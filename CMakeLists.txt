@@ -61,6 +61,7 @@ target_link_libraries(ezremote_client
   curl
   lexbor
   smb2
+  minizip
   kernel
   SceShellCoreUtil
   SceSysmodule

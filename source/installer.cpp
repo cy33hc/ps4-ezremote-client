@@ -9,6 +9,7 @@
 #include <orbis/Bgft.h>
 #include <orbis/AppInstUtil.h>
 #include <orbis/UserService.h>
+#include <minizip/unzip.h>
 #include <curl/curl.h>
 #include <request.hpp>
 #include <urn.hpp>
@@ -96,9 +97,9 @@ namespace INSTALLER
 		s_bgft_initialized = false;
 	}
 
-	int InstallRemotePkg(const char *filename, pkg_header *header)
+	int InstallRemotePkg(const std::string &filename, pkg_header *header)
 	{
-		std::string full_url = remote_settings->server + std::string(filename);
+		std::string full_url = remote_settings->server + filename;
 		size_t scheme_pos = full_url.find("://");
 		size_t root_pos = full_url.find("/", scheme_pos+3);
 		std::string host = full_url.substr(0, root_pos);
@@ -188,22 +189,22 @@ namespace INSTALLER
 		return 0;
 	}
 
-	int InstallLocalPkg(const char *filename, pkg_header *header, bool remove_after_install)
+	int InstallLocalPkg(const std::string &filename, pkg_header *header, bool remove_after_install)
 	{
 		int ret;
-		if (strncmp(filename, "/data/", 6) != 0 &&
-			strncmp(filename, "/user/data/", 11) != 0 &&
-			strncmp(filename, "/mnt/usb", 8) != 0)
+		if (strncmp(filename.c_str(), "/data/", 6) != 0 &&
+			strncmp(filename.c_str(), "/user/data/", 11) != 0 &&
+			strncmp(filename.c_str(), "/mnt/usb", 8) != 0)
 			return -1;
 
 		char filepath[1024];
-		snprintf(filepath, 1023, "%s", filename);
-		if (strncmp(filename, "/data/", 6) == 0)
-			snprintf(filepath, 1023, "/user%s", filename);
+		snprintf(filepath, 1023, "%s", filename.c_str());
+		if (strncmp(filename.c_str(), "/data/", 6) == 0)
+			snprintf(filepath, 1023, "/user%s", filename.c_str());
 		char titleId[18];
 		memset(titleId, 0, sizeof(titleId));
 		int is_app = -1;
-		ret = sceAppInstUtilGetTitleIdFromPkg(filename, titleId, &is_app);
+		ret = sceAppInstUtilGetTitleIdFromPkg(filename.c_str(), titleId, &is_app);
 		if (ret)
 		{
 			return 0;
@@ -265,4 +266,51 @@ namespace INSTALLER
 	err:
 		return 0;
 	}
+
+    void Extract(const std::string &file, const std::string &dir)
+    {
+        unz_global_info global_info;
+        unz_file_info file_info;
+        unzFile zipfile = unzOpen(file.c_str());
+        unzGetGlobalInfo(zipfile, &global_info);
+        unzGoToFirstFile(zipfile);
+        uint64_t curr_extracted_bytes = 0;
+        uint64_t curr_file_bytes = 0;
+        int num_files = global_info.number_entry;
+        char fname[512];
+        char ext_fname[512];
+        char read_buffer[8192];
+
+        for (int zip_idx = 0; zip_idx < num_files; ++zip_idx)
+        {
+            unzGetCurrentFileInfo(zipfile, &file_info, fname, 512, NULL, 0, NULL, 0);
+            sprintf(ext_fname, "%s%s", dir.c_str(), fname); 
+            const size_t filename_length = strlen(ext_fname);
+            if (ext_fname[filename_length - 1] != '/')
+            {
+                snprintf(activity_message, 255, "Extracting %s", fname);
+                curr_file_bytes = 0;
+                unzOpenCurrentFile(zipfile);
+                FS::MkDirs(ext_fname, true);
+                FILE *f = fopen(ext_fname, "wb");
+                while (curr_file_bytes < file_info.uncompressed_size)
+                {
+                    int rbytes = unzReadCurrentFile(zipfile, read_buffer, 8192);
+                    if (rbytes > 0)
+                    {
+                        fwrite(read_buffer, 1, rbytes, f);
+                        curr_extracted_bytes += rbytes;
+                        curr_file_bytes += rbytes;
+                    }
+                }
+                fclose(f);
+                unzCloseCurrentFile(zipfile);
+            }
+            if ((zip_idx + 1) < num_files)
+            {
+                unzGoToNextFile(zipfile);
+            }
+        }
+        unzClose(zipfile);
+    }
 }
