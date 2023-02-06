@@ -34,7 +34,7 @@
 
 #define CONFIG_LANGUAGE "language"
 
-struct WebDavSettings
+struct RemoteSettings
 {
     char site_name[32];
     char server[256];
@@ -43,15 +43,15 @@ struct WebDavSettings
 };
 
 extern std::vector<std::string> sites;
-extern std::map<std::string, WebDavSettings> site_settings;
+extern std::map<std::string, RemoteSettings> site_settings;
 extern char local_directory[255];
 extern char remote_directory[255];
 extern char app_ver[6];
 extern char last_site[32];
 extern char display_site[32];
 extern char language[128];
-extern WebDavSettings *webdav_settings;
-extern RemoteClient *webdavclient;
+extern RemoteSettings *remote_settings;
+extern RemoteClient *remoteclient;
 extern char install_pkg_url[512];
 extern char favorite_urls[MAX_FAVORITE_URLS][512];
 extern bool auto_delete_tmp_pkg;

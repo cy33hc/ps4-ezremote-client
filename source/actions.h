@@ -32,9 +32,9 @@ enum ACTIONS
     ACTION_REMOTE_SELECT_ALL,
     ACTION_LOCAL_CLEAR_ALL,
     ACTION_REMOTE_CLEAR_ALL,
-    ACTION_CONNECT_WEBDAV,
-    ACTION_DISCONNECT_WEBDAV,
-    ACTION_DISCONNECT_WEBDAV_AND_EXIT,
+    ACTION_CONNECT,
+    ACTION_DISCONNECT,
+    ACTION_DISCONNECT_AND_EXIT,
     ACTION_INSTALL_REMOTE_PKG,
     ACTION_INSTALL_LOCAL_PKG,
     ACTION_INSTALL_URL_PKG
@@ -71,8 +71,8 @@ namespace Actions
     void UploadFiles();
     void *DownloadFilesThread(void *argp);
     void DownloadFiles();
-    void ConnectWebDav();
-    void DisconnectWebDav();
+    void Connect();
+    void Disconnect();
     void SelectAllLocalFiles();
     void SelectAllRemoteFiles();
     void *InstallRemotePkgsThread(void *argp);

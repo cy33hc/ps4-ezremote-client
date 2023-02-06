@@ -10,8 +10,8 @@
 	FUNC(STR_REMOTE)                     \
 	FUNC(STR_MESSAGES)                   \
 	FUNC(STR_UPDATE_SOFTWARE)            \
-	FUNC(STR_CONNECT_WEBDAV)             \
-	FUNC(STR_DISCONNECT_WEBDAV)          \
+	FUNC(STR_CONNECT)                    \
+	FUNC(STR_DISCONNECT)                 \
 	FUNC(STR_SEARCH)                     \
 	FUNC(STR_REFRESH)                    \
 	FUNC(STR_SERVER)                     \

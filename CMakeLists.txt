@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(ps4_remote_client)
+project(ezremote_client)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DDONT_HAVE_STRUPR")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
@@ -11,7 +11,7 @@ include_directories(
   source/pugixml
 )
 
-add_executable(ps4_remote_client
+add_executable(ezremote_client
   source/pugixml/pugixml.cpp
   source/webdav/callback.cpp
   source/webdav/client.cpp
@@ -43,11 +43,11 @@ add_executable(ps4_remote_client
   source/imgui.cpp
 )
 
-add_self(ps4_remote_client)
+add_self(ezremote_client)
 
-add_pkg(ps4_remote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "PS4 Remote Client" "01.00" 32 0)
+add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.00" 32 0)
 
-target_link_libraries(ps4_remote_client
+target_link_libraries(ezremote_client
   c
   c++
   png

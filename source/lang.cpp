@@ -16,8 +16,8 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Remote",														  // STR_REMOTE
 	"Messages",														  // STR_MESSAGES
 	"Update Software",												  // STR_UPDATE_SOFTWARE
-	"Connect",														  // STR_CONNECT_WEBDAV
-	"Disconnect",													  // STR_DISCONNECT_WEBDAV
+	"Connect",														  // STR_CONNECT
+	"Disconnect",													  // STR_DISCONNECT
 	"Search",														  // STR_SEARCH
 	"Refresh",														  // STR_REFRESH
 	"Server",														  // STR_SERVER

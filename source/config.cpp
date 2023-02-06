@@ -13,7 +13,7 @@ extern "C"
 }
 
 bool swap_xo;
-WebDavSettings *webdav_settings;
+RemoteSettings *remote_settings;
 char local_directory[255];
 char remote_directory[255];
 char app_ver[6];
@@ -21,11 +21,11 @@ char last_site[32];
 char display_site[32];
 char language[128];
 std::vector<std::string> sites;
-std::map<std::string, WebDavSettings> site_settings;
+std::map<std::string, RemoteSettings> site_settings;
 char install_pkg_url[512];
 char favorite_urls[MAX_FAVORITE_URLS][512];
 bool auto_delete_tmp_pkg;
-RemoteClient *webdavclient;
+RemoteClient *remoteclient;
 
 namespace CONFIG
 {
@@ -57,7 +57,7 @@ namespace CONFIG
 
         for (int i = 0; i < sites.size(); i++)
         {
-            WebDavSettings setting;
+            RemoteSettings setting;
             sprintf(setting.site_name, "%s", sites[i].c_str());
 
             sprintf(setting.server, "%s", ReadString(sites[i].c_str(), CONFIG_WEBDAV_SERVER_IP, ""));
@@ -75,7 +75,7 @@ namespace CONFIG
         sprintf(last_site, "%s", ReadString(CONFIG_GLOBAL, CONFIG_LAST_SITE, sites[0].c_str()));
         WriteString(CONFIG_GLOBAL, CONFIG_LAST_SITE, last_site);
 
-        webdav_settings = &site_settings[std::string(last_site)];
+        remote_settings = &site_settings[std::string(last_site)];
 
         for (int i = 0; i < MAX_FAVORITE_URLS; i++)
         {
@@ -92,9 +92,9 @@ namespace CONFIG
     {
         OpenIniFile(CONFIG_INI_FILE);
 
-        WriteString(last_site, CONFIG_WEBDAV_SERVER_IP, webdav_settings->server);
-        WriteString(last_site, CONFIG_WEBDAV_SERVER_USER, webdav_settings->username);
-        WriteString(last_site, CONFIG_WEBDAV_SERVER_PASSWORD, webdav_settings->password);
+        WriteString(last_site, CONFIG_WEBDAV_SERVER_IP, remote_settings->server);
+        WriteString(last_site, CONFIG_WEBDAV_SERVER_USER, remote_settings->username);
+        WriteString(last_site, CONFIG_WEBDAV_SERVER_PASSWORD, remote_settings->password);
         WriteString(CONFIG_GLOBAL, CONFIG_LAST_SITE, last_site);
         WriteBool(CONFIG_GLOBAL, CONFIG_AUTO_DELETE_TMP_PKG, auto_delete_tmp_pkg);
         WriteIniFile(CONFIG_INI_FILE);

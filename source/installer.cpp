@@ -98,7 +98,7 @@ namespace INSTALLER
 
 	int InstallRemotePkg(const char *filename, pkg_header *header)
 	{
-		std::string full_url = webdav_settings->server + std::string(filename);
+		std::string full_url = remote_settings->server + std::string(filename);
 		size_t scheme_pos = full_url.find("://");
 		size_t root_pos = full_url.find("/", scheme_pos+3);
 		std::string host = full_url.substr(0, root_pos);

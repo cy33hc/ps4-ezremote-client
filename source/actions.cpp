@@ -57,9 +57,9 @@ namespace Actions
 
     void RefreshRemoteFiles(bool apply_filter)
     {
-        if (!webdavclient->Ping())
+        if (!remoteclient->Ping())
         {
-            webdavclient->Quit();
+            remoteclient->Quit();
             sprintf(status_message, "%s", lang_strings[STR_CONNECTION_CLOSE_ERR_MSG]);
             return;
         }
@@ -69,7 +69,7 @@ namespace Actions
         remote_files.clear();
         if (strlen(remote_filter) > 0 && apply_filter)
         {
-            std::vector<DirEntry> temp_files = webdavclient->ListDir(remote_directory);
+            std::vector<DirEntry> temp_files = remoteclient->ListDir(remote_directory);
             std::string lower_filter = Util::ToLower(remote_filter);
             for (std::vector<DirEntry>::iterator it = temp_files.begin(); it != temp_files.end();)
             {
@@ -84,7 +84,7 @@ namespace Actions
         }
         else
         {
-            remote_files = webdavclient->ListDir(remote_directory);
+            remote_files = remoteclient->ListDir(remote_directory);
         }
         FS::Sort(remote_files);
     }
@@ -127,9 +127,9 @@ namespace Actions
         if (!entry.isDir)
             return;
 
-        if (!webdavclient->Ping())
+        if (!remoteclient->Ping())
         {
-            webdavclient->Quit();
+            remoteclient->Quit();
             sprintf(status_message, "%s", lang_strings[STR_CONNECTION_CLOSE_ERR_MSG]);
             return;
         }
@@ -202,15 +202,15 @@ namespace Actions
         sprintf(status_message, "%s", "");
         std::string folder = std::string(new_folder);
         folder = Util::Rtrim(Util::Trim(folder, " "), "/");
-        std::string path = webdavclient->GetPath(remote_directory, folder.c_str());
-        if (webdavclient->Mkdir(path.c_str()))
+        std::string path = remoteclient->GetPath(remote_directory, folder.c_str());
+        if (remoteclient->Mkdir(path.c_str()))
         {
             RefreshRemoteFiles(false);
             sprintf(remote_file_to_select, "%s", folder.c_str());
         }
         else
         {
-            sprintf(status_message, "%s - %s", lang_strings[STR_FAILED], webdavclient->LastResponse());
+            sprintf(status_message, "%s - %s", lang_strings[STR_FAILED], remoteclient->LastResponse());
         }
     }
 
@@ -231,14 +231,14 @@ namespace Actions
         std::string new_name = std::string(new_path);
         new_name = Util::Rtrim(Util::Trim(new_name, " "), "/");
         std::string path = FS::GetPath(remote_directory, new_name);
-        if (webdavclient->Rename(old_path, path.c_str()))
+        if (remoteclient->Rename(old_path, path.c_str()))
         {
             RefreshRemoteFiles(false);
             sprintf(remote_file_to_select, "%s", new_name.c_str());
         }
         else
         {
-            sprintf(status_message, "%s - %s", lang_strings[STR_FAILED], webdavclient->LastResponse());
+            sprintf(status_message, "%s - %s", lang_strings[STR_FAILED], remoteclient->LastResponse());
         }
     }
 
@@ -267,18 +267,18 @@ namespace Actions
 
     void *DeleteSelectedRemotesFilesThread(void *argp)
     {
-        if (webdavclient->Ping())
+        if (remoteclient->Ping())
         {
             for (std::set<DirEntry>::iterator it = multi_selected_remote_files.begin(); it != multi_selected_remote_files.end(); ++it)
             {
                 if (it->isDir)
-                    webdavclient->Rmdir(it->path, true);
+                    remoteclient->Rmdir(it->path, true);
                 else
                 {
                     sprintf(activity_message, "%s %s", lang_strings[STR_DELETING], it->path);
-                    if (!webdavclient->Delete(it->path))
+                    if (!remoteclient->Delete(it->path))
                     {
-                        sprintf(status_message, "%s - %s", lang_strings[STR_FAILED], webdavclient->LastResponse());
+                        sprintf(status_message, "%s - %s", lang_strings[STR_FAILED], remoteclient->LastResponse());
                     }
                 }
             }
@@ -287,7 +287,7 @@ namespace Actions
         else
         {
             sprintf(status_message, "%s", lang_strings[STR_CONNECTION_CLOSE_ERR_MSG]);
-            DisconnectWebDav();
+            Disconnect();
         }
         activity_inprogess = false;
         Windows::SetModalMode(false);
@@ -307,14 +307,14 @@ namespace Actions
     int UploadFile(const char *src, const char *dest)
     {
         int ret;
-        if (!webdavclient->Ping())
+        if (!remoteclient->Ping())
         {
-            webdavclient->Quit();
+            remoteclient->Quit();
             sprintf(status_message, "%s", lang_strings[STR_CONNECTION_CLOSE_ERR_MSG]);
             return 0;
         }
 
-        if (overwrite_type == OVERWRITE_PROMPT && webdavclient->FileExists(dest))
+        if (overwrite_type == OVERWRITE_PROMPT && remoteclient->FileExists(dest))
         {
             sprintf(confirm_message, "%s %s?", lang_strings[STR_OVERWRITE], dest);
             confirm_state = CONFIRM_WAIT;
@@ -327,7 +327,7 @@ namespace Actions
             activity_inprogess = true;
             selected_action = action_to_take;
         }
-        else if (overwrite_type == OVERWRITE_NONE && webdavclient->FileExists(dest))
+        else if (overwrite_type == OVERWRITE_NONE && remoteclient->FileExists(dest))
         {
             confirm_state = CONFIRM_NO;
         }
@@ -338,7 +338,7 @@ namespace Actions
 
         if (confirm_state == CONFIRM_YES)
         {
-            return webdavclient->Put(src, dest);
+            return remoteclient->Put(src, dest);
         }
 
         return 1;
@@ -354,7 +354,7 @@ namespace Actions
         {
             int err;
             std::vector<DirEntry> entries = FS::ListDir(src.path, &err);
-            webdavclient->Mkdir(dest);
+            remoteclient->Mkdir(dest);
             for (int i = 0; i < entries.size(); i++)
             {
                 if (stop_activity)
@@ -369,7 +369,7 @@ namespace Actions
                     if (strcmp(entries[i].name, "..") == 0)
                         continue;
 
-                    webdavclient->Mkdir(new_path);
+                    remoteclient->Mkdir(new_path);
                     ret = Upload(entries[i], new_path);
                     if (ret <= 0)
                     {
@@ -453,9 +453,9 @@ namespace Actions
     int DownloadFile(const char *src, const char *dest)
     {
         bytes_transfered = 0;
-        if (!webdavclient->Size(src, &bytes_to_download))
+        if (!remoteclient->Size(src, &bytes_to_download))
         {
-            webdavclient->Quit();
+            remoteclient->Quit();
             sprintf(status_message, "%s", lang_strings[STR_CONNECTION_CLOSE_ERR_MSG]);
             return 0;
         }
@@ -484,7 +484,7 @@ namespace Actions
 
         if (confirm_state == CONFIRM_YES)
         {
-            return webdavclient->Get(dest, src);
+            return remoteclient->Get(dest, src);
         }
 
         return 1;
@@ -499,7 +499,7 @@ namespace Actions
         if (src.isDir)
         {
             int err;
-            std::vector<DirEntry> entries = webdavclient->ListDir(src.path);
+            std::vector<DirEntry> entries = remoteclient->ListDir(src.path);
             FS::MkDirs(dest);
             for (int i = 0; i < entries.size(); i++)
             {
@@ -599,7 +599,7 @@ namespace Actions
         int success = 0;
         int skipped = 0;
 
-        WebDAV::WebDavClient *client = (WebDAV::WebDavClient *)client;
+        WebDAV::WebDavClient *client = (WebDAV::WebDavClient *)remoteclient;
         for (std::set<DirEntry>::iterator it = multi_selected_remote_files.begin(); it != multi_selected_remote_files.end(); ++it)
         {
             if (stop_activity)
@@ -930,24 +930,24 @@ namespace Actions
         }
     }
 
-    void ConnectWebDav()
+    void Connect()
     {
         CONFIG::SaveConfig();
-        if (strncmp(webdav_settings->server, "https://", 8) == 0 || strncmp(webdav_settings->server, "http://", 7) == 0)
+        if (strncmp(remote_settings->server, "https://", 8) == 0 || strncmp(remote_settings->server, "http://", 7) == 0)
         {
-            webdavclient = new WebDAV::WebDavClient();
+            remoteclient = new WebDAV::WebDavClient();
         }
-        else if (strncmp(webdav_settings->server, "smb://", 6) == 0)
+        else if (strncmp(remote_settings->server, "smb://", 6) == 0)
         {
-            webdavclient = new SmbClient();
+            remoteclient = new SmbClient();
         }
-        else if (strncmp(webdav_settings->server, "ftp://", 6) == 0)
+        else if (strncmp(remote_settings->server, "ftp://", 6) == 0)
         {
             FtpClient *client = new FtpClient();
             client->SetConnmode(FtpClient::pasv);
             client->SetCallbackBytes(1);
             client->SetCallbackXferFunction(FtpCallback);
-            webdavclient = client;
+            remoteclient = client;
 
             int res = pthread_create(&ftp_keep_alive_thid, NULL, KeepAliveThread, NULL);
         }
@@ -958,34 +958,34 @@ namespace Actions
             return;
         }
 
-        if (webdavclient->Connect(webdav_settings->server, webdav_settings->username, webdav_settings->password))
+        if (remoteclient->Connect(remote_settings->server, remote_settings->username, remote_settings->password))
         {
             RefreshRemoteFiles(false);
         }
         else
         {
-            sprintf(status_message, "%s - %s", lang_strings[STR_FAIL_TIMEOUT_MSG], webdavclient->LastResponse());
-            if (webdavclient != nullptr)
+            sprintf(status_message, "%s - %s", lang_strings[STR_FAIL_TIMEOUT_MSG], remoteclient->LastResponse());
+            if (remoteclient != nullptr)
             {
-                webdavclient->Quit();
-                delete webdavclient;
-                webdavclient = nullptr;
+                remoteclient->Quit();
+                delete remoteclient;
+                remoteclient = nullptr;
             }
         }
         selected_action = ACTION_NONE;
     }
 
-    void DisconnectWebDav()
+    void Disconnect()
     {
-        if (webdavclient != nullptr)
+        if (remoteclient != nullptr)
         {
-            if (webdavclient->IsConnected())
-                webdavclient->Quit();
+            if (remoteclient->IsConnected())
+                remoteclient->Quit();
             multi_selected_remote_files.clear();
             remote_files.clear();
             sprintf(remote_directory, "%s", "/");
             sprintf(status_message, "%s", "");
-            webdavclient = nullptr;
+            remoteclient = nullptr;
         }
     }
 
@@ -1010,9 +1010,9 @@ namespace Actions
     void *KeepAliveThread(void *argp)
     {
         long idle;
-        while (webdavclient != nullptr && webdavclient->clientType() == CLIENT_TYPE_FTP && webdavclient->IsConnected())
+        while (remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_FTP && remoteclient->IsConnected())
         {
-            FtpClient *client = (FtpClient*) webdavclient;
+            FtpClient *client = (FtpClient*) remoteclient;
             idle = client->GetIdleTime();
             if (idle > 60000000)
             {

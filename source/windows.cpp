@@ -77,7 +77,7 @@ namespace Windows
 
     void Init()
     {
-        webdavclient = nullptr;
+        remoteclient = nullptr;
 
         sprintf(local_file_to_select, "..");
         sprintf(remote_file_to_select, "..");
@@ -142,7 +142,7 @@ namespace Windows
 
         if (prev_down[SDL_CONTROLLER_BUTTON_START] && !cur_down[SDL_CONTROLLER_BUTTON_START] && !paused)
         {
-            selected_action = ACTION_DISCONNECT_WEBDAV_AND_EXIT;
+            selected_action = ACTION_DISCONNECT_AND_EXIT;
         }
 
         prev_down[SDL_CONTROLLER_BUTTON_X] = cur_down[SDL_CONTROLLER_BUTTON_X];
@@ -161,7 +161,7 @@ namespace Windows
         ImGuiStyle *style = &ImGui::GetStyle();
         ImVec4 *colors = style->Colors;
         static char title[64];
-        sprintf(title, "WebDAV %s", lang_strings[STR_CONNECTION_SETTINGS]);
+        sprintf(title, "ezRemote %s", lang_strings[STR_CONNECTION_SETTINGS]);
         BeginGroupPanel(title, ImVec2(1905, 100));
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10);
         char id[256];
@@ -169,7 +169,7 @@ namespace Windows
         ImVec2 pos;
 
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 4);
-        bool is_connected = webdavclient != nullptr && webdavclient->IsConnected();
+        bool is_connected = remoteclient != nullptr && remoteclient->IsConnected();
 
         if (ImGui::IsWindowAppearing())
         {
@@ -180,9 +180,9 @@ namespace Windows
             ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
             ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.3f);
         }
-        if (ImGui::Button(lang_strings[STR_CONNECT_WEBDAV], ImVec2(180, 0)))
+        if (ImGui::Button(lang_strings[STR_CONNECT], ImVec2(180, 0)))
         {
-            selected_action = ACTION_CONNECT_WEBDAV;
+            selected_action = ACTION_CONNECT;
         }
         if (is_connected)
         {
@@ -192,7 +192,7 @@ namespace Windows
         if (ImGui::IsItemHovered())
         {
             ImGui::BeginTooltip();
-            ImGui::Text("%s", lang_strings[STR_CONNECT_WEBDAV]);
+            ImGui::Text("%s", lang_strings[STR_CONNECT]);
             ImGui::EndTooltip();
         }
         ImGui::SameLine();
@@ -202,9 +202,9 @@ namespace Windows
             ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
             ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.3f);
         }
-        if (ImGui::Button(lang_strings[STR_DISCONNECT_WEBDAV], ImVec2(200, 0)))
+        if (ImGui::Button(lang_strings[STR_DISCONNECT], ImVec2(200, 0)))
         {
-            selected_action = ACTION_DISCONNECT_WEBDAV;
+            selected_action = ACTION_DISCONNECT;
         }
         if (!is_connected)
         {
@@ -214,7 +214,7 @@ namespace Windows
         if (ImGui::IsItemHovered())
         {
             ImGui::BeginTooltip();
-            ImGui::Text("%s", lang_strings[STR_DISCONNECT_WEBDAV]);
+            ImGui::Text("%s", lang_strings[STR_DISCONNECT]);
             ImGui::EndTooltip();
         }
         ImGui::SameLine();
@@ -231,7 +231,7 @@ namespace Windows
                 {
                     sprintf(last_site, "%s", sites[n].c_str());
                     sprintf(display_site, "%s", site_id);
-                    webdav_settings = &site_settings[sites[n]];
+                    remote_settings = &site_settings[sites[n]];
                 }
 
                 // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
@@ -243,15 +243,15 @@ namespace Windows
         ImGui::SameLine();
 
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 1.0f));
-        sprintf(id, "%s##server", webdav_settings->server);
+        sprintf(id, "%s##server", remote_settings->server);
         pos = ImGui::GetCursorPos();
         if (ImGui::Button(id, ImVec2(650, 0)))
         {
-            ime_single_field = webdav_settings->server;
+            ime_single_field = remote_settings->server;
             ResetImeCallbacks();
             ime_field_size = 255;
             ime_callback = SingleValueImeCallback;
-            Dialog::initImeDialog(lang_strings[STR_SERVER], webdav_settings->server, 255, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
+            Dialog::initImeDialog(lang_strings[STR_SERVER], remote_settings->server, 255, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
             gui_mode = GUI_MODE_IME;
         }
         ImGui::SameLine();
@@ -260,15 +260,15 @@ namespace Windows
         ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_USERNAME]);
         ImGui::SameLine();
 
-        sprintf(id, "%s##username", webdav_settings->username);
+        sprintf(id, "%s##username", remote_settings->username);
         pos = ImGui::GetCursorPos();
         if (ImGui::Button(id, ImVec2(180, 0)))
         {
-            ime_single_field = webdav_settings->username;
+            ime_single_field = remote_settings->username;
             ResetImeCallbacks();
             ime_field_size = 32;
             ime_callback = SingleValueImeCallback;
-            Dialog::initImeDialog(lang_strings[STR_USERNAME], webdav_settings->username, 32, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
+            Dialog::initImeDialog(lang_strings[STR_USERNAME], remote_settings->username, 32, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
             gui_mode = GUI_MODE_IME;
         }
         ImGui::SameLine();
@@ -281,11 +281,11 @@ namespace Windows
         pos = ImGui::GetCursorPos();
         if (ImGui::Button(id, ImVec2(100, 0)))
         {
-            ime_single_field = webdav_settings->password;
+            ime_single_field = remote_settings->password;
             ResetImeCallbacks();
             ime_field_size = 24;
             ime_callback = SingleValueImeCallback;
-            Dialog::initImeDialog(lang_strings[STR_PASSWORD], webdav_settings->password, 24, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
+            Dialog::initImeDialog(lang_strings[STR_PASSWORD], remote_settings->password, 24, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
             gui_mode = GUI_MODE_IME;
         }
 
@@ -674,7 +674,7 @@ namespace Windows
 
             flags = ImGuiSelectableFlags_Disabled;
             if ((local_browser_selected && multi_selected_local_files.size() > 0) ||
-                (remote_browser_selected && multi_selected_remote_files.size() > 0 && webdavclient != nullptr))
+                (remote_browser_selected && multi_selected_remote_files.size() > 0 && remoteclient != nullptr))
                 flags = ImGuiSelectableFlags_None;
             ImGui::PushID("Delete##settings");
             if (ImGui::Selectable(lang_strings[STR_DELETE], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
@@ -691,7 +691,7 @@ namespace Windows
 
             flags = ImGuiSelectableFlags_Disabled;
             if ((local_browser_selected && multi_selected_local_files.size() == 1) ||
-                (remote_browser_selected && multi_selected_remote_files.size() == 1 && webdavclient != nullptr))
+                (remote_browser_selected && multi_selected_remote_files.size() == 1 && remoteclient != nullptr))
                 flags = ImGuiSelectableFlags_None;
             ImGui::PushID("Rename##settings");
             if (ImGui::Selectable(lang_strings[STR_RENAME], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
@@ -707,7 +707,7 @@ namespace Windows
             ImGui::Separator();
 
             flags = ImGuiSelectableFlags_Disabled;
-            if (local_browser_selected || (remote_browser_selected && webdavclient != nullptr))
+            if (local_browser_selected || (remote_browser_selected && remoteclient != nullptr))
                 flags = ImGuiSelectableFlags_None;
             ImGui::PushID("New Folder##settings");
             if (ImGui::Selectable(lang_strings[STR_NEW_FOLDER], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
@@ -725,7 +725,7 @@ namespace Windows
             flags = ImGuiSelectableFlags_Disabled;
             if (local_browser_selected)
             {
-                if (multi_selected_local_files.size() > 0 && webdavclient != nullptr)
+                if (multi_selected_local_files.size() > 0 && remoteclient != nullptr)
                 {
                     flags = ImGuiSelectableFlags_None;
                 }
@@ -755,7 +755,7 @@ namespace Windows
 
             if (remote_browser_selected)
             {
-                if (multi_selected_remote_files.size() > 0 && webdavclient != nullptr)
+                if (multi_selected_remote_files.size() > 0 && remoteclient != nullptr)
                 {
                     flags = ImGuiSelectableFlags_None;
                 }
@@ -772,7 +772,7 @@ namespace Windows
                 ImGui::Separator();
 
                 ImGui::PushID("Install##remote");
-                if (webdavclient != nullptr && webdavclient->clientType() != CLIENT_TYPE_WEBDAV)
+                if (remoteclient != nullptr && remoteclient->clientType() != CLIENT_TYPE_WEBDAV)
                 {
                     flags = ImGuiSelectableFlags_Disabled;
                 }
@@ -1244,14 +1244,14 @@ namespace Windows
             multi_selected_remote_files.clear();
             selected_action = ACTION_NONE;
             break;
-        case ACTION_CONNECT_WEBDAV:
-            Actions::ConnectWebDav();
+        case ACTION_CONNECT:
+            Actions::Connect();
             break;
-        case ACTION_DISCONNECT_WEBDAV:
-            Actions::DisconnectWebDav();
+        case ACTION_DISCONNECT:
+            Actions::Disconnect();
             break;
-        case ACTION_DISCONNECT_WEBDAV_AND_EXIT:
-            Actions::DisconnectWebDav();
+        case ACTION_DISCONNECT_AND_EXIT:
+            Actions::Disconnect();
             done = true;
             break;
         case ACTION_INSTALL_REMOTE_PKG:
