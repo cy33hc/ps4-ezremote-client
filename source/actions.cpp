@@ -807,7 +807,7 @@ namespace Actions
                 if (ret == 0)
                 {
                     sprintf(status_message, "%s %s", lang_strings[STR_FAILED_TO_EXTRACT], it->name);
-                    sceKernelUsleep(1000000);
+                    sceKernelUsleep(100000);
                 }
             }
         }
