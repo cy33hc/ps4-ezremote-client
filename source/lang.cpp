@@ -97,7 +97,11 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Failed to obtain google download URL",							  // STR_FAIL_TO_OBTAIN_GG_DL_MSG
 	"Auto delete temporary downloaded pkg file after install",		  // STR_AUTO_DELETE_TMP_PKG
 	"Protocol not supported",										  // STR_PROTOCOL_NOT_SUPPORTED
-	"Could not resolve hostname"									  // STR_COULD_NOT_RESOLVE_HOST
+	"Could not resolve hostname",									  // STR_COULD_NOT_RESOLVE_HOST
+	"Extract",														  // STR_EXTRACT
+	"Extracting",													  // STR_EXTRACTING
+	"Failed to extract",											  // STR_FAILED_TO_EXTRACT
+	"Extract Location"												  // STR_EXTRACT_LOCATION
 };
 
 bool needs_extended_font = false;

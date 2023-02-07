@@ -37,7 +37,9 @@ enum ACTIONS
     ACTION_DISCONNECT_AND_EXIT,
     ACTION_INSTALL_REMOTE_PKG,
     ACTION_INSTALL_LOCAL_PKG,
-    ACTION_INSTALL_URL_PKG
+    ACTION_INSTALL_URL_PKG,
+    ACTION_EXTRACT_LOCAL_ZIP,
+    ACTION_CREATE_LOCAL_ZIP
 };
 
 enum OverWriteType
@@ -82,6 +84,8 @@ namespace Actions
     void *InstallUrlPkgThread(void *argp);
     void InstallUrlPkg();
     void *KeepAliveThread(void *argp);
+    void *ExtractZipThread(void *argp);
+    void ExtractLocalZips();
 }
 
 #endif

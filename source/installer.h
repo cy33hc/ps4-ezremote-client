@@ -110,7 +110,6 @@ namespace INSTALLER
     int Init(void);
     void Exit(void);
 
-    void Extract(const std::string &file, const std::string &dir);
     int InstallRemotePkg(const std::string &filename, pkg_header *header);
     int InstallLocalPkg(const std::string &filename, pkg_header *header, bool remove_after_install=false);
 }

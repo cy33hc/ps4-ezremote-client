@@ -58,6 +58,7 @@ bool set_focus_to_local = false;
 bool set_focus_to_remote = false;
 bool select_url_inprogress = false;
 int favorite_url_idx = 0;
+char extract_zip_folder[256];
 
 bool dont_prompt_overwrite = false;
 bool dont_prompt_overwrite_cb = false;
@@ -643,7 +644,7 @@ namespace Windows
         {
             ImGui::SetNextWindowPos(ImVec2(1330, 350));
         }
-        ImGui::SetNextWindowSizeConstraints(ImVec2(230, 150), ImVec2(230, 400), NULL, NULL);
+        ImGui::SetNextWindowSizeConstraints(ImVec2(230, 150), ImVec2(230, 450), NULL, NULL);
         if (ImGui::BeginPopupModal(lang_strings[STR_ACTIONS], NULL, ImGuiWindowFlags_AlwaysAutoResize))
         {
             ImGui::PushID("Select All##settings");
@@ -725,6 +726,25 @@ namespace Windows
             flags = ImGuiSelectableFlags_Disabled;
             if (local_browser_selected)
             {
+                (multi_selected_local_files.size() > 0) ? flags = ImGuiSelectableFlags_None : flags = ImGuiSelectableFlags_Disabled;
+                ImGui::PushID("Extract##settings");
+                if (ImGui::Selectable(lang_strings[STR_EXTRACT], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+                {
+                    ResetImeCallbacks();
+                    sprintf(extract_zip_folder, "%s", local_directory);
+                    ime_single_field = extract_zip_folder;
+                    ime_field_size = 255;
+                    ime_callback = SingleValueImeCallback;
+                    ime_after_update = AfterExtractFolderCallback;
+                    Dialog::initImeDialog(lang_strings[STR_EXTRACT_LOCATION], extract_zip_folder, 255, ORBIS_TYPE_BASIC_LATIN, 600, 350);
+                    gui_mode = GUI_MODE_IME;
+                    SetModalMode(false);
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::PopID();
+                ImGui::Separator();
+
+                flags = ImGuiSelectableFlags_Disabled;
                 if (multi_selected_local_files.size() > 0 && remoteclient != nullptr)
                 {
                     flags = ImGuiSelectableFlags_None;
@@ -734,6 +754,7 @@ namespace Windows
                 {
                     SetModalMode(false);
                     selected_action = ACTION_UPLOAD;
+                    file_transfering = true;
                     confirm_transfer_state = 0;
                     dont_prompt_overwrite_cb = dont_prompt_overwrite;
                     ImGui::CloseCurrentPopup();
@@ -764,6 +785,7 @@ namespace Windows
                 {
                     SetModalMode(false);
                     selected_action = ACTION_DOWNLOAD;
+                    file_transfering = true;
                     confirm_transfer_state = 0;
                     dont_prompt_overwrite_cb = dont_prompt_overwrite;
                     ImGui::CloseCurrentPopup();
@@ -1194,6 +1216,13 @@ namespace Windows
                 selected_action = ACTION_NONE;
             }
             break;
+        case ACTION_EXTRACT_LOCAL_ZIP:
+            activity_inprogess = true;
+            stop_activity = false;
+            file_transfering = false;
+            selected_action = ACTION_NONE;
+            Actions::ExtractLocalZips();
+            break;
         case ACTION_RENAME_LOCAL:
             if (gui_mode != GUI_MODE_IME)
             {
@@ -1402,5 +1431,10 @@ namespace Windows
     void CancelActionCallBack(int ime_result)
     {
         selected_action = ACTION_NONE;
+    }
+
+    void AfterExtractFolderCallback(int ime_result)
+    {
+        selected_action = ACTION_EXTRACT_LOCAL_ZIP;
     }
 }
