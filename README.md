@@ -92,6 +92,7 @@ Galego
 Greek
 Hungarian
 Indonesian
+Romanian
 Ryukyuan
 Thai
 Turkish
@@ -105,7 +106,6 @@ Swedish
 Danish
 Norwegian
 Czech
-Romanian
 Vietnamese
 ```
 or any other language that you have a traslation for.
