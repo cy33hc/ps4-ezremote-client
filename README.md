@@ -63,7 +63,9 @@ TouchPad Button - Exit Application
 ```
 
 ## Multi Language Support
-The appplication support following languages
+The appplication support following languages.
+
+**Note:** Due to new strings added, there are about 31 missing translations for all the languagess. Please help by downloading this [Template](https://github.com/cy33hc/ps4-ezremote-client/blob/master/data/assets/langs/English.ini), make your changes and submit an issue with the file attached for the language.
 
 The following languages are auto detected.
 ```
