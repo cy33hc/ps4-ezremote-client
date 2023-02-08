@@ -9,7 +9,7 @@ To distinguish between FTP, SMB or WebDAV, the URL mush be prefix with **ftp://*
    ```
    ftp://hostname[:port]
 
-     - hostname can be the textual hostname or an IP address
+     - hostname can be the textual hostname or an IP address. hostname is required
      - port is optional and defaults to 21 if not provided
    ```
 
@@ -17,8 +17,9 @@ To distinguish between FTP, SMB or WebDAV, the URL mush be prefix with **ftp://*
    ```
    smb://hostname[:port]/sharename
 
-     - hostname can be the textual hostname or an IP address
+     - hostname can be the textual hostname or an IP address. hostname is required
      - port is optional and defaults to 445 if not provided
+     - sharename is required
    ```
 
  - The url format for WebDAV is
@@ -26,8 +27,9 @@ To distinguish between FTP, SMB or WebDAV, the URL mush be prefix with **ftp://*
    http://hostname[:port]/url_path
    https://hostname[:port]/url_path
 
-     - hostname can be the textual hostname or an IP address
+     - hostname can be the textual hostname or an IP address. hostname is required
      - port is optional and defaults to 80(http) and 443(https) if not provided
+     - url_path is optional based on your WebDAV hosting requiremets
    ```
 
 Tested with following WebDAV server:
