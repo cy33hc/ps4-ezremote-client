@@ -791,6 +791,10 @@ namespace Actions
             }
             zipClose(zf, NULL);
         }
+        else
+        {
+            sprintf(status_message, "%s", lang_strings[STR_ERROR_CREATE_ZIP]);
+        }
         activity_inprogess = false;
         multi_selected_local_files.clear();
         Windows::SetModalMode(false);
