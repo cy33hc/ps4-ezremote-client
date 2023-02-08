@@ -162,7 +162,7 @@ namespace Windows
     {
         std::string zipfolder;
         std::string zipname;
-        if (strcmp(multi_selected_local_files.begin()->directory, "/") == 0)
+        if (strncmp(multi_selected_local_files.begin()->directory, "/data", 5) != 0)
         {
             zipfolder = "/data";
         }
@@ -170,11 +170,11 @@ namespace Windows
         {
             zipfolder = multi_selected_local_files.begin()->directory;
         }
+
         if (multi_selected_local_files.size() == 1)
         {
             zipname = multi_selected_local_files.begin()->name;
         }
-        
         else if (strcmp(multi_selected_local_files.begin()->directory, "/") == 0)
         {
             zipname = "new_zip";
