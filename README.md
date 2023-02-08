@@ -46,9 +46,9 @@ Remote Package Installation only works if the WebDAV server allow anonymous acce
 ## Features ##
  - Transfer files back and forth between PS4 and FTP/SMB/WebDAV server
  - Install Remote Packages from connected WebDAV server
- - Install packages from PS4 local drive
- - Install package from Direct Links. Direct links are links that can be reached without being redirected to a webpage where it requires capthas or timers. Example of direct links are github release artifacts. Google shared links is the only exception since I could indirectly parse the webpage to obtain the direct links.
- - Extract/Create Zip files
+ - Install packages from PS4 local drive **/data** folder or usb drive **/mnt/usbX**
+ - Install package from Direct Links. Direct links are links that can be reached without being redirected to a webpage where it requires capthas or timers. Example of direct links are github release artifacts. Google shared links is the only exception since I could indirectly parse the webpage to obtain the direct links
+ - Extract/Create Zip files on PS4 local drive or usb drive
 
 ## Installation
 Copy the **ezremote_client.pkg** in to a FAT32 format usb drive then install from package installer
