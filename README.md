@@ -1,7 +1,7 @@
 # ezRemote Client
 
 ezRemote Client is an application that allows you to connect the PS4 to remote FTP, SMB and WebDAV servers to transfer files. The interface is inspired by Filezilla client which provides a commander like GUI.
-
+![Preview](/screenshot.jpg)
 ## Usage
 To distinguish between FTP, SMB or WebDAV, the URL mush be prefix with **ftp://**, **smb://**, **http://** and **https://**
 
@@ -40,8 +40,6 @@ Tested with following WebDAV server:
 
 ## Remote Package Installer Feature
 Remote Package Installation only works if the WebDAV server allow anonymous access. It's a limitation of the PS4 Installer not able to access protected links.
-
-![Preview](/screenshot.jpg)
 
 ## Features ##
  - Transfer files back and forth between PS4 and FTP/SMB/WebDAV server
