@@ -86,6 +86,8 @@ namespace Actions
     void *KeepAliveThread(void *argp);
     void *ExtractZipThread(void *argp);
     void ExtractLocalZips();
+    void *MakeZipThread(void *argp);
+    void MakeLocalZip();
 }
 
 #endif

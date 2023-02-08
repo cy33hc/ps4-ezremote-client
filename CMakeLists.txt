@@ -35,6 +35,7 @@ add_executable(ezremote_client
   source/smbclient.cpp
   source/windows.cpp
   source/webdavclient.cpp
+  source/zip_util.cpp
   source/imgui_draw.cpp
   source/imgui_impl_sdl.cpp
   source/imgui_impl_sdlrenderer.cpp

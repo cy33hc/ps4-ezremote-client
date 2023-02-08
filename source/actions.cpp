@@ -18,6 +18,7 @@
 #include "ftpclient.h"
 #include "smbclient.h"
 #include "webdavclient.h"
+#include "zip_util.h"
 
 namespace Actions
 {
@@ -735,75 +736,15 @@ namespace Actions
         }
     }
 
-    int Extract(const DirEntry &file, const std::string &dir)
-    {
-        unz_global_info global_info;
-        unz_file_info file_info;
-        unzFile zipfile = unzOpen(file.path);
-        std::string dest_dir = std::string(dir);
-        if (dest_dir[dest_dir.length()-1] != '/')
-        {
-            dest_dir = dest_dir + "/";
-        }
-        if (zipfile == NULL)
-        {
-            return 0;
-        }
-        unzGetGlobalInfo(zipfile, &global_info);
-        unzGoToFirstFile(zipfile);
-        uint64_t curr_extracted_bytes = 0;
-        uint64_t curr_file_bytes = 0;
-        int num_files = global_info.number_entry;
-        char fname[512];
-        char ext_fname[512];
-        char read_buffer[32768];
-
-        for (int zip_idx = 0; zip_idx < num_files; ++zip_idx)
-        {
-            if (stop_activity)
-                break;
-            unzGetCurrentFileInfo(zipfile, &file_info, fname, 512, NULL, 0, NULL, 0);
-            sprintf(ext_fname, "%s%s", dest_dir.c_str(), fname); 
-            const size_t filename_length = strlen(ext_fname);
-            if (ext_fname[filename_length - 1] != '/')
-            {
-                snprintf(activity_message, 255, "%s %s: %s", lang_strings[STR_EXTRACTING], file.name, fname);
-                curr_file_bytes = 0;
-                unzOpenCurrentFile(zipfile);
-                FS::MkDirs(ext_fname, true);
-                FILE *f = fopen(ext_fname, "wb");
-                while (curr_file_bytes < file_info.uncompressed_size)
-                {
-                    int rbytes = unzReadCurrentFile(zipfile, read_buffer, 32768);
-                    if (rbytes > 0)
-                    {
-                        fwrite(read_buffer, 1, rbytes, f);
-                        curr_extracted_bytes += rbytes;
-                        curr_file_bytes += rbytes;
-                    }
-                }
-                fclose(f);
-                unzCloseCurrentFile(zipfile);
-            }
-            if ((zip_idx + 1) < num_files)
-            {
-                unzGoToNextFile(zipfile);
-            }
-        }
-        unzClose(zipfile);
-        return 1;
-    }
-
     void *ExtractZipThread(void *argp)
     {
-        file_transfering = true;
         for (std::set<DirEntry>::iterator it = multi_selected_local_files.begin(); it != multi_selected_local_files.end(); ++it)
         {
             if (stop_activity)
                 break;
             if (!it->isDir)
             {
-                int ret = Extract(*it, extract_zip_folder);
+                int ret = ZipUtil::Extract(*it, extract_zip_folder);
                 if (ret == 0)
                 {
                     sprintf(status_message, "%s %s", lang_strings[STR_FAILED_TO_EXTRACT], it->name);
@@ -822,6 +763,44 @@ namespace Actions
     {
         sprintf(status_message, "%s", "");
         int res = pthread_create(&bk_activity_thid, NULL, ExtractZipThread, NULL);
+        if (res != 0)
+        {
+            file_transfering = false;
+            activity_inprogess = false;
+            multi_selected_local_files.clear();
+            Windows::SetModalMode(false);
+        }
+    }
+
+    void *MakeZipThread(void *argp)
+    {
+        zipFile zf = zipOpen64(zip_file_path, APPEND_STATUS_CREATE);
+        if (zf != NULL)
+        {
+            for (std::set<DirEntry>::iterator it = multi_selected_local_files.begin(); it != multi_selected_local_files.end(); ++it)
+            {
+                if (stop_activity)
+                    break;
+                int res = ZipUtil::ZipAddPath(zf, it->path, strlen(it->directory)+1, Z_DEFAULT_COMPRESSION);
+                if (res <= 0)
+                {
+                    sprintf(status_message, "%s", lang_strings[STR_ERROR_CREATE_ZIP]);
+                    sceKernelUsleep(2000000);
+                }
+            }
+            zipClose(zf, NULL);
+        }
+        activity_inprogess = false;
+        multi_selected_local_files.clear();
+        Windows::SetModalMode(false);
+        selected_action = ACTION_REFRESH_LOCAL_FILES;
+        return NULL;
+    }
+
+    void MakeLocalZip()
+    {
+        sprintf(status_message, "%s", "");
+        int res = pthread_create(&bk_activity_thid, NULL, MakeZipThread, NULL);
         if (res != 0)
         {
             file_transfering = false;

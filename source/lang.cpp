@@ -101,7 +101,11 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Extract",														  // STR_EXTRACT
 	"Extracting",													  // STR_EXTRACTING
 	"Failed to extract",											  // STR_FAILED_TO_EXTRACT
-	"Extract Location"												  // STR_EXTRACT_LOCATION
+	"Extract Location",												  // STR_EXTRACT_LOCATION
+	"Compress",														  // STR_COMPRESS
+	"Zip Filename",													  // STR_ZIP_FILE_PATH
+	"Compressing",													  // STR_COMPRESSING
+	"Error occured while creating zip"								  // STR_ERROR_CREATE_ZIP
 };
 
 bool needs_extended_font = false;

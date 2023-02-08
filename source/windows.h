@@ -37,6 +37,7 @@ extern int overwrite_type;
 extern ACTIONS action_to_take;
 extern bool file_transfering;
 extern char extract_zip_folder[];
+extern char zip_file_path[];
 
 static ImVector<ImRect> s_GroupPanelLabelStack;
 
@@ -201,6 +202,7 @@ namespace Windows
     void AfterPackageUrlCallback(int ime_result);
     void AfterFavoriteUrlCallback(int ime_result);
     void AfterExtractFolderCallback(int ime_result);
+    void AfterZipFileCallback(int ime_result);
 }
 
 #endif

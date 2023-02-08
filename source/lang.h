@@ -95,7 +95,11 @@
 	FUNC(STR_EXTRACT)                    \
 	FUNC(STR_EXTRACTING)                 \
 	FUNC(STR_FAILED_TO_EXTRACT)          \
-	FUNC(STR_EXTRACT_LOCATION)
+	FUNC(STR_EXTRACT_LOCATION)           \
+	FUNC(STR_COMPRESS)                   \
+	FUNC(STR_ZIP_FILE_PATH)              \
+	FUNC(STR_COMPRESSING)                \
+	FUNC(STR_ERROR_CREATE_ZIP)
 
 #define GET_VALUE(x) x,
 #define GET_STRING(x) #x,
@@ -105,7 +109,7 @@ enum
 	FOREACH_STR(GET_VALUE)
 };
 
-#define LANG_STRINGS_NUM 92
+#define LANG_STRINGS_NUM 96
 #define LANG_ID_SIZE LANG_STRINGS_NUM
 #define LANG_STR_SIZE 256
 extern char lang_identifiers[LANG_STRINGS_NUM][LANG_ID_SIZE];
