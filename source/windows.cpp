@@ -1260,6 +1260,7 @@ namespace Windows
             Actions::DeleteSelectedRemotesFiles();
             break;
         case ACTION_UPLOAD:
+            sprintf(status_message, "%s", "");
             if (dont_prompt_overwrite || (!dont_prompt_overwrite && confirm_transfer_state == 1))
             {
                 activity_inprogess = true;
@@ -1270,6 +1271,7 @@ namespace Windows
             }
             break;
         case ACTION_DOWNLOAD:
+            sprintf(status_message, "%s", "");
             if (dont_prompt_overwrite || (!dont_prompt_overwrite && confirm_transfer_state == 1))
             {
                 activity_inprogess = true;
@@ -1280,6 +1282,7 @@ namespace Windows
             }
             break;
         case ACTION_EXTRACT_LOCAL_ZIP:
+            sprintf(status_message, "%s", "");
             activity_inprogess = true;
             stop_activity = false;
             file_transfering = true;
@@ -1287,6 +1290,7 @@ namespace Windows
             Actions::ExtractLocalZips();
             break;
         case ACTION_CREATE_LOCAL_ZIP:
+            sprintf(status_message, "%s", "");
             activity_inprogess = true;
             stop_activity = false;
             file_transfering = true;
@@ -1344,9 +1348,11 @@ namespace Windows
             selected_action = ACTION_NONE;
             break;
         case ACTION_CONNECT:
+            sprintf(status_message, "%s", "");
             Actions::Connect();
             break;
         case ACTION_DISCONNECT:
+            sprintf(status_message, "%s", "");
             Actions::Disconnect();
             break;
         case ACTION_DISCONNECT_AND_EXIT:
@@ -1354,6 +1360,7 @@ namespace Windows
             done = true;
             break;
         case ACTION_INSTALL_REMOTE_PKG:
+            sprintf(status_message, "%s", "");
             activity_inprogess = true;
             sprintf(activity_message, "%s", "");
             stop_activity = false;
@@ -1362,6 +1369,7 @@ namespace Windows
             break;
         case ACTION_INSTALL_LOCAL_PKG:
             activity_inprogess = true;
+            sprintf(status_message, "%s", "");
             sprintf(activity_message, "%s", "");
             stop_activity = false;
             Actions::InstallLocalPkgs();
@@ -1369,6 +1377,7 @@ namespace Windows
             break;
         case ACTION_INSTALL_URL_PKG:
             activity_inprogess = true;
+            sprintf(status_message, "%s", "");
             sprintf(activity_message, "%s", "");
             stop_activity = false;
             Actions::InstallUrlPkg();
