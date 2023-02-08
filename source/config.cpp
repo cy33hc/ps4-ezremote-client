@@ -60,14 +60,14 @@ namespace CONFIG
             RemoteSettings setting;
             sprintf(setting.site_name, "%s", sites[i].c_str());
 
-            sprintf(setting.server, "%s", ReadString(sites[i].c_str(), CONFIG_WEBDAV_SERVER_IP, ""));
-            WriteString(sites[i].c_str(), CONFIG_WEBDAV_SERVER_IP, setting.server);
+            sprintf(setting.server, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_URL, ""));
+            WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_URL, setting.server);
 
-            sprintf(setting.username, "%s", ReadString(sites[i].c_str(), CONFIG_WEBDAV_SERVER_USER, ""));
-            WriteString(sites[i].c_str(), CONFIG_WEBDAV_SERVER_USER, setting.username);
+            sprintf(setting.username, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_USER, ""));
+            WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_USER, setting.username);
 
-            sprintf(setting.password, "%s", ReadString(sites[i].c_str(), CONFIG_WEBDAV_SERVER_PASSWORD, ""));
-            WriteString(sites[i].c_str(), CONFIG_WEBDAV_SERVER_PASSWORD, setting.password);
+            sprintf(setting.password, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_PASSWORD, ""));
+            WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_PASSWORD, setting.password);
 
             site_settings.insert(std::make_pair(sites[i], setting));
         }
@@ -92,9 +92,9 @@ namespace CONFIG
     {
         OpenIniFile(CONFIG_INI_FILE);
 
-        WriteString(last_site, CONFIG_WEBDAV_SERVER_IP, remote_settings->server);
-        WriteString(last_site, CONFIG_WEBDAV_SERVER_USER, remote_settings->username);
-        WriteString(last_site, CONFIG_WEBDAV_SERVER_PASSWORD, remote_settings->password);
+        WriteString(last_site, CONFIG_REMOTE_SERVER_URL, remote_settings->server);
+        WriteString(last_site, CONFIG_REMOTE_SERVER_USER, remote_settings->username);
+        WriteString(last_site, CONFIG_REMOTE_SERVER_PASSWORD, remote_settings->password);
         WriteString(CONFIG_GLOBAL, CONFIG_LAST_SITE, last_site);
         WriteBool(CONFIG_GLOBAL, CONFIG_AUTO_DELETE_TMP_PKG, auto_delete_tmp_pkg);
         WriteIniFile(CONFIG_INI_FILE);

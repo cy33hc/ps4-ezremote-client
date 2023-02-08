@@ -1191,7 +1191,7 @@ namespace Windows
         (void)io;
         ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 
-        if (ImGui::Begin("WEBDAV Client", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar))
+        if (ImGui::Begin("Remote Client", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar))
         {
             ConnectionPanel();
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3);

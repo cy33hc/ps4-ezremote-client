@@ -8,20 +8,17 @@
 
 #include "remote_client.h"
 
-#define APP_ID "ps4-remote-client"
+#define APP_ID "ezremote-client"
 #define DATA_PATH "/data/" APP_ID
 #define CONFIG_INI_FILE DATA_PATH "/config.ini"
 #define COOKIE_FILE DATA_PATH "/cookies.txt"
 
 #define CONFIG_GLOBAL "Global"
 
-#define CONFIG_WEBDAV_SERVER_NAME "webdav_server_name"
-#define CONFIG_WEBDAV_SERVER_IP "webdav_server_ip"
-#define CONFIG_WEBDAV_SERVER_PORT "webdav_server_port"
-#define CONFIG_WEBDAV_SERVER_USER "webdav_server_user"
-#define CONFIG_WEBDAV_SERVER_PASSWORD "webdav_server_password"
-#define CONFIG_WEBDAV_SERVER_SHARE "webdav_server_share"
-#define CONFIG_WEBDAV_SERVER_HTTP_PORT "webdav_server_http_port"
+#define CONFIG_REMOTE_SERVER_NAME "remote_server_name"
+#define CONFIG_REMOTE_SERVER_URL "remote_server_url"
+#define CONFIG_REMOTE_SERVER_USER "remote_server_user"
+#define CONFIG_REMOTE_SERVER_PASSWORD "remote_server_password"
 
 #define CONFIG_FAVORITE_URLS "favorite_urls"
 #define MAX_FAVORITE_URLS 30
