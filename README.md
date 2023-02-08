@@ -34,7 +34,7 @@ Tested with following WebDAV server:
  - **(Recommeded)** [Dufs](https://github.com/sigoden/dufs) - For hosting your own WebDAV server. (Recommended since this allow anonymous access which is required for Remote Package Install)
  - [SFTPgo](https://github.com/drakkan/sftpgo) - For local hosted WebDAV server. Can also be used as a webdav frontend for Cloud Storage like AWS S3, Azure Blob or Google Storage.
  - box.com (Note: delete folder does not work. This is an issue with box.com and not the app)
- - mega.nz (via the megacmd tool)
+ - mega.nz (via the [megacmd tool](https://mega.io/cmd))
  - 4shared.com
  - drivehq.com
 
