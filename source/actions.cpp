@@ -738,6 +738,7 @@ namespace Actions
 
     void *ExtractZipThread(void *argp)
     {
+        FS::MkDirs(extract_zip_folder, true);
         for (std::set<DirEntry>::iterator it = multi_selected_local_files.begin(); it != multi_selected_local_files.end(); ++it)
         {
             if (stop_activity)
