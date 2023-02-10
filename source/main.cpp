@@ -97,6 +97,30 @@ void InitImgui()
 		0,
 	};
 
+	static const ImWchar icons[] {
+		0xF07B, 0xF07B, // folder
+		0xF65E, 0xF65E, // new folder
+		0xF15B, 0xF15B, // file
+		0xF021, 0xF021, // refresh
+		0xF0CA, 0xF0CA, // select all
+		0xF0C9, 0xF0C9, // unselect all
+		0x2700, 0x2700, // cut
+		0xF0C5, 0xF0C5, // copy
+		0xF0EA, 0xF0EA, // paste
+		0xF31C, 0xF31C, // edit
+		0xE0AC, 0xE0AC, // rename
+		0xE5A1, 0xE5A1, // delete
+		0xF002, 0xF002, // search
+		0x2699, 0x2699, // settings
+		0xF0ED, 0xF0ED, // download
+		0xF0EE, 0xF0EE, // upload
+		0xF56E, 0xF56E, // extract
+		0xF56F, 0xF56F, // compress
+		0xF0F6, 0xF0F6, // properties
+		0xF112, 0xF112, // cancel
+		0,
+	};
+
 	std::string lang = std::string(language);
 	int32_t lang_idx;
 	sceSystemServiceParamGetInt( ORBIS_SYSTEM_SERVICE_PARAM_ID_LANG, &lang_idx );
@@ -138,6 +162,13 @@ void InitImgui()
 	{
 		io.Fonts->AddFontFromFileTTF("/app0/assets/fonts/Roboto.ttf", 26.0f, NULL, ranges);
 	}
+	ImFontConfig config;
+	config.MergeMode = true;
+	config.GlyphMinAdvanceX = 13.0f; // Use if you want to make the icon monospaced
+	io.Fonts->AddFontFromFileTTF("/app0/assets/fonts/fa-solid-900.ttf", 20.0f, &config, icons);
+	io.Fonts->Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;
+	io.Fonts->Build();
+
 	Lang::SetTranslation(lang_idx);
 
 	auto &style = ImGui::GetStyle();

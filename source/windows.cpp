@@ -12,6 +12,7 @@
 #include "util.h"
 #include "lang.h"
 #include "ime_dialog.h"
+#include "IconsFontAwesome6.h"
 
 extern "C"
 {
@@ -60,6 +61,7 @@ bool select_url_inprogress = false;
 int favorite_url_idx = 0;
 char extract_zip_folder[256];
 char zip_file_path[384];
+char label[256];
 
 bool dont_prompt_overwrite = false;
 bool dont_prompt_overwrite_cb = false;
@@ -196,6 +198,27 @@ namespace Windows
                 return temp_path;
             i++;
         }
+    }
+
+    std::string getExtractFolder()
+    {
+        std::string zipfolder;
+        if (strncmp(multi_selected_local_files.begin()->directory, "/data", 5) != 0)
+        {
+            zipfolder = "/data";
+        }
+        else if (multi_selected_local_files.size() > 1)
+        {
+            zipfolder = "/data";
+        }
+        else
+        {
+            std::string filename = std::string(multi_selected_local_files.begin()->name);
+            size_t dot_pos = filename.find_last_of(".");
+            zipfolder = std::string(local_directory) + "/" + filename.substr(0, dot_pos);
+        }
+
+        return zipfolder;
     }
 
     void ConnectionPanel()
@@ -772,7 +795,7 @@ namespace Windows
                 if (ImGui::Selectable(lang_strings[STR_EXTRACT], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
                 {
                     ResetImeCallbacks();
-                    sprintf(extract_zip_folder, "%s", local_directory);
+                    sprintf(extract_zip_folder, "%s", getExtractFolder().c_str());
                     ime_single_field = extract_zip_folder;
                     ime_field_size = 255;
                     ime_callback = SingleValueImeCallback;

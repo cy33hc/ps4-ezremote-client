@@ -106,6 +106,7 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Zip Filename",													  // STR_ZIP_FILE_PATH
 	"Compressing",													  // STR_COMPRESSING
 	"Error occured while creating zip"								  // STR_ERROR_CREATE_ZIP
+	"Unsupported compressed file format"							  // STR_UNSUPPORTED_FILE_FORMAT
 };
 
 bool needs_extended_font = false;

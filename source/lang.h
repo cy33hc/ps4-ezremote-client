@@ -99,7 +99,8 @@
 	FUNC(STR_COMPRESS)                   \
 	FUNC(STR_ZIP_FILE_PATH)              \
 	FUNC(STR_COMPRESSING)                \
-	FUNC(STR_ERROR_CREATE_ZIP)
+	FUNC(STR_ERROR_CREATE_ZIP)           \
+	FUNC(STR_UNSUPPORTED_FILE_FORMAT)
 
 #define GET_VALUE(x) x,
 #define GET_STRING(x) #x,
@@ -109,7 +110,7 @@ enum
 	FOREACH_STR(GET_VALUE)
 };
 
-#define LANG_STRINGS_NUM 96
+#define LANG_STRINGS_NUM 97
 #define LANG_ID_SIZE LANG_STRINGS_NUM
 #define LANG_STR_SIZE 256
 extern char lang_identifiers[LANG_STRINGS_NUM][LANG_ID_SIZE];

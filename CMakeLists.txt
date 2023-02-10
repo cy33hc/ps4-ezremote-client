@@ -46,7 +46,7 @@ add_executable(ezremote_client
 
 add_self(ezremote_client)
 
-add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.00" 32 0)
+add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.01" 32 0)
 
 target_link_libraries(ezremote_client
   c
@@ -63,6 +63,8 @@ target_link_libraries(ezremote_client
   lexbor
   smb2
   minizip
+  un7zip
+  unrar
   kernel
   SceShellCoreUtil
   SceSysmodule

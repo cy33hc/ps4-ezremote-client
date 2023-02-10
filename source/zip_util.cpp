@@ -7,16 +7,26 @@
 #include <sys/stat.h>
 #include <minizip/unzip.h>
 #include <minizip/zip.h>
+#include <un7zip.h>
+#include <unrar.h>
 #include "common.h"
 #include "fs.h"
 #include "lang.h"
 #include "rtc.h"
 #include "windows.h"
+#include "zip_util.h"
 
 #define TRANSFER_SIZE (128 * 1024)
 
 namespace ZipUtil
 {
+    static char filename_extracted[256];
+
+    void callback_7zip(const char *fileName, unsigned long fileSize, unsigned fileNum, unsigned numFiles)
+    {
+        sprintf(activity_message, "%s %s: %s", lang_strings[STR_EXTRACTING], filename_extracted, fileName);
+    }
+
     void convertToZipTime(time_t time, tm_zip *tmzip)
     {
         OrbisDateTime gmt;
@@ -135,7 +145,7 @@ namespace ZipUtil
 
         // Open new file in zip
         std::string folder = path.substr(filename_start);
-        if (folder[folder.length()-1] != '/')
+        if (folder[folder.length() - 1] != '/')
             folder = folder + "/";
 
         res = zipOpenNewFileInZip3_64(zf, folder.c_str(), &zi,
@@ -170,7 +180,7 @@ namespace ZipUtil
                 if (dirent != NULL && strcmp(dirent->d_name, ".") != 0 && strcmp(dirent->d_name, "..") != 0)
                 {
                     int new_path_length = path.length() + strlen(dirent->d_name) + 2;
-                    char *new_path = (char*)malloc(new_path_length);
+                    char *new_path = (char *)malloc(new_path_length);
                     snprintf(new_path, new_path_length, "%s%s%s", path.c_str(), FS::hasEndSlash(path.c_str()) ? "" : "/", dirent->d_name);
 
                     int ret = 0;
@@ -206,7 +216,31 @@ namespace ZipUtil
         return 1;
     }
 
-    int Extract(const DirEntry &file, const std::string &dir)
+    CompressFileType getCompressFileType(const std::string &file)
+    {
+        char buf[8];
+
+        FILE *f = FS::OpenRead(file);
+        if (f == nullptr)
+            return COMPRESS_FILE_TYPE_UNKNOWN;
+
+        memset(buf, 0, 8);
+        int ret = FS::Read(f, buf, 8);
+        FS::Close(f);
+        if (ret < 0)
+            return COMPRESS_FILE_TYPE_UNKNOWN;
+
+        if (strncmp(buf, (const char *)MAGIC_7Z_1, 6) == 0)
+            return COMPRESS_FILE_TYPE_7Z;
+        else if (strncmp(buf, (const char *)MAGIC_RAR_1, 7) == 0 || strncmp(buf, (const char *)MAGIC_RAR_2, 8) == 0)
+            return COMPRESS_FILE_TYPE_RAR;
+        else if (strncmp(buf, (const char *)MAGIC_ZIP_1, 4) == 0 || strncmp(buf, (const char *)MAGIC_ZIP_2, 4) == 0 || strncmp(buf, (const char *)MAGIC_ZIP_3, 4) == 0)
+            return COMPRESS_FILE_TYPE_ZIP;
+
+        return COMPRESS_FILE_TYPE_UNKNOWN;
+    }
+
+    int ExtractZip(const DirEntry &file, const std::string &dir)
     {
         unz_global_info global_info;
         unz_file_info file_info;
@@ -265,6 +299,65 @@ namespace ZipUtil
             }
         }
         unzClose(zipfile);
+        return 1;
+    }
+
+    int Extract7Zip(const DirEntry &file, const std::string &dir)
+    {
+        FS::MkDirs(dir, true);
+        sprintf(filename_extracted, "%s", file.name);
+        int res = Extract7zFileEx(file.path, dir.c_str(), callback_7zip, DEFAULT_IN_BUF_SIZE);
+        return res == 0;
+    }
+
+    int ExtractRar(const DirEntry &file, const std::string &dir)
+    {
+        HANDLE hArcData; // Archive Handle
+        struct RAROpenArchiveDataEx rarOpenArchiveData;
+        struct RARHeaderDataEx rarHeaderData;
+        char destPath[256];
+
+        memset(&rarOpenArchiveData, 0, sizeof(rarOpenArchiveData));
+        memset(&rarHeaderData, 0, sizeof(rarHeaderData));
+
+        sprintf(destPath, "%s", dir.c_str());
+        rarOpenArchiveData.ArcName = (char *)file.path;
+        rarOpenArchiveData.CmtBuf = NULL;
+        rarOpenArchiveData.CmtBufSize = 0;
+        rarOpenArchiveData.OpenMode = RAR_OM_EXTRACT;
+        hArcData = RAROpenArchiveEx(&rarOpenArchiveData);
+
+        if (rarOpenArchiveData.OpenResult != ERAR_SUCCESS)
+        {
+            return 0;
+        }
+
+        while (RARReadHeaderEx(hArcData, &rarHeaderData) == ERAR_SUCCESS)
+        {
+            sprintf(activity_message, "%s %s: %s", lang_strings[STR_EXTRACTING], file.name, rarHeaderData.FileName);
+            if (RARProcessFile(hArcData, RAR_EXTRACT, destPath, NULL) != ERAR_SUCCESS)
+            {
+                RARCloseArchive(hArcData);
+                return 0;
+            }
+        }
+
+        RARCloseArchive(hArcData);
+        return 1;
+    }
+
+    int Extract(const DirEntry &file, const std::string &dir)
+    {
+        CompressFileType fileType = getCompressFileType(file.path);
+
+        if (fileType == COMPRESS_FILE_TYPE_ZIP)
+            return ExtractZip(file, dir);
+        else if (fileType == COMPRESS_FILE_TYPE_7Z)
+            return Extract7Zip(file, dir);
+        else if (fileType == COMPRESS_FILE_TYPE_RAR)
+            return ExtractRar(file, dir);
+        else
+            sprintf(status_message, "%s - %s", file.name, lang_strings[STR_UNSUPPORTED_FILE_FORMAT]);
         return 1;
     }
 }

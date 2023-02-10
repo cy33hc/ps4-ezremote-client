@@ -1029,8 +1029,6 @@ namespace Actions
             client->SetCallbackBytes(1);
             client->SetCallbackXferFunction(FtpCallback);
             remoteclient = client;
-
-            int res = pthread_create(&ftp_keep_alive_thid, NULL, KeepAliveThread, NULL);
         }
         else
         {
@@ -1042,6 +1040,11 @@ namespace Actions
         if (remoteclient->Connect(remote_settings->server, remote_settings->username, remote_settings->password))
         {
             RefreshRemoteFiles(false);
+
+            if (remoteclient->clientType() == CLIENT_TYPE_FTP)
+            {
+                int res = pthread_create(&ftp_keep_alive_thid, NULL, KeepAliveThread, NULL);
+            }
         }
         else
         {
