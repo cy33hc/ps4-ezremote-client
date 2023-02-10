@@ -242,6 +242,7 @@ namespace ZipUtil
 
     int ExtractZip(const DirEntry &file, const std::string &dir)
     {
+        file_transfering = true;
         unz_global_info global_info;
         unz_file_info file_info;
         unzFile zipfile = unzOpen(file.path);
@@ -304,6 +305,7 @@ namespace ZipUtil
 
     int Extract7Zip(const DirEntry &file, const std::string &dir)
     {
+        file_transfering = false;
         FS::MkDirs(dir, true);
         sprintf(filename_extracted, "%s", file.name);
         int res = Extract7zFileEx(file.path, dir.c_str(), callback_7zip, DEFAULT_IN_BUF_SIZE);
@@ -312,6 +314,7 @@ namespace ZipUtil
 
     int ExtractRar(const DirEntry &file, const std::string &dir)
     {
+        file_transfering = false;
         HANDLE hArcData; // Archive Handle
         struct RAROpenArchiveDataEx rarOpenArchiveData;
         struct RARHeaderDataEx rarHeaderData;
