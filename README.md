@@ -3,13 +3,13 @@
 ezRemote Client is an application that allows you to connect the PS4 to remote FTP, SMB and WebDAV servers to transfer files. The interface is inspired by Filezilla client which provides a commander like GUI.
 ![Preview](/screenshot.jpg)
 ## Usage
-To distinguish between FTP, SMB or WebDAV, the URL mush be prefix with **ftp://**, **smb://**, **http://** and **https://**
+To distinguish between FTP, SMB or WebDAV, the URL must be prefix with **ftp://**, **smb://**, **http://** and **https://**
 
  - The url format for FTP is
    ```
    ftp://hostname[:port]
 
-     - hostname can be the textual hostname or an IP address
+     - hostname can be the textual hostname or an IP address. hostname is required
      - port is optional and defaults to 21 if not provided
    ```
 
@@ -17,17 +17,19 @@ To distinguish between FTP, SMB or WebDAV, the URL mush be prefix with **ftp://*
    ```
    smb://hostname[:port]/sharename
 
-     - hostname can be the textual hostname or an IP address
+     - hostname can be the textual hostname or an IP address. hostname is required
      - port is optional and defaults to 445 if not provided
+     - sharename is required
    ```
 
  - The url format for WebDAV is
    ```
-   http://hostname[:port]/url_path
-   https://hostname[:port]/url_path
+   http://hostname[:port]/[url_path]
+   https://hostname[:port]/[url_path]
 
-     - hostname can be the textual hostname or an IP address
+     - hostname can be the textual hostname or an IP address. hostname is required
      - port is optional and defaults to 80(http) and 443(https) if not provided
+     - url_path is optional based on your WebDAV hosting requiremets
    ```
 
 Tested with following WebDAV server:
@@ -43,10 +45,10 @@ Remote Package Installation only works if the WebDAV server allow anonymous acce
 
 ## Features ##
  - Transfer files back and forth between PS4 and FTP/SMB/WebDAV server
- - Install packages from connected WebDAV server
- - Install packages from PS4 local drive
- - Install package from Direct Links. Direct links are links that can be reached without being redirected to a webpage where it requires capthas or timers. Example of direct links are github release artifacts. Google shared links is the only exception since I could indirectly parse the webpage to obtain the direct links.
- - Extract/Create Zip files
+ - Install Remote Packages from connected WebDAV server
+ - Install packages from PS4 local drive **/data** folder or usb drive **/mnt/usbX**
+ - Install package from Direct Links. Direct links are links that can be reached without being redirected to a webpage where it requires capthas or timers. Example of direct links are github release artifacts. Google shared links is the only exception since I could indirectly parse the webpage to obtain the direct links
+ - Extract/Create Zip files on PS4 local drive or usb drive
 
 ## Installation
 Copy the **ezremote_client.pkg** in to a FAT32 format usb drive then install from package installer
