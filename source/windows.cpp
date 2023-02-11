@@ -224,7 +224,7 @@ namespace Windows
         }
         else if (files.size() > 1)
         {
-            zipfolder = "/data";
+            zipfolder = files.begin()->directory;
         }
         else
         {
