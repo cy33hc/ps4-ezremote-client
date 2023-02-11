@@ -1592,6 +1592,7 @@ std::vector<DirEntry> FtpClient::ListDir(const std::string &path)
 	sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
 	entry.file_size = 0;
 	entry.isDir = true;
+	entry.selectable = false;
 	out.push_back(entry);
 
 	ftphandle *nData;
@@ -1608,6 +1609,7 @@ std::vector<DirEntry> FtpClient::ListDir(const std::string &path)
 		{
 			DirEntry entry;
 			memset(&entry, 0, sizeof(entry));
+			entry.selectable = true;
 			if (ParseDirEntry(buf, &entry) > 0)
 			{
 				sprintf(entry.directory, "%s", path.c_str());

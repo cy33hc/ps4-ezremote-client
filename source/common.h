@@ -28,6 +28,7 @@ struct DirEntry
     bool isDir;
     bool isLink;
     DateTime modified;
+    bool selectable;
 
     friend bool operator<(DirEntry const &a, DirEntry const &b)
     {

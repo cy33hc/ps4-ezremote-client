@@ -398,6 +398,7 @@ std::vector<DirEntry> SmbClient::ListDir(const std::string &path)
 	sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
 	entry.file_size = 0;
 	entry.isDir = true;
+	entry.selectable = false;
 	out.push_back(entry);
 
 	struct smb2dir *dir;
@@ -416,6 +417,7 @@ std::vector<DirEntry> SmbClient::ListDir(const std::string &path)
 		DirEntry entry;
 		memset(&entry, 0, sizeof(entry));
 
+		entry.selectable = true;
 		snprintf(entry.directory, 511, "%s", path.c_str());
 		snprintf(entry.name, 255, "%s", ent->name);
 		entry.file_size = ent->st.smb2_size;

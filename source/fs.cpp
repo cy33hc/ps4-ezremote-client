@@ -180,6 +180,7 @@ namespace FS
         sprintf(entry.path, "%s", path.c_str());
         entry.file_size = 0;
         entry.isDir = true;
+        entry.selectable = false;
         out.push_back(entry);
 
         DIR *fd = opendir(path.c_str());
@@ -209,6 +210,7 @@ namespace FS
 
                 snprintf(entry.directory, 512, "%s", path.c_str());
                 snprintf(entry.name, 256, "%s", dirent->d_name);
+                entry.selectable = true;
 
                 if (hasEndSlash(path.c_str()))
                 {

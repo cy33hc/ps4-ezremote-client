@@ -246,7 +246,13 @@ namespace Actions
 
     void *DeleteSelectedLocalFilesThread(void *argp)
     {
-        for (std::set<DirEntry>::iterator it = multi_selected_local_files.begin(); it != multi_selected_local_files.end(); ++it)
+        std::vector<DirEntry> files;
+        if (multi_selected_local_files.size() > 0)
+            std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(files));
+        else
+            files.push_back(selected_local_file);
+        
+        for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
         {
             FS::RmRecursive(it->path);
         }
@@ -271,7 +277,13 @@ namespace Actions
     {
         if (remoteclient->Ping())
         {
-            for (std::set<DirEntry>::iterator it = multi_selected_remote_files.begin(); it != multi_selected_remote_files.end(); ++it)
+            std::vector<DirEntry> files;
+            if (multi_selected_remote_files.size() > 0)
+                std::copy(multi_selected_remote_files.begin(), multi_selected_remote_files.end(), std::back_inserter(files));
+            else
+                files.push_back(selected_remote_file);
+
+            for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
             {
                 if (it->isDir)
                     remoteclient->Rmdir(it->path, true);
@@ -417,7 +429,13 @@ namespace Actions
     void *UploadFilesThread(void *argp)
     {
         file_transfering = true;
-        for (std::set<DirEntry>::iterator it = multi_selected_local_files.begin(); it != multi_selected_local_files.end(); ++it)
+        std::vector<DirEntry> files;
+        if (multi_selected_local_files.size()>0)
+            std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(files));
+        else
+            files.push_back(selected_local_file);
+
+        for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
         {
             if (it->isDir)
             {
@@ -432,7 +450,6 @@ namespace Actions
         }
         activity_inprogess = false;
         file_transfering = false;
-        multi_selected_local_files.clear();
         Windows::SetModalMode(false);
         selected_action = ACTION_REFRESH_REMOTE_FILES;
         return NULL;
@@ -560,7 +577,13 @@ namespace Actions
     void *DownloadFilesThread(void *argp)
     {
         file_transfering = true;
-        for (std::set<DirEntry>::iterator it = multi_selected_remote_files.begin(); it != multi_selected_remote_files.end(); ++it)
+        std::vector<DirEntry> files;
+        if (multi_selected_remote_files.size()>0)
+            std::copy(multi_selected_remote_files.begin(), multi_selected_remote_files.end(), std::back_inserter(files));
+        else
+            files.push_back(selected_remote_file);
+
+        for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
         {
             if (it->isDir)
             {
@@ -602,7 +625,13 @@ namespace Actions
         int skipped = 0;
 
         WebDAV::WebDavClient *client = (WebDAV::WebDavClient *)remoteclient;
-        for (std::set<DirEntry>::iterator it = multi_selected_remote_files.begin(); it != multi_selected_remote_files.end(); ++it)
+        std::vector<DirEntry> files;
+        if (multi_selected_remote_files.size()>0)
+            std::copy(multi_selected_remote_files.begin(), multi_selected_remote_files.end(), std::back_inserter(files));
+        else
+            files.push_back(selected_remote_file);
+
+        for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
         {
             if (stop_activity)
                 break;
@@ -667,7 +696,13 @@ namespace Actions
         int skipped = 0;
         int ret;
 
-        for (std::set<DirEntry>::iterator it = multi_selected_local_files.begin(); it != multi_selected_local_files.end(); ++it)
+        std::vector<DirEntry> files;
+        if (multi_selected_local_files.size()>0)
+            std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(files));
+        else
+            files.push_back(selected_local_file);
+
+        for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
         {
             if (stop_activity)
                 break;
@@ -739,7 +774,13 @@ namespace Actions
     void *ExtractZipThread(void *argp)
     {
         FS::MkDirs(extract_zip_folder, true);
-        for (std::set<DirEntry>::iterator it = multi_selected_local_files.begin(); it != multi_selected_local_files.end(); ++it)
+        std::vector<DirEntry> files;
+        if (multi_selected_local_files.size()>0)
+            std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(files));
+        else
+            files.push_back(selected_local_file);
+
+        for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
         {
             if (stop_activity)
                 break;
@@ -778,7 +819,13 @@ namespace Actions
         zipFile zf = zipOpen64(zip_file_path, APPEND_STATUS_CREATE);
         if (zf != NULL)
         {
-            for (std::set<DirEntry>::iterator it = multi_selected_local_files.begin(); it != multi_selected_local_files.end(); ++it)
+            std::vector<DirEntry> files;
+            if (multi_selected_local_files.size()>0)
+                std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(files));
+            else
+                files.push_back(selected_local_file);
+
+            for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
             {
                 if (stop_activity)
                     break;
@@ -786,7 +833,7 @@ namespace Actions
                 if (res <= 0)
                 {
                     sprintf(status_message, "%s", lang_strings[STR_ERROR_CREATE_ZIP]);
-                    sceKernelUsleep(2000000);
+                    sceKernelUsleep(1000000);
                 }
             }
             zipClose(zf, NULL);
@@ -1103,7 +1150,7 @@ namespace Actions
                 if (!client->Ping())
                 {
                     client->Quit();
-                    sprintf(status_message, lang_strings[STR_REMOTE_TERM_CONN_MSG]);
+                    sprintf(status_message, "%s", lang_strings[STR_REMOTE_TERM_CONN_MSG]);
                     return NULL;
                 }
             }

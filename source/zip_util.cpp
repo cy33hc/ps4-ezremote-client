@@ -294,6 +294,10 @@ namespace ZipUtil
                 fclose(f);
                 unzCloseCurrentFile(zipfile);
             }
+            else
+            {
+                FS::MkDirs(ext_fname, true);
+            }
             if ((zip_idx + 1) < num_files)
             {
                 unzGoToNextFile(zipfile);

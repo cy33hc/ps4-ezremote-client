@@ -164,26 +164,33 @@ namespace Windows
     {
         std::string zipfolder;
         std::string zipname;
-        if (strncmp(multi_selected_local_files.begin()->directory, "/data", 5) != 0)
+        std::vector<DirEntry> files;
+        if (multi_selected_local_files.size()>0)
+            std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(files));
+        else
+            files.push_back(selected_local_file);
+
+        if (strncmp(files.begin()->directory, "/data", 5) != 0 &&
+            strncmp(files.begin()->directory, "/mnt/usb", 8) != 0)
         {
             zipfolder = "/data";
         }
         else
         {
-            zipfolder = multi_selected_local_files.begin()->directory;
+            zipfolder = files.begin()->directory;
         }
 
-        if (multi_selected_local_files.size() == 1)
+        if (files.size() == 1)
         {
-            zipname = multi_selected_local_files.begin()->name;
+            zipname = files.begin()->name;
         }
-        else if (strcmp(multi_selected_local_files.begin()->directory, "/") == 0)
+        else if (strcmp(files.begin()->directory, "/") == 0)
         {
             zipname = "new_zip";
         }
         else
         {
-            zipname = std::string(multi_selected_local_files.begin()->directory);
+            zipname = std::string(files.begin()->directory);
             zipname = zipname.substr(zipname.find_last_of("/")+1);
         }
 
@@ -203,21 +210,28 @@ namespace Windows
     std::string getExtractFolder()
     {
         std::string zipfolder;
-        if (strncmp(multi_selected_local_files.begin()->directory, "/data", 5) != 0)
+        std::vector<DirEntry> files;
+
+        if (multi_selected_local_files.size() > 0)
+            std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(files));
+        else
+            files.push_back(selected_local_file);
+
+        if (strncmp(files.begin()->directory, "/data", 5) != 0 &&
+            strncmp(files.begin()->directory, "/mnt/usb", 8) != 0)
         {
             zipfolder = "/data";
         }
-        else if (multi_selected_local_files.size() > 1)
+        else if (files.size() > 1)
         {
             zipfolder = "/data";
         }
         else
         {
-            std::string filename = std::string(multi_selected_local_files.begin()->name);
+            std::string filename = std::string(files.begin()->name);
             size_t dot_pos = filename.find_last_of(".");
             zipfolder = std::string(local_directory) + "/" + filename.substr(0, dot_pos);
         }
-
         return zipfolder;
     }
 
@@ -616,6 +630,10 @@ namespace Windows
                     selected_action = ACTION_CHANGE_REMOTE_DIRECTORY;
                 }
             }
+            if (ImGui::IsItemFocused())
+            {
+                selected_remote_file = item;
+            }
             if (ImGui::IsItemHovered())
             {
                 if (ImGui::CalcTextSize(item.name).x > 740)
@@ -626,10 +644,6 @@ namespace Windows
                 }
             }
             ImGui::PopID();
-            if (ImGui::IsItemFocused())
-            {
-                selected_remote_file = item;
-            }
             if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
             {
                 if (strcmp(remote_file_to_select, item.name) == 0)
@@ -676,6 +690,19 @@ namespace Windows
         ImGui::PopTextWrapPos();
         ImGui::SameLine();
         EndGroupPanel();
+    }
+
+    int getSelectableFlag()
+    {
+        int flag = ImGuiSelectableFlags_Disabled;
+        bool local_browser_selected = saved_selected_browser & LOCAL_BROWSER;
+        bool remote_browser_selected = saved_selected_browser & REMOTE_BROWSER;
+        if ((local_browser_selected && selected_local_file.selectable) ||
+            (remote_browser_selected && selected_remote_file.selectable))
+        {
+                flag = ImGuiSelectableFlags_None;
+        }
+        return flag;
     }
 
     void ShowActionsDialog()
@@ -737,12 +764,9 @@ namespace Windows
             ImGui::PopID();
             ImGui::Separator();
 
-            flags = ImGuiSelectableFlags_Disabled;
-            if ((local_browser_selected && multi_selected_local_files.size() > 0) ||
-                (remote_browser_selected && multi_selected_remote_files.size() > 0 && remoteclient != nullptr))
-                flags = ImGuiSelectableFlags_None;
+
             ImGui::PushID("Delete##settings");
-            if (ImGui::Selectable(lang_strings[STR_DELETE], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+            if (ImGui::Selectable(lang_strings[STR_DELETE], false, getSelectableFlag() | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
             {
                 confirm_state = CONFIRM_WAIT;
                 sprintf(confirm_message, "%s", lang_strings[STR_DEL_CONFIRM_MSG]);
@@ -754,11 +778,11 @@ namespace Windows
             ImGui::PopID();
             ImGui::Separator();
 
-            flags = ImGuiSelectableFlags_Disabled;
-            if ((local_browser_selected && multi_selected_local_files.size() == 1) ||
-                (remote_browser_selected && multi_selected_remote_files.size() == 1 && remoteclient != nullptr))
-                flags = ImGuiSelectableFlags_None;
             ImGui::PushID("Rename##settings");
+            flags = getSelectableFlag();
+            if ((local_browser_selected && multi_selected_local_files.size()>1) ||
+                (remote_browser_selected && multi_selected_remote_files.size()>1))
+                flags = ImGuiSelectableFlags_Disabled;
             if (ImGui::Selectable(lang_strings[STR_RENAME], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
             {
                 if (local_browser_selected)
@@ -771,11 +795,8 @@ namespace Windows
             ImGui::PopID();
             ImGui::Separator();
 
-            flags = ImGuiSelectableFlags_Disabled;
-            if (local_browser_selected || (remote_browser_selected && remoteclient != nullptr))
-                flags = ImGuiSelectableFlags_None;
             ImGui::PushID("New Folder##settings");
-            if (ImGui::Selectable(lang_strings[STR_NEW_FOLDER], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+            if (ImGui::Selectable(lang_strings[STR_NEW_FOLDER], false, ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
             {
                 if (local_browser_selected)
                     selected_action = ACTION_NEW_LOCAL_FOLDER;
@@ -787,12 +808,10 @@ namespace Windows
             ImGui::PopID();
             ImGui::Separator();
 
-            flags = ImGuiSelectableFlags_Disabled;
             if (local_browser_selected)
             {
-                (multi_selected_local_files.size() > 0) ? flags = ImGuiSelectableFlags_None : flags = ImGuiSelectableFlags_Disabled;
                 ImGui::PushID("Extract##settings");
-                if (ImGui::Selectable(lang_strings[STR_EXTRACT], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+                if (ImGui::Selectable(lang_strings[STR_EXTRACT], false, getSelectableFlag() | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
                 {
                     ResetImeCallbacks();
                     sprintf(extract_zip_folder, "%s", getExtractFolder().c_str());
@@ -810,7 +829,7 @@ namespace Windows
                 ImGui::Separator();
 
                 ImGui::PushID("Compress##settings");
-                if (ImGui::Selectable(lang_strings[STR_COMPRESS], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+                if (ImGui::Selectable(lang_strings[STR_COMPRESS], false, getSelectableFlag() | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
                 {
                     std::string zipname;
                     std::string zipfolder;
@@ -831,7 +850,7 @@ namespace Windows
                 ImGui::Separator();
 
                 flags = ImGuiSelectableFlags_Disabled;
-                if (multi_selected_local_files.size() > 0 && remoteclient != nullptr)
+                if (remoteclient != nullptr && selected_local_file.selectable)
                 {
                     flags = ImGuiSelectableFlags_None;
                 }
@@ -848,9 +867,8 @@ namespace Windows
                 ImGui::PopID();
                 ImGui::Separator();
 
-                (multi_selected_local_files.size() > 0) ? flags = ImGuiSelectableFlags_None : flags = ImGuiSelectableFlags_Disabled;
                 ImGui::PushID("Install##local");
-                if (ImGui::Selectable(lang_strings[STR_INSTALL], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+                if (ImGui::Selectable(lang_strings[STR_INSTALL], false, getSelectableFlag() | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
                 {
                     SetModalMode(false);
                     selected_action = ACTION_INSTALL_LOCAL_PKG;
@@ -862,12 +880,8 @@ namespace Windows
 
             if (remote_browser_selected)
             {
-                if (multi_selected_remote_files.size() > 0 && remoteclient != nullptr)
-                {
-                    flags = ImGuiSelectableFlags_None;
-                }
                 ImGui::PushID("Download##settings");
-                if (ImGui::Selectable(lang_strings[STR_DOWNLOAD], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+                if (ImGui::Selectable(lang_strings[STR_DOWNLOAD], false, getSelectableFlag() | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
                 {
                     SetModalMode(false);
                     selected_action = ACTION_DOWNLOAD;
@@ -884,7 +898,7 @@ namespace Windows
                 {
                     flags = ImGuiSelectableFlags_Disabled;
                 }
-                if (ImGui::Selectable(lang_strings[STR_INSTALL], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+                if (ImGui::Selectable(lang_strings[STR_INSTALL], false, getSelectableFlag() | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
                 {
                     SetModalMode(false);
                     selected_action = ACTION_INSTALL_REMOTE_PKG;
@@ -903,11 +917,8 @@ namespace Windows
             ImGui::PopID();
             ImGui::Separator();
 
-            flags = ImGuiSelectableFlags_Disabled;
-            if (local_browser_selected || remote_browser_selected)
-                flags = ImGuiSelectableFlags_None;
             ImGui::PushID("Properties##settings");
-            if (ImGui::Selectable(lang_strings[STR_PROPERTIES], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+            if (ImGui::Selectable(lang_strings[STR_PROPERTIES], false, ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
             {
                 if (local_browser_selected)
                     selected_action = ACTION_SHOW_LOCAL_PROPERTIES;
@@ -917,7 +928,6 @@ namespace Windows
                 ImGui::CloseCurrentPopup();
             }
             ImGui::PopID();
-
             ImGui::Separator();
 
             ImGui::PushID("Cancel##settings");
@@ -1323,7 +1333,10 @@ namespace Windows
         case ACTION_RENAME_LOCAL:
             if (gui_mode != GUI_MODE_IME)
             {
-                sprintf(editor_text, "%s", multi_selected_local_files.begin()->name);
+                if (multi_selected_local_files.size()>0)
+                    sprintf(editor_text, "%s", multi_selected_local_files.begin()->name);
+                else
+                    sprintf(editor_text, "%s", selected_local_file.name);
                 ime_single_field = editor_text;
                 ResetImeCallbacks();
                 ime_field_size = 128;
@@ -1337,7 +1350,10 @@ namespace Windows
         case ACTION_RENAME_REMOTE:
             if (gui_mode != GUI_MODE_IME)
             {
-                sprintf(editor_text, "%s", multi_selected_remote_files.begin()->name);
+                if (multi_selected_remote_files.size()>0)
+                    sprintf(editor_text, "%s", multi_selected_remote_files.begin()->name);
+                else
+                    sprintf(editor_text, "%s", selected_remote_file.name);
                 ime_single_field = editor_text;
                 ResetImeCallbacks();
                 ime_field_size = 128;
@@ -1521,11 +1537,17 @@ namespace Windows
         }
         else if (selected_action == ACTION_RENAME_LOCAL)
         {
-            Actions::RenameLocalFolder(multi_selected_local_files.begin()->path, editor_text);
+            if (multi_selected_local_files.size()>0)
+                Actions::RenameLocalFolder(multi_selected_local_files.begin()->path, editor_text);
+            else
+                Actions::RenameLocalFolder(selected_local_file.path, editor_text);
         }
         else if (selected_action == ACTION_RENAME_REMOTE)
         {
-            Actions::RenameRemoteFolder(multi_selected_remote_files.begin()->path, editor_text);
+            if (multi_selected_remote_files.size()>0)
+                Actions::RenameRemoteFolder(multi_selected_remote_files.begin()->path, editor_text);
+            else
+                Actions::RenameRemoteFolder(selected_remote_file.path, editor_text);
         }
         selected_action = ACTION_NONE;
     }
