@@ -128,8 +128,7 @@ Download the PS4SDK Toolchain
    chmod guo+x /opt/pacbrew/ps4/openorbis/ps4vars.sh
 ```
 
-Build and install openssl
-openssl - https://github.com/cy33hc/ps4-openssl/blob/OpenSSL_1_1_1-ps4/README_PS4.md
+Build and install openssl - https://github.com/cy33hc/ps4-openssl/blob/OpenSSL_1_1_1-ps4/README_PS4.md
 
 Build and install libcurl
 ```
@@ -144,14 +143,15 @@ Build and install libcurl
 6. make -C lib install
 ```
 
-Build and install libsmb2
-libsmb2 - https://github.com/cy33hc/libsmb2/blob/ps4/README_PS4.md
+Build and install libsmb2 - https://github.com/cy33hc/libsmb2/blob/ps4/README_PS4.md
 
-Build and install lexbor
-lexbor - https://github.com/lexbor/lexbor.git
+Build and install lexbor - https://github.com/lexbor/lexbor.git
 
-Build libjbc
-libjbc - https://github.com/cy33hc/ps4-libjbc/blob/master/README_PS4.md
+Build libjbc - https://github.com/cy33hc/ps4-libjbc/blob/master/README_PS4.md
+
+Build libunrar - https://github.com/cy33hc/libunrar-ps3
+
+Build libun7zip - https://github.com/cy33hc/libun7zip
 
 Finally build the app
 ```
