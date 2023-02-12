@@ -28,6 +28,10 @@ namespace FS
 
     void Rename(const std::string &from, const std::string &to);
 
+    bool Copy(const std::string &from, const std::string &to);
+
+    bool Move(const std::string &from, const std::string &to);
+
     // creates file (if it exists, truncates size to 0)
     FILE *Create(const std::string &path);
 
@@ -51,8 +55,6 @@ namespace FS
 
     std::vector<std::string> ListFiles(const std::string &path);
     std::vector<DirEntry> ListDir(const std::string &path, int *err);
-
-    void Sort(std::vector<DirEntry> &list);
 
     int hasEndSlash(const char *path);
 

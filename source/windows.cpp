@@ -40,9 +40,12 @@ std::vector<DirEntry> local_files;
 std::vector<DirEntry> remote_files;
 std::set<DirEntry> multi_selected_local_files;
 std::set<DirEntry> multi_selected_remote_files;
+std::vector<DirEntry> local_paste_files;
+std::vector<DirEntry> remote_paste_files;
 DirEntry selected_local_file;
 DirEntry selected_remote_file;
 ACTIONS selected_action;
+ACTIONS paste_action;
 char status_message[1024];
 char local_file_to_select[256];
 char remote_file_to_select[256];
@@ -92,6 +95,8 @@ namespace Windows
         confirm_transfer_state = -1;
         dont_prompt_overwrite_cb = false;
         overwrite_type = OVERWRITE_PROMPT;
+        local_paste_files.clear();
+        remote_paste_files.clear();
 
         Actions::RefreshLocalFiles(false);
     }
@@ -678,7 +683,8 @@ namespace Windows
         ImVec2 pos = ImGui::GetCursorPos();
         ImGui::Dummy(ImVec2(1880, 30));
         ImGui::SetCursorPos(pos);
-        ImGui::PushTextWrapPos(1880);
+        ImGui::SetCursorPosX(pos.x + 10);
+        ImGui::PushTextWrapPos(1870);
         if (strncmp(status_message, "4", 1) == 0 || strncmp(status_message, "3", 1) == 0)
         {
             ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "%s", status_message);
@@ -729,13 +735,13 @@ namespace Windows
         bool remote_browser_selected = saved_selected_browser & REMOTE_BROWSER;
         if (local_browser_selected)
         {
-            ImGui::SetNextWindowPos(ImVec2(410, 350));
+            ImGui::SetNextWindowPos(ImVec2(410, 300));
         }
         else if (remote_browser_selected)
         {
-            ImGui::SetNextWindowPos(ImVec2(1330, 350));
+            ImGui::SetNextWindowPos(ImVec2(1330, 300));
         }
-        ImGui::SetNextWindowSizeConstraints(ImVec2(230, 150), ImVec2(230, 450), NULL, NULL);
+        ImGui::SetNextWindowSizeConstraints(ImVec2(230, 150), ImVec2(230, 550), NULL, NULL);
         if (ImGui::BeginPopupModal(lang_strings[STR_ACTIONS], NULL, ImGuiWindowFlags_AlwaysAutoResize))
         {
             ImGui::PushID("Select All##settings");
@@ -764,6 +770,42 @@ namespace Windows
             ImGui::PopID();
             ImGui::Separator();
 
+            ImGui::PushID("Cut##settings");
+            if (ImGui::Selectable(lang_strings[STR_CUT], false, getSelectableFlag() | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+            {
+                selected_action = local_browser_selected ? ACTION_LOCAL_CUT : ACTION_REMOTE_CUT;
+                SetModalMode(false);
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::PopID();
+            ImGui::Separator();
+
+            ImGui::PushID("Copy##settings");
+            if (ImGui::Selectable(lang_strings[STR_COPY], false, getSelectableFlag() | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+            {
+                selected_action = local_browser_selected ? ACTION_LOCAL_COPY : ACTION_REMOTE_COPY;
+                SetModalMode(false);
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::PopID();
+            ImGui::Separator();
+
+            ImGui::PushID("Paste##settings");
+            flags = ImGuiSelectableFlags_None;
+            if ((local_browser_selected && local_paste_files.size() == 0) ||
+                (remote_browser_selected && remote_paste_files.size() == 0))
+                flags = ImGuiSelectableFlags_Disabled;
+            if (ImGui::Selectable(lang_strings[STR_PASTE], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+            {
+                SetModalMode(false);
+                selected_action = ACTION_LOCAL_PASTE;
+                file_transfering = true;
+                confirm_transfer_state = 0;
+                dont_prompt_overwrite_cb = dont_prompt_overwrite;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::PopID();
+            ImGui::Separator();
 
             ImGui::PushID("Delete##settings");
             if (ImGui::Selectable(lang_strings[STR_DELETE], false, getSelectableFlag() | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
@@ -1421,6 +1463,47 @@ namespace Windows
             stop_activity = false;
             Actions::InstallUrlPkg();
             selected_action = ACTION_NONE;
+            break;
+        case ACTION_LOCAL_CUT:
+        case ACTION_LOCAL_COPY:
+            paste_action = selected_action;
+            local_paste_files.clear();
+            if (multi_selected_local_files.size()>0)
+                std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(local_paste_files));
+            else
+                local_paste_files.push_back(selected_local_file);
+            multi_selected_local_files.clear();
+            selected_action = ACTION_NONE;
+            break;
+        case ACTION_REMOTE_CUT:
+        case ACTION_REMOTE_COPY:
+            paste_action = selected_action;
+            remote_paste_files.clear();
+            if (multi_selected_remote_files.size()>0)
+                std::copy(multi_selected_remote_files.begin(), multi_selected_remote_files.end(), std::back_inserter(remote_paste_files));
+            else
+                remote_paste_files.push_back(selected_remote_file);
+            multi_selected_remote_files.clear();
+            selected_action = ACTION_NONE;
+            break;
+        case ACTION_LOCAL_PASTE:
+            sprintf(status_message, "%s", "");
+            sprintf(activity_message, "%s", "");
+            if (dont_prompt_overwrite || (!dont_prompt_overwrite && confirm_transfer_state == 1))
+            {
+                activity_inprogess = true;
+                stop_activity = false;
+                confirm_transfer_state = -1;
+                if (paste_action == ACTION_LOCAL_CUT)
+                    Actions::MoveLocalFiles();
+                else if (paste_action == ACTION_LOCAL_COPY)
+                    Actions::CopyLocalFiles();
+                else
+                {
+                    activity_inprogess = false;
+                }
+                selected_action = ACTION_NONE;
+            }
             break;
         default:
             break;

@@ -106,7 +106,16 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Zip Filename",													  // STR_ZIP_FILE_PATH
 	"Compressing",													  // STR_COMPRESSING
 	"Error occured while creating zip"								  // STR_ERROR_CREATE_ZIP
-	"Unsupported compressed file format"							  // STR_UNSUPPORTED_FILE_FORMAT
+	"Unsupported compressed file format",							  // STR_UNSUPPORTED_FILE_FORMAT
+	"Cut",															  // STR_CUT
+	"Copy",															  // STR_COPY
+	"Paste",														  // STR_PASTE
+	"Moving",														  // STR_MOVING
+	"Copying",														  // STR_COPYING
+	"Failed to move file",											  // STR_FAIL_MOVE_MSG
+	"Failed to copy file",											  // STR_FAIL_MOVE_MSG
+	"Cannot move parent directory to sub subdirectory",				  // STR_CANT_MOVE_TO_SUBDIR_MSG
+	"Cannot copy parent directory to sub subdirectory",				  // STR_CANT_COPY_TO_SUBDIR_MSG
 };
 
 bool needs_extended_font = false;

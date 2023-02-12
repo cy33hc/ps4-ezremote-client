@@ -42,7 +42,10 @@ enum ACTIONS
     ACTION_CREATE_LOCAL_ZIP,
     ACTION_LOCAL_CUT,
     ACTION_LOCAL_COPY,
-    ACTION_LOCAL_PASTE
+    ACTION_LOCAL_PASTE,
+    ACTION_REMOTE_CUT,
+    ACTION_REMOTE_COPY,
+    ACTION_REMOTE_PASTE
 };
 
 enum OverWriteType
@@ -91,6 +94,10 @@ namespace Actions
     void ExtractLocalZips();
     void *MakeZipThread(void *argp);
     void MakeLocalZip();
+    void *MoveLocalFilesThread(void *argp);
+    void MoveLocalFiles();
+    void *CopyLocalFilesThread(void *argp);
+    void CopyLocalFiles();
 }
 
 #endif

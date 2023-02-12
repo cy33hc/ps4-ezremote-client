@@ -7,11 +7,13 @@
 #include <filesystem>
 #include <stdio.h>
 #include <unistd.h>
+#include <vector>
 
 #include "util.h"
 #include "lang.h"
 #include "rtc.h"
 #include "windows.h"
+#include "dbglogger.h"
 
 namespace FS
 {
@@ -176,7 +178,7 @@ namespace FS
         memset(&entry, 0, sizeof(DirEntry));
         sprintf(entry.directory, "%s", path.c_str());
         sprintf(entry.name, "..");
-        sprintf(entry.display_size, "%s",lang_strings[STR_FOLDER]);
+        sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
         sprintf(entry.path, "%s", path.c_str());
         entry.file_size = 0;
         entry.isDir = true;
@@ -248,7 +250,7 @@ namespace FS
                 {
                     entry.isDir = true;
                     entry.file_size = 0;
-                    sprintf(entry.display_size, "%s",lang_strings[STR_FOLDER]);
+                    sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
                 }
                 else
                 {
@@ -322,7 +324,7 @@ namespace FS
     {
         if (stop_activity)
             return 1;
-        
+
         DIR *dfd = opendir(path.c_str());
         if (dfd != NULL)
         {
@@ -388,32 +390,6 @@ namespace FS
         return 1;
     }
 
-    int DirEntryComparator(const void *v1, const void *v2)
-    {
-        const DirEntry *p1 = (DirEntry *)v1;
-        const DirEntry *p2 = (DirEntry *)v2;
-        if (strcasecmp(p1->name, "..") == 0)
-            return -1;
-        if (strcasecmp(p2->name, "..") == 0)
-            return 1;
-
-        if (p1->isDir && !p2->isDir)
-        {
-            return -1;
-        }
-        else if (!p1->isDir && p2->isDir)
-        {
-            return 1;
-        }
-
-        return strcasecmp(p1->name, p2->name);
-    }
-
-    void Sort(std::vector<DirEntry> &list)
-    {
-        qsort(&list[0], list.size(), sizeof(DirEntry), DirEntryComparator);
-    }
-
     std::string GetPath(const std::string &ppath1, const std::string &ppath2)
     {
         std::string path1 = ppath1;
@@ -422,9 +398,11 @@ namespace FS
         return path1 + "/" + path2;
     }
 
-    int Head(const std::string &path, void* buffer, uint16_t len)
+    int Head(const std::string &path, void *buffer, uint16_t len)
     {
         FILE *file = OpenRead(path);
+        if (file == nullptr)
+            return 0;
         int ret = Read(file, buffer, len);
         if (ret != len)
         {
@@ -433,5 +411,75 @@ namespace FS
         }
         Close(file);
         return 1;
+    }
+
+    bool Copy(const std::string &from, const std::string &to)
+    {
+        dbglogger_log("start copy");
+        MkDirs(to, true);
+        FILE *src = fopen(from.c_str(), "rb");
+        if (!src)
+        {
+            return false;
+        }
+
+        struct stat file_stat = {0};
+        if (stat(from.c_str(), &file_stat) != 0)
+        {
+            return false;
+        }
+
+        bytes_to_download = file_stat.st_size;
+
+        FILE *dest = fopen(to.c_str(), "wb");
+        if (!dest)
+        {
+            fclose(src);
+            return false;
+        }
+
+        size_t bytes_read = 0, bytes_transfered = 0;
+        const size_t buf_size = 0x10000;
+        unsigned char *buf = new unsigned char[buf_size];
+
+        do
+        {
+            bytes_read = fread(buf, sizeof(unsigned char), buf_size, src);
+            if (bytes_read < 0)
+            {
+                delete[] buf;
+                fclose(src);
+                fclose(dest);
+                return false;
+            }
+
+            size_t bytes_written = fwrite(buf, sizeof(unsigned char), bytes_read, dest);
+            if (bytes_written != bytes_read)
+            {
+                delete[] buf;
+                fclose(src);
+                fclose(dest);
+                return false;
+            }
+
+            bytes_transfered += bytes_read;
+        } while (bytes_transfered < bytes_to_download);
+
+        delete[] buf;
+        fclose(src);
+        fclose(dest);
+        dbglogger_log("end copy");
+        return true;
+    }
+
+    bool Move(const std::string &from, const std::string &to)
+    {
+        bool res = Copy(from, to);
+        if (res)
+            Rm(from);
+        else
+            return res;
+
+        return true;
     }
 }

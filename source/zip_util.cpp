@@ -220,14 +220,9 @@ namespace ZipUtil
     {
         char buf[8];
 
-        FILE *f = FS::OpenRead(file);
-        if (f == nullptr)
-            return COMPRESS_FILE_TYPE_UNKNOWN;
-
         memset(buf, 0, 8);
-        int ret = FS::Read(f, buf, 8);
-        FS::Close(f);
-        if (ret < 0)
+        int ret = FS::Head(file, buf, 8);
+        if (ret == 0)
             return COMPRESS_FILE_TYPE_UNKNOWN;
 
         if (strncmp(buf, (const char *)MAGIC_7Z_1, 6) == 0)

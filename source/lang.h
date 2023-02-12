@@ -100,7 +100,16 @@
 	FUNC(STR_ZIP_FILE_PATH)              \
 	FUNC(STR_COMPRESSING)                \
 	FUNC(STR_ERROR_CREATE_ZIP)           \
-	FUNC(STR_UNSUPPORTED_FILE_FORMAT)
+	FUNC(STR_UNSUPPORTED_FILE_FORMAT)    \
+	FUNC(STR_CUT)                        \
+	FUNC(STR_COPY)                       \
+	FUNC(STR_PASTE)                      \
+	FUNC(STR_MOVING)                     \
+	FUNC(STR_COPYING)                    \
+	FUNC(STR_FAIL_MOVE_MSG)              \
+	FUNC(STR_FAIL_COPY_MSG)              \
+	FUNC(STR_CANT_MOVE_TO_SUBDIR_MSG)    \
+	FUNC(STR_CANT_COPY_TO_SUBDIR_MSG)
 
 #define GET_VALUE(x) x,
 #define GET_STRING(x) #x,
@@ -110,7 +119,7 @@ enum
 	FOREACH_STR(GET_VALUE)
 };
 
-#define LANG_STRINGS_NUM 97
+#define LANG_STRINGS_NUM 106
 #define LANG_ID_SIZE LANG_STRINGS_NUM
 #define LANG_STR_SIZE 256
 extern char lang_identifiers[LANG_STRINGS_NUM][LANG_ID_SIZE];
