@@ -19,7 +19,6 @@
 #include "smbclient.h"
 #include "webdavclient.h"
 #include "zip_util.h"
-#include "dbglogger.h"
 
 namespace Actions
 {
@@ -1160,7 +1159,7 @@ namespace Actions
         return NULL;
     }
 
-    int CopyOrMoveFile(const char *src, const char *dest, bool isCopy)
+    int CopyOrMoveLocalFile(const char *src, const char *dest, bool isCopy)
     {
         int ret;
         if (overwrite_type == OVERWRITE_PROMPT && FS::FileExists(dest))
@@ -1234,7 +1233,7 @@ namespace Actions
                     snprintf(activity_message, 1024, "%s %s", isCopy ? lang_strings[STR_COPYING] : lang_strings[STR_MOVING], entries[i].path);
                     bytes_to_download = entries[i].file_size;
                     bytes_transfered = 0;
-                    ret = CopyOrMoveFile(entries[i].path, new_path, isCopy);
+                    ret = CopyOrMoveLocalFile(entries[i].path, new_path, isCopy);
                     if (ret <= 0)
                     {
                         sprintf(status_message, "%s %s", isCopy ? lang_strings[STR_FAIL_COPY_MSG] : lang_strings[STR_FAIL_MOVE_MSG], entries[i].path);
@@ -1254,7 +1253,7 @@ namespace Actions
             snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", src.name);
             snprintf(activity_message, 1024, "%s %s", isCopy ? lang_strings[STR_COPYING] : lang_strings[STR_MOVING], src.name);
             bytes_to_download = src.file_size;
-            ret = CopyOrMoveFile(src.path, new_path, isCopy);
+            ret = CopyOrMoveLocalFile(src.path, new_path, isCopy);
             if (ret <= 0)
             {
                 free(new_path);
@@ -1358,6 +1357,202 @@ namespace Actions
             file_transfering = false;
             activity_inprogess = false;
             local_paste_files.clear();
+            Windows::SetModalMode(false);
+        }
+    }
+
+    int CopyOrMoveRemoteFile(const std::string &src, const std::string &dest, bool isCopy)
+    {
+        int ret;
+        if (overwrite_type == OVERWRITE_PROMPT && remoteclient->FileExists(dest))
+        {
+            sprintf(confirm_message, "%s %s?", lang_strings[STR_OVERWRITE], dest.c_str());
+            confirm_state = CONFIRM_WAIT;
+            action_to_take = selected_action;
+            activity_inprogess = false;
+            while (confirm_state == CONFIRM_WAIT)
+            {
+                sceKernelUsleep(100000);
+            }
+            activity_inprogess = true;
+            selected_action = action_to_take;
+        }
+        else if (overwrite_type == OVERWRITE_NONE && remoteclient->FileExists(dest))
+        {
+            confirm_state = CONFIRM_NO;
+        }
+        else
+        {
+            confirm_state = CONFIRM_YES;
+        }
+
+        if (confirm_state == CONFIRM_YES)
+        {
+            if (isCopy)
+                return remoteclient->Copy(src, dest);
+            else
+                return remoteclient->Move(src, dest);
+        }
+
+        return 1;
+    }
+
+    void *MoveRemoteFilesThread(void *argp)
+    {
+        file_transfering = true;
+        for (std::vector<DirEntry>::iterator it = remote_paste_files.begin(); it != remote_paste_files.end(); ++it)
+        {
+            if (stop_activity)
+                break;
+
+            if (strcmp(it->directory, remote_directory) == 0)
+                continue;
+
+            char new_path[1024];
+            sprintf(new_path, "%s%s%s", remote_directory, FS::hasEndSlash(remote_directory) ? "" : "/", it->name);
+            if (it->isDir)
+            {
+                if (strncmp(remote_directory, it->path, strlen(it->path)) == 0)
+                {
+                    sprintf(status_message, "%s", lang_strings[STR_CANT_MOVE_TO_SUBDIR_MSG]);
+                    continue;
+                }
+            }
+            
+            int res = CopyOrMoveRemoteFile(it->path, new_path, false);
+            if (res == 0)
+                sprintf(status_message, "%s - %s", it->name, lang_strings[STR_FAIL_COPY_MSG]);
+        }
+        activity_inprogess = false;
+        file_transfering = false;
+        remote_paste_files.clear();
+        Windows::SetModalMode(false);
+        selected_action = ACTION_REFRESH_REMOTE_FILES;
+        return NULL;
+    }
+
+    void MoveRemoteFiles()
+    {
+        sprintf(status_message, "%s", "");
+        int res = pthread_create(&bk_activity_thid, NULL, MoveRemoteFilesThread, NULL);
+        if (res != 0)
+        {
+            file_transfering = false;
+            activity_inprogess = false;
+            remote_paste_files.clear();
+            Windows::SetModalMode(false);
+        }
+    }
+
+    int CopyRemotePath(const DirEntry &src, const char *dest)
+    {
+        if (stop_activity)
+            return 1;
+
+        int ret;
+        if (src.isDir)
+        {
+            int err;
+            std::vector<DirEntry> entries = remoteclient->ListDir(src.path);
+            remoteclient->Mkdir(dest);
+            for (int i = 0; i < entries.size(); i++)
+            {
+                if (stop_activity)
+                    return 1;
+
+                int path_length = strlen(dest) + strlen(entries[i].name) + 2;
+                char *new_path = (char *)malloc(path_length);
+                snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", entries[i].name);
+
+                if (entries[i].isDir)
+                {
+                    if (strcmp(entries[i].name, "..") == 0)
+                        continue;
+
+                    FS::MkDirs(new_path, true);
+                    ret = CopyRemotePath(entries[i], new_path);
+                    if (ret <= 0)
+                    {
+                        free(new_path);
+                        return ret;
+                    }
+                }
+                else
+                {
+                    snprintf(activity_message, 1024, "%s %s", lang_strings[STR_COPYING], entries[i].path);
+                    bytes_to_download = entries[i].file_size;
+                    bytes_transfered = 0;
+                    ret = CopyOrMoveRemoteFile(entries[i].path, new_path, true);
+                    if (ret <= 0)
+                    {
+                        sprintf(status_message, "%s %s", lang_strings[STR_FAIL_COPY_MSG], entries[i].path);
+                        free(new_path);
+                        return ret;
+                    }
+                }
+                free(new_path);
+            }
+        }
+        else
+        {
+            int path_length = strlen(dest) + strlen(src.name) + 2;
+            char *new_path = (char *)malloc(path_length);
+            snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", src.name);
+            snprintf(activity_message, 1024, "%s %s", lang_strings[STR_COPYING], src.name);
+            ret = CopyOrMoveRemoteFile(src.path, new_path, true);
+            if (ret <= 0)
+            {
+                free(new_path);
+                sprintf(status_message, "%s %s", lang_strings[STR_FAIL_COPY_MSG], src.name);
+                return 0;
+            }
+            free(new_path);
+        }
+        return 1;
+    }
+
+    void *CopyRemoteFilesThread(void *argp)
+    {
+        file_transfering = false;
+        for (std::vector<DirEntry>::iterator it = remote_paste_files.begin(); it != remote_paste_files.end(); ++it)
+        {
+            if (stop_activity)
+                break;
+
+            if (strcmp(it->directory, remote_directory) == 0)
+                continue;
+
+            char new_path[1024];
+            sprintf(new_path, "%s%s%s", remote_directory, FS::hasEndSlash(remote_directory) ? "" : "/", it->name);
+            if (it->isDir)
+            {
+                if (strncmp(remote_directory, it->path, strlen(it->path)) == 0)
+                {
+                    sprintf(status_message, "%s", lang_strings[STR_CANT_COPY_TO_SUBDIR_MSG]);
+                    continue;
+                }
+            }
+            int res = CopyRemotePath(*it, new_path);
+            if (res == 0)
+                sprintf(status_message, "%s - %s", it->name, lang_strings[STR_FAIL_COPY_MSG]);
+        }
+        activity_inprogess = false;
+        file_transfering = false;
+        remote_paste_files.clear();
+        Windows::SetModalMode(false);
+        selected_action = ACTION_REFRESH_REMOTE_FILES;
+        return NULL;
+    }
+
+    void CopyRemoteFiles()
+    {
+        sprintf(status_message, "%s", "");
+        int res = pthread_create(&bk_activity_thid, NULL, CopyRemoteFilesThread, NULL);
+        if (res != 0)
+        {
+            file_transfering = false;
+            activity_inprogess = false;
+            remote_paste_files.clear();
             Windows::SetModalMode(false);
         }
     }

@@ -13,7 +13,6 @@
 #include "lang.h"
 #include "rtc.h"
 #include "windows.h"
-#include "dbglogger.h"
 
 namespace FS
 {
@@ -415,7 +414,6 @@ namespace FS
 
     bool Copy(const std::string &from, const std::string &to)
     {
-        dbglogger_log("start copy");
         MkDirs(to, true);
         FILE *src = fopen(from.c_str(), "rb");
         if (!src)
@@ -468,7 +466,6 @@ namespace FS
         delete[] buf;
         fclose(src);
         fclose(dest);
-        dbglogger_log("end copy");
         return true;
     }
 

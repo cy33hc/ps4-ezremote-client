@@ -829,12 +829,12 @@ bool
     auto source_resource_urn = root_urn + remote_source_resource;
     auto destination_resource_urn = root_urn + remote_destination_resource;
 
+    Request request(this->options());
     Header header =
         {
             "Accept: */*",
-            "Destination: " + destination_resource_urn.path()};
+            "Destination: " + destination_resource_urn.quote(request.handle)};
 
-    Request request(this->options());
 
     auto url = this->webdav_hostname + source_resource_urn.quote(request.handle);
 
@@ -862,12 +862,11 @@ bool
     auto source_resource_urn = root_urn + remote_source_resource;
     auto destination_resource_urn = root_urn + remote_destination_resource;
 
+    Request request(this->options());
     Header header =
         {
             "Accept: */*",
-            "Destination: " + destination_resource_urn.path()};
-
-    Request request(this->options());
+            "Destination: " + destination_resource_urn.quote(request.handle)};
 
     auto url = this->webdav_hostname + source_resource_urn.quote(request.handle);
 

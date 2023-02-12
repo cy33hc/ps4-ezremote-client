@@ -228,6 +228,20 @@ namespace WebDAV
 		return ret;
 	}
 
+	int WebDavClient::Copy(const std::string &from, const std::string &to)
+	{
+		bool ret = client->copy(from, to);
+		sprintf(response, "Http Code %ld", client->status_code());
+		return ret;
+	}
+
+	int WebDavClient::Move(const std::string &from, const std::string &to)
+	{
+		bool ret = client->move(from, to);
+		sprintf(response, "Http Code %ld", client->status_code());
+		return ret;
+	}
+
 	int WebDavClient::Size(const std::string &ppath, int64_t *size)
 	{
 		WebDAV::dict_t file_info = client->info(ppath);

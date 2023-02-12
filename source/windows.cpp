@@ -771,7 +771,12 @@ namespace Windows
             ImGui::Separator();
 
             ImGui::PushID("Cut##settings");
-            if (ImGui::Selectable(lang_strings[STR_CUT], false, getSelectableFlag() | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+            flags = ImGuiSelectableFlags_Disabled;
+            if ((local_browser_selected && selected_local_file.selectable) ||
+                (remote_browser_selected && selected_remote_file.selectable &&
+                 remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_WEBDAV))
+                flags = ImGuiSelectableFlags_None;
+            if (ImGui::Selectable(lang_strings[STR_CUT], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
             {
                 selected_action = local_browser_selected ? ACTION_LOCAL_CUT : ACTION_REMOTE_CUT;
                 SetModalMode(false);
@@ -781,7 +786,12 @@ namespace Windows
             ImGui::Separator();
 
             ImGui::PushID("Copy##settings");
-            if (ImGui::Selectable(lang_strings[STR_COPY], false, getSelectableFlag() | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+            flags = ImGuiSelectableFlags_Disabled;
+            if ((local_browser_selected && selected_local_file.selectable) ||
+                (remote_browser_selected && selected_remote_file.selectable &&
+                 remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_WEBDAV))
+                flags = ImGuiSelectableFlags_None;
+            if (ImGui::Selectable(lang_strings[STR_COPY], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
             {
                 selected_action = local_browser_selected ? ACTION_LOCAL_COPY : ACTION_REMOTE_COPY;
                 SetModalMode(false);
@@ -791,14 +801,15 @@ namespace Windows
             ImGui::Separator();
 
             ImGui::PushID("Paste##settings");
-            flags = ImGuiSelectableFlags_None;
-            if ((local_browser_selected && local_paste_files.size() == 0) ||
-                (remote_browser_selected && remote_paste_files.size() == 0))
-                flags = ImGuiSelectableFlags_Disabled;
+            flags = ImGuiSelectableFlags_Disabled;
+            if ((local_browser_selected && local_paste_files.size() > 0) ||
+                (remote_browser_selected && remote_paste_files.size() > 0 &&
+                 remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_WEBDAV))
+                flags = ImGuiSelectableFlags_None;
             if (ImGui::Selectable(lang_strings[STR_PASTE], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
             {
                 SetModalMode(false);
-                selected_action = ACTION_LOCAL_PASTE;
+                selected_action = local_browser_selected ? ACTION_LOCAL_PASTE : ACTION_REMOTE_PASTE;
                 file_transfering = true;
                 confirm_transfer_state = 0;
                 dont_prompt_overwrite_cb = dont_prompt_overwrite;
@@ -1498,6 +1509,25 @@ namespace Windows
                     Actions::MoveLocalFiles();
                 else if (paste_action == ACTION_LOCAL_COPY)
                     Actions::CopyLocalFiles();
+                else
+                {
+                    activity_inprogess = false;
+                }
+                selected_action = ACTION_NONE;
+            }
+            break;
+        case ACTION_REMOTE_PASTE:
+            sprintf(status_message, "%s", "");
+            sprintf(activity_message, "%s", "");
+            if (dont_prompt_overwrite || (!dont_prompt_overwrite && confirm_transfer_state == 1))
+            {
+                activity_inprogess = true;
+                stop_activity = false;
+                confirm_transfer_state = -1;
+                if (paste_action == ACTION_REMOTE_CUT)
+                    Actions::MoveRemoteFiles();
+                else if (paste_action == ACTION_REMOTE_COPY)
+                    Actions::CopyRemoteFiles();
                 else
                 {
                     activity_inprogess = false;

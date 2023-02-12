@@ -23,6 +23,8 @@ public:
     virtual int Put(const std::string &inputfile, const std::string &path, uint64_t offset=0) = 0;
     virtual int Rename(const std::string &src, const std::string &dst) = 0;
     virtual int Delete(const std::string &path) = 0;
+    virtual int Copy(const std::string &from, const std::string &to) = 0;
+    virtual int Move(const std::string &from, const std::string &to) = 0;
     virtual bool FileExists(const std::string &path) = 0;
     virtual std::vector<DirEntry> ListDir(const std::string &path) = 0;
     virtual std::string GetPath(std::string path1, std::string path2) = 0;

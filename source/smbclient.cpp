@@ -228,7 +228,19 @@ int SmbClient::Get(const std::string &outputfile, const std::string &ppath, uint
 	return 1;
 }
 
-int SmbClient::Copy(const std::string &ppath, int socket_fd)
+int SmbClient::Copy(const std::string &ffrom, const std::string &tto)
+{
+	sprintf(response, lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+	return 0;
+}
+
+int SmbClient::Move(const std::string &ffrom, const std::string &tto)
+{
+	sprintf(response, lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+	return 0;
+}
+
+int SmbClient::CopyToSocket(const std::string &ppath, int socket_fd)
 {
 	std::string path = std::string(ppath);
 	path = Util::Trim(path, "/");

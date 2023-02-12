@@ -27,7 +27,9 @@ public:
 	int Rename(const std::string &src, const std::string &dst);
 	int Delete(const std::string &path);
 	bool FileExists(const std::string &path);
-	int Copy(const std::string &path, int socket_fd);
+    int Copy(const std::string &from, const std::string &to);
+    int Move(const std::string &from, const std::string &to);
+	int CopyToSocket(const std::string &path, int socket_fd);
 	std::vector<DirEntry> ListDir(const std::string &path);
 	bool IsConnected();
 	bool Ping();

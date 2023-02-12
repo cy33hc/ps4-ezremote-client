@@ -23,6 +23,8 @@ namespace WebDAV
 		int Put(const std::string &inputfile, const std::string &path, uint64_t offset=0);
 		int Rename(const std::string &src, const std::string &dst);
 		int Delete(const std::string &path);
+		int Copy(const std::string &from, const std::string &to);
+		int Move(const std::string &from, const std::string &to);
 		bool FileExists(const std::string &path);
 		std::vector<DirEntry> ListDir(const std::string &path);
 		bool IsConnected();

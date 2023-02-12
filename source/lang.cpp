@@ -113,9 +113,10 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Moving",														  // STR_MOVING
 	"Copying",														  // STR_COPYING
 	"Failed to move file",											  // STR_FAIL_MOVE_MSG
-	"Failed to copy file",											  // STR_FAIL_MOVE_MSG
+	"Failed to copy file",											  // STR_FAIL_COPY_MSG
 	"Cannot move parent directory to sub subdirectory",				  // STR_CANT_MOVE_TO_SUBDIR_MSG
 	"Cannot copy parent directory to sub subdirectory",				  // STR_CANT_COPY_TO_SUBDIR_MSG
+	"Operation not supported",										  // STR_UNSUPPORTED_OPERATION_MSG
 };
 
 bool needs_extended_font = false;

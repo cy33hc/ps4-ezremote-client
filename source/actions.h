@@ -98,6 +98,10 @@ namespace Actions
     void MoveLocalFiles();
     void *CopyLocalFilesThread(void *argp);
     void CopyLocalFiles();
+    void *MoveRemoteFilesThread(void *argp);
+    void MoveRemoteFiles();
+    void *CopyRemoteFilesThread(void *argp);
+    void CopyRemoteFiles();
 }
 
 #endif
