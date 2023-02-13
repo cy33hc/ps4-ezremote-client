@@ -1398,7 +1398,7 @@ namespace Actions
 
     void *MoveRemoteFilesThread(void *argp)
     {
-        file_transfering = true;
+        file_transfering = false;
         for (std::vector<DirEntry>::iterator it = remote_paste_files.begin(); it != remote_paste_files.end(); ++it)
         {
             if (stop_activity)
@@ -1418,6 +1418,7 @@ namespace Actions
                 }
             }
             
+            snprintf(activity_message, 1024, "%s %s", lang_strings[STR_MOVING], it->path);
             int res = CopyOrMoveRemoteFile(it->path, new_path, false);
             if (res == 0)
                 sprintf(status_message, "%s - %s", it->name, lang_strings[STR_FAIL_COPY_MSG]);
