@@ -121,7 +121,7 @@ enum
 };
 
 #define LANG_STRINGS_NUM 107
-#define LANG_ID_SIZE LANG_STRINGS_NUM
+#define LANG_ID_SIZE 64
 #define LANG_STR_SIZE 256
 extern char lang_identifiers[LANG_STRINGS_NUM][LANG_ID_SIZE];
 extern char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE];

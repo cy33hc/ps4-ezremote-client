@@ -132,11 +132,17 @@ void InitImgui()
 	}
 	else if (lang.compare("Simplified Chinese") == 0 || (lang.empty() && lang_idx == ORBIS_SYSTEM_PARAM_LANG_CHINESE_S))
 	{
-		io.Fonts->AddFontFromFileTTF("/app0/assets/fonts/Roboto_ext.ttf", 26.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+		ImFontConfig config;
+		config.OversampleH = 1;
+		config.OversampleV = 1;
+		io.Fonts->AddFontFromFileTTF("/app0/assets/fonts/Roboto_ext.ttf", 26.0f, &config, io.Fonts->GetGlyphRangesChineseFull());
 	}
 	else if (lang.compare("Traditional Chinese") == 0 || (lang.empty() && lang_idx == ORBIS_SYSTEM_PARAM_LANG_CHINESE_T))
 	{
-		io.Fonts->AddFontFromFileTTF("/app0/assets/fonts/Roboto_ext.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesChineseFull());
+		ImFontConfig config;
+		config.OversampleH = 1;
+		config.OversampleV = 1;
+		io.Fonts->AddFontFromFileTTF("/app0/assets/fonts/Roboto_ext.ttf", 26.0f, &config, io.Fonts->GetGlyphRangesChineseFull());
 	}
 	else if (lang.compare("Japanese") == 0 || lang.compare("Ryukyuan") == 0 || (lang.empty() && lang_idx == ORBIS_SYSTEM_PARAM_LANG_JAPANESE))
 	{
