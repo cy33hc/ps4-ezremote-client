@@ -210,6 +210,7 @@ namespace ZipUtil
         }
         else
         {
+            sprintf(activity_message, "%s %s", lang_strings[STR_COMPRESSING], path.c_str());
             return ZipAddFile(zf, path, filename_start, level);
         }
 
