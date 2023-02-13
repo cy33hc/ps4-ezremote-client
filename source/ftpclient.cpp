@@ -1695,13 +1695,13 @@ std::string FtpClient::GetPath(std::string ppath1, std::string ppath2)
 
 int FtpClient::Copy(const std::string &from, const std::string &to)
 {
-	sprintf(mp_ftphandle->response, lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+	sprintf(mp_ftphandle->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
 	return 0;
 }
 
 int FtpClient::Move(const std::string &from, const std::string &to)
 {
-	sprintf(mp_ftphandle->response, lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+	sprintf(mp_ftphandle->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
 	return 0;
 }
 

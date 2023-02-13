@@ -102,8 +102,9 @@ namespace INSTALLER
 		{
 			std::string full_url = remote_settings->server + filename;
 			size_t scheme_pos = full_url.find("://");
-			if (scheme_pos == std::string::npos) return "";
-			size_t root_pos = full_url.find("/", scheme_pos+3);
+			if (scheme_pos == std::string::npos)
+				return "";
+			size_t root_pos = full_url.find("/", scheme_pos + 3);
 			std::string host = full_url.substr(0, root_pos);
 			std::string path = full_url.substr(root_pos);
 
@@ -111,16 +112,17 @@ namespace INSTALLER
 			CURL *curl = curl_easy_init();
 			path = uri.quote(curl);
 			curl_easy_cleanup(curl);
-			
+
 			return host + path;
 		}
 		else
 		{
 			std::string full_url = std::string(remote_settings->server);
 			size_t scheme_pos = full_url.find("://");
-			if (scheme_pos == std::string::npos) return "";
-			size_t root_pos = full_url.find("/", scheme_pos+3);
-			std::string host = full_url.substr(scheme_pos+3, (root_pos-(scheme_pos+3)));
+			if (scheme_pos == std::string::npos)
+				return "";
+			size_t root_pos = full_url.find("/", scheme_pos + 3);
+			std::string host = full_url.substr(scheme_pos + 3, (root_pos - (scheme_pos + 3)));
 			size_t port_pos = host.find(":");
 			if (port_pos != std::string::npos)
 				host = host.substr(0, port_pos);
@@ -172,7 +174,7 @@ namespace INSTALLER
 		}
 
 		if (flags & PKG_CONTENT_FLAGS_FIRST_PATCH ||
-		    flags & PKG_CONTENT_FLAGS_SUBSEQUENT_PATCH ||
+			flags & PKG_CONTENT_FLAGS_SUBSEQUENT_PATCH ||
 			flags & PKG_CONTENT_FLAGS_DELTA_PATCH ||
 			flags & PKG_CONTENT_FLAGS_CUMULATIVE_PATCH)
 		{
@@ -195,15 +197,34 @@ namespace INSTALLER
 			params.packageSize = BE64(header->pkg_size);
 		}
 
+	retry:
 		int task_id = -1;
 		if (!is_patch)
 			ret = sceBgftServiceIntDownloadRegisterTask(&params, &task_id);
 		else
 			ret = sceBgftServiceIntDebugDownloadRegisterPkg(&params, &task_id);
-		if (ret)
+		if (ret == 0x80990088 || ret == 0x80990015)
 		{
-			goto err;
+			sprintf(confirm_message, "%s - %s?", filename.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
+			confirm_state = CONFIRM_WAIT;
+			action_to_take = selected_action;
+			activity_inprogess = false;
+			while (confirm_state == CONFIRM_WAIT)
+			{
+				sceKernelUsleep(100000);
+			}
+			activity_inprogess = true;
+			selected_action = action_to_take;
+
+			if (confirm_state == CONFIRM_YES)
+			{
+				ret = sceAppInstUtilAppUnInstall(cid.c_str());
+				if (ret != 0)
+					goto err;
+				goto retry;
+			}
 		}
+		else if (ret > 0) goto err;
 
 		ret = sceBgftServiceDownloadStartTask(task_id);
 		if (ret)
@@ -247,21 +268,39 @@ namespace INSTALLER
 			download_params.params.entitlementType = 5;
 			download_params.params.id = (char *)header->pkg_content_id;
 			download_params.params.contentUrl = filepath;
-			download_params.params.contentName = (char *)header->pkg_content_id;;
+			download_params.params.contentName = (char *)header->pkg_content_id;
+			;
 			download_params.params.iconPath = "";
 			download_params.params.playgoScenarioId = "0";
 			download_params.params.option = ORBIS_BGFT_TASK_OPT_FORCE_UPDATE;
 			download_params.slot = 0;
 		}
 
+	retry:
 		int task_id = -1;
 		ret = sceBgftServiceIntDownloadRegisterTaskByStorageEx(&download_params, &task_id);
-		if (ret)
+		if (ret == 0x80990088 || ret == 0x80990015)
 		{
-			if (ret == 0x80990088)
-				return -2;
-			goto err;
+			sprintf(confirm_message, "%s - %s?", filename.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
+			confirm_state = CONFIRM_WAIT;
+			action_to_take = selected_action;
+			activity_inprogess = false;
+			while (confirm_state == CONFIRM_WAIT)
+			{
+				sceKernelUsleep(100000);
+			}
+			activity_inprogess = true;
+			selected_action = action_to_take;
+
+			if (confirm_state == CONFIRM_YES)
+			{
+				ret = sceAppInstUtilAppUnInstall(titleId);
+				if (ret != 0)
+					goto err;
+				goto retry;
+			}
 		}
+		else if (ret > 0) goto err;
 
 		ret = sceBgftServiceDownloadStartTask(task_id);
 		if (ret)
