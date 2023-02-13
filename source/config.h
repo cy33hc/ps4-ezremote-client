@@ -19,6 +19,7 @@
 #define CONFIG_REMOTE_SERVER_URL "remote_server_url"
 #define CONFIG_REMOTE_SERVER_USER "remote_server_user"
 #define CONFIG_REMOTE_SERVER_PASSWORD "remote_server_password"
+#define CONFIG_REMOTE_SERVER_HTTP_PORT "remote_server_http_port"
 
 #define CONFIG_FAVORITE_URLS "favorite_urls"
 #define MAX_FAVORITE_URLS 30
@@ -37,6 +38,9 @@ struct RemoteSettings
     char server[256];
     char username[33];
     char password[25];
+    int http_port;
+    bool is_smb;
+    bool is_ftp;
 };
 
 extern std::vector<std::string> sites;

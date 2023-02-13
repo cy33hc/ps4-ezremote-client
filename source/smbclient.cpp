@@ -230,13 +230,13 @@ int SmbClient::Get(const std::string &outputfile, const std::string &ppath, uint
 
 int SmbClient::Copy(const std::string &ffrom, const std::string &tto)
 {
-	sprintf(response, lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+	sprintf(response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
 	return 0;
 }
 
 int SmbClient::Move(const std::string &ffrom, const std::string &tto)
 {
-	sprintf(response, lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+	sprintf(response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
 	return 0;
 }
 
@@ -500,7 +500,7 @@ std::string SmbClient::GetPath(std::string ppath1, std::string ppath2)
 	return Util::Ltrim(path1, "/");
 }
 
-int SmbClient::Head(const std::string &ppath, void* buffer, uint16_t len)
+int SmbClient::Head(const std::string &ppath, void *buffer, uint64_t len)
 {
 	std::string path = std::string(ppath);
 	path = Util::Trim(path, "/");

@@ -36,7 +36,7 @@ public:
 	const char *LastResponse();
 	int Quit();
 	std::string GetPath(std::string ppath1, std::string ppath2);
-	int Head(const std::string &path, void* buffer, uint16_t len);
+	int Head(const std::string &path, void *buffer, uint64_t len);
 	ClientType clientType();
 
 private:

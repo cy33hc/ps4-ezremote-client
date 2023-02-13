@@ -32,7 +32,7 @@ namespace WebDAV
 		const char *LastResponse();
 		int Quit();
 		std::string GetPath(std::string path1, std::string path2);
-		int Head(const std::string &path, void *buffer, int64_t len);
+		int Head(const std::string &path, void *buffer, uint64_t len);
 		bool GetHeaders(const std::string &path, dict_t *headers);
 		WebDAV::Client *GetClient();
 		ClientType clientType();

@@ -91,6 +91,7 @@ namespace Windows
         sprintf(status_message, "");
         sprintf(local_filter, "");
         sprintf(remote_filter, "");
+        sprintf(txt_http_port, "%d", remote_settings->http_port);
         dont_prompt_overwrite = false;
         confirm_transfer_state = -1;
         dont_prompt_overwrite_cb = false;
@@ -259,46 +260,15 @@ namespace Windows
         {
             ImGui::SetItemDefaultFocus();
         }
-        if (is_connected)
+        sprintf(id, "%s###connectbutton", is_connected ? lang_strings[STR_DISCONNECT] : lang_strings[STR_CONNECT]);
+        if (ImGui::Button(id, ImVec2(200, 0)))
         {
-            ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.3f);
-        }
-        if (ImGui::Button(lang_strings[STR_CONNECT], ImVec2(180, 0)))
-        {
-            selected_action = ACTION_CONNECT;
-        }
-        if (is_connected)
-        {
-            ImGui::PopItemFlag();
-            ImGui::PopStyleVar();
+            selected_action = is_connected ? ACTION_DISCONNECT : ACTION_CONNECT;
         }
         if (ImGui::IsItemHovered())
         {
             ImGui::BeginTooltip();
-            ImGui::Text("%s", lang_strings[STR_CONNECT]);
-            ImGui::EndTooltip();
-        }
-        ImGui::SameLine();
-
-        if (!is_connected)
-        {
-            ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.3f);
-        }
-        if (ImGui::Button(lang_strings[STR_DISCONNECT], ImVec2(200, 0)))
-        {
-            selected_action = ACTION_DISCONNECT;
-        }
-        if (!is_connected)
-        {
-            ImGui::PopItemFlag();
-            ImGui::PopStyleVar();
-        }
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::BeginTooltip();
-            ImGui::Text("%s", lang_strings[STR_DISCONNECT]);
+            ImGui::Text("%s", is_connected ? lang_strings[STR_DISCONNECT] : lang_strings[STR_CONNECT]);
             ImGui::EndTooltip();
         }
         ImGui::SameLine();
@@ -316,6 +286,7 @@ namespace Windows
                     sprintf(last_site, "%s", sites[n].c_str());
                     sprintf(display_site, "%s", site_id);
                     remote_settings = &site_settings[sites[n]];
+                    sprintf(txt_http_port, "%d", remote_settings->http_port);
                 }
 
                 // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
@@ -371,6 +342,27 @@ namespace Windows
             ime_callback = SingleValueImeCallback;
             Dialog::initImeDialog(lang_strings[STR_PASSWORD], remote_settings->password, 24, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
             gui_mode = GUI_MODE_IME;
+        }
+
+        if (remote_settings->is_smb || remote_settings->is_ftp)
+        {
+            ImGui::SameLine();
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
+            ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_HTTP_PORT]);
+            ImGui::SameLine();
+
+            sprintf(id, "%s##http_port", txt_http_port);
+            pos = ImGui::GetCursorPos();
+            if (ImGui::Button(id, ImVec2(65, 0)))
+            {
+                ime_single_field = txt_http_port;
+                ResetImeCallbacks();
+                ime_field_size = 24;
+                ime_callback = SingleValueImeCallback;
+                ime_after_update = AfterHttpPortChangeCallback;
+                Dialog::initImeDialog(lang_strings[STR_PASSWORD], txt_http_port, 24, ORBIS_TYPE_NUMBER, pos.x, pos.y);
+                gui_mode = GUI_MODE_IME;
+            }
         }
 
         ImGui::PopStyleVar();
@@ -1678,5 +1670,22 @@ namespace Windows
     void AfterZipFileCallback(int ime_result)
     {
         selected_action = ACTION_CREATE_LOCAL_ZIP;
+    }
+
+    void AferServerChangeCallback(int ime_result)
+    {
+        if (ime_result == IME_DIALOG_RESULT_FINISHED)
+        {
+            remote_settings->is_smb = strncmp(remote_settings->server, "smb://", 6) == 0;
+            remote_settings->is_ftp = strncmp(remote_settings->server, "ftp://", 6) == 0;
+        }
+    }
+
+    void AfterHttpPortChangeCallback(int ime_result)
+    {
+        if (ime_result == IME_DIALOG_RESULT_FINISHED)
+        {
+            remote_settings->http_port = atoi(txt_http_port);
+        }
     }
 }

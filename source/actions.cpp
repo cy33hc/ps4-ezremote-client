@@ -624,7 +624,6 @@ namespace Actions
         int success = 0;
         int skipped = 0;
 
-        WebDAV::WebDavClient *client = (WebDAV::WebDavClient *)remoteclient;
         std::vector<DirEntry> files;
         if (multi_selected_remote_files.size()>0)
             std::copy(multi_selected_remote_files.begin(), multi_selected_remote_files.end(), std::back_inserter(files));
@@ -646,7 +645,7 @@ namespace Actions
                     pkg_header header;
                     memset(&header, 0, sizeof(header));
 
-                    if (client->Head(it->path, (void *)&header, sizeof(header)) == 0)
+                    if (remoteclient->Head(it->path, (void *)&header, sizeof(header)) == 0)
                         failed++;
                     else
                     {

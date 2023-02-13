@@ -1704,3 +1704,19 @@ int FtpClient::Move(const std::string &from, const std::string &to)
 	sprintf(mp_ftphandle->response, lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
 	return 0;
 }
+
+int FtpClient::Head(const std::string &path, void *buffer, uint64_t len)
+{
+	ftphandle *nData;
+	if (!FtpAccess(path, FtpClient::fileread, FtpClient::transfermode::image, mp_ftphandle, &nData))
+	{
+		return 0;
+	}
+
+	int l = FtpRead(buffer, len, nData);
+	FtpClose(nData);
+
+	if (l != len)
+		return 0;
+	return 1;
+}

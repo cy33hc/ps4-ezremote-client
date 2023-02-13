@@ -361,7 +361,7 @@ namespace WebDAV
 		return path1;
 	}
 
-	int WebDavClient::Head(const std::string &path, void *buffer, int64_t len)
+	int WebDavClient::Head(const std::string &path, void *buffer, uint64_t len)
 	{
 		char *buffer_ptr = nullptr;
 		unsigned long long buffer_size = 0;

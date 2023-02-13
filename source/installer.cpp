@@ -96,20 +96,50 @@ namespace INSTALLER
 		s_bgft_initialized = false;
 	}
 
+	std::string getRemoteUrl(const std::string filename)
+	{
+		if (remoteclient->clientType() == CLIENT_TYPE_WEBDAV)
+		{
+			std::string full_url = remote_settings->server + filename;
+			size_t scheme_pos = full_url.find("://");
+			if (scheme_pos == std::string::npos) return "";
+			size_t root_pos = full_url.find("/", scheme_pos+3);
+			std::string host = full_url.substr(0, root_pos);
+			std::string path = full_url.substr(root_pos);
+
+			WebDAV::Urn::Path uri(path);
+			CURL *curl = curl_easy_init();
+			path = uri.quote(curl);
+			curl_easy_cleanup(curl);
+			
+			return host + path;
+		}
+		else
+		{
+			std::string full_url = std::string(remote_settings->server);
+			size_t scheme_pos = full_url.find("://");
+			if (scheme_pos == std::string::npos) return "";
+			size_t root_pos = full_url.find("/", scheme_pos+3);
+			std::string host = full_url.substr(scheme_pos+3, (root_pos-(scheme_pos+3)));
+			size_t port_pos = host.find(":");
+			if (port_pos != std::string::npos)
+				host = host.substr(0, port_pos);
+
+			std::string path = std::string(filename);
+			WebDAV::Urn::Path uri(path);
+			CURL *curl = curl_easy_init();
+			path = uri.quote(curl);
+			return "http://" + host + ":" + std::to_string(remote_settings->http_port) + path;
+		}
+
+		return "";
+	}
+
 	int InstallRemotePkg(const std::string &filename, pkg_header *header)
 	{
-		std::string full_url = remote_settings->server + filename;
-		size_t scheme_pos = full_url.find("://");
-		size_t root_pos = full_url.find("/", scheme_pos+3);
-		std::string host = full_url.substr(0, root_pos);
-		std::string path = full_url.substr(root_pos);
-
-		WebDAV::Urn::Path uri(path);
-		CURL *curl = curl_easy_init();
-		path = uri.quote(curl);
-		curl_easy_cleanup(curl);
-		char url[2000];
-		sprintf(url, "%s%s", host.c_str(), path.c_str());
+		std::string url = getRemoteUrl(filename);
+		if (url.empty())
+			return 0;
 
 		int ret;
 		std::string cid = std::string((char *)header->pkg_content_id);
@@ -155,7 +185,7 @@ namespace INSTALLER
 			params.userId = user_id;
 			params.entitlementType = 5;
 			params.id = (char *)header->pkg_content_id;
-			params.contentUrl = url;
+			params.contentUrl = url.c_str();
 			params.contentName = cid.c_str();
 			params.iconPath = "";
 			params.playgoScenarioId = "0";

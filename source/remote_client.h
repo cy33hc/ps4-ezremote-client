@@ -25,6 +25,7 @@ public:
     virtual int Delete(const std::string &path) = 0;
     virtual int Copy(const std::string &from, const std::string &to) = 0;
     virtual int Move(const std::string &from, const std::string &to) = 0;
+    virtual int Head(const std::string &path, void *buffer, uint64_t len) = 0;
     virtual bool FileExists(const std::string &path) = 0;
     virtual std::vector<DirEntry> ListDir(const std::string &path) = 0;
     virtual std::string GetPath(std::string path1, std::string path2) = 0;
