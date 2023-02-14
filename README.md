@@ -52,7 +52,7 @@ Remote Package Installation only works if the WebDAV server allow anonymous acce
  - Install package from Direct Links. Direct links are links that can be reached without being redirected to a webpage where it requires capthas or timers. Example of direct links are github release artifacts. Google shared links is the only exception since I could indirectly parse the webpage to obtain the direct links
  - Create Zip files on PS4 local drive or usb drive
  - Extract from zip, 7zip and rar files
- - File management function include cut/copy/paste/rename/delete/new folder
+ - File management function include cut/copy/paste/rename/delete/new folder for files on PS4 local drive or usb or WebDAV Server.
 
 ## Installation
 Copy the **ezremote_client.pkg** in to a FAT32 format usb drive then install from package installer
