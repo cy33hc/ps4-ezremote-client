@@ -274,6 +274,11 @@ namespace Windows
         ImGui::SameLine();
 
         ImGui::SetNextItemWidth(120);
+        if (is_connected)
+        {
+            ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.3f);
+        }
         if (ImGui::BeginCombo("##Site", display_site, ImGuiComboFlags_PopupAlignLeft | ImGuiComboFlags_HeightLargest | ImGuiComboFlags_NoArrowButton))
         {
             static char site_id[64];
@@ -294,6 +299,11 @@ namespace Windows
                     ImGui::SetItemDefaultFocus();
             }
             ImGui::EndCombo();
+        }
+        if (is_connected)
+        {
+            ImGui::PopItemFlag();
+            ImGui::PopStyleVar();
         }
         ImGui::SameLine();
 
