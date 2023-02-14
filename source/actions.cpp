@@ -1283,8 +1283,6 @@ namespace Actions
                         return ret;
                     }
                 }
-                if (!isCopy)
-                    FS::RmDir(src.path);
                 free(new_path);
             }
         }
@@ -1328,6 +1326,7 @@ namespace Actions
                 char new_dir[512];
                 sprintf(new_dir, "%s%s%s", local_directory, FS::hasEndSlash(local_directory) ? "" : "/", it->name);
                 CopyOrMove(*it, new_dir, false);
+                FS::RmRecursive(it->path);
             }
             else
             {
