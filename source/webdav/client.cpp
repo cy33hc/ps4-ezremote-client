@@ -117,6 +117,7 @@ namespace WebDAV
 
     bool is_performed = request.perform();
     this->http_code = request.status_code();
+    this->result = request.result();
 
     if (callback != nullptr)
       callback(is_performed);
@@ -161,6 +162,7 @@ namespace WebDAV
 
     bool is_performed = request.perform();
     this->http_code = request.status_code();
+    this->result = request.result();
 
     if (callback != nullptr)
       callback(is_performed);
@@ -218,6 +220,7 @@ bool
 
     bool is_performed = request.perform();
     this->http_code = request.status_code();
+    this->result = request.result();
     if (callback != nullptr)
       callback(is_performed);
     if (!is_performed)
@@ -265,6 +268,7 @@ bool
 
     bool is_performed = request.perform();
     this->http_code = request.status_code();
+    this->result = request.result();
     if (callback != nullptr)
       callback(is_performed);
 
@@ -315,6 +319,7 @@ bool
 
     bool is_performed = request.perform();
     this->http_code = request.status_code();
+    this->result = request.result();
     if (callback != nullptr)
       callback(is_performed);
     return is_performed;
@@ -360,6 +365,7 @@ bool
 
     bool is_performed = request.perform();
     this->http_code = request.status_code();
+    this->result = request.result();
     if (callback != nullptr)
       callback(is_performed);
 
@@ -407,6 +413,7 @@ bool
 
     bool is_performed = request.perform();
     this->http_code = request.status_code();
+    this->result = request.result();
 
     if (callback != nullptr)
       callback(is_performed);
@@ -471,6 +478,7 @@ bool
 
     auto is_performed = request.perform();
     this->http_code = request.status_code();
+    this->result = request.result();
     if (!is_performed)
       return 0;
 
@@ -516,6 +524,7 @@ bool
 
     bool is_performed = request.perform();
     this->http_code = request.status_code();
+    this->result = request.result();
     return is_performed;
   }
 
@@ -546,6 +555,7 @@ bool
 #endif
     bool is_performed = request.perform();
     this->http_code = request.status_code();
+    this->result = request.result();
 
     if (!is_performed)
       return dict_t{};
@@ -621,6 +631,7 @@ bool
 #endif
     bool is_performed = request.perform();
     this->http_code = request.status_code();
+    this->result = request.result();
 
     return is_performed;
   }
@@ -667,6 +678,7 @@ bool
 
     bool is_performed = request.perform();
     this->http_code = request.status_code();
+    this->result = request.result();
 
     if (!is_performed)
       return dict_items_t{};
@@ -814,6 +826,7 @@ bool
 
     bool is_performed = request.perform();
     this->http_code = request.status_code();
+    this->result = request.result();
     return is_performed;
   }
 
@@ -847,6 +860,7 @@ bool
 
     bool is_performed = request.perform();
     this->http_code = request.status_code();
+    this->result = request.result();
     return is_performed;
   }
 
@@ -879,6 +893,7 @@ bool
 
     bool is_performed = request.perform();
     this->http_code = request.status_code();
+    this->result = request.result();
     return is_performed;
   }
 
@@ -954,6 +969,7 @@ bool
 
     bool is_performed = request.perform();
     this->http_code = request.status_code();
+    this->result = request.result();
     return is_performed;
   }
 

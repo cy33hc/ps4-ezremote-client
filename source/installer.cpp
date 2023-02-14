@@ -19,6 +19,7 @@
 #include "lang.h"
 #include "rtc.h"
 #include "fs.h"
+#include "webdavclient.h"
 
 #define BGFT_HEAP_SIZE (1 * 1024 * 1024)
 
@@ -135,6 +136,39 @@ namespace INSTALLER
 		}
 
 		return "";
+	}
+
+	bool canInstallRemotePkg(const std::string &url)
+	{
+		if (remoteclient->clientType() == CLIENT_TYPE_WEBDAV)
+		{
+			if (strlen(remote_settings->username) > 0)
+			{
+				sprintf(confirm_message, "%s %s", lang_strings[STR_REMOTE_NOT_SUPPORT_MSG], lang_strings[STR_DOWNLOAD_INSTALL_MSG]);
+				return false;
+			}
+			else
+				return true;
+		}
+		else
+		{
+			size_t scheme_pos = url.find_first_of("://");
+			size_t path_pos = url.find_first_of("/", scheme_pos + 3);
+			std::string host = url.substr(0, path_pos);
+			std::string path = url.substr(path_pos);
+
+			WebDAV::WebDavClient tmp_client;
+			tmp_client.Connect(host.c_str(), "", "", false);
+			WebDAV::dict_t response_headers{};
+			int ret = tmp_client.GetHeaders(path.c_str(), &response_headers);
+			if (!ret)
+			{
+				sprintf(confirm_message, "%s %s", lang_strings[STR_CANNOT_CONNECT_REMOTE_MSG], lang_strings[STR_DOWNLOAD_INSTALL_MSG]);
+				return false;
+			}
+			return true;
+		}
+		return false;
 	}
 
 	int InstallRemotePkg(const std::string &filename, pkg_header *header)

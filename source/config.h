@@ -43,6 +43,13 @@ struct RemoteSettings
     bool is_ftp;
 };
 
+struct PackageUrlInfo
+{
+    char url[512];
+    char username[33];
+    char password[25];
+};
+
 extern std::vector<std::string> sites;
 extern std::map<std::string, RemoteSettings> site_settings;
 extern char local_directory[255];
@@ -53,7 +60,7 @@ extern char display_site[32];
 extern char language[128];
 extern RemoteSettings *remote_settings;
 extern RemoteClient *remoteclient;
-extern char install_pkg_url[512];
+extern PackageUrlInfo install_pkg_url;
 extern char favorite_urls[MAX_FAVORITE_URLS][512];
 extern bool auto_delete_tmp_pkg;
 

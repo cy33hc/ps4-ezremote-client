@@ -2,6 +2,7 @@
 #define ACTIONS_H
 
 #include <pthread.h>
+#include "installer.h"
 #include "common.h"
 
 #define CONFIRM_NONE -1
@@ -102,6 +103,7 @@ namespace Actions
     void MoveRemoteFiles();
     void *CopyRemoteFilesThread(void *argp);
     void CopyRemoteFiles();
+    int DownloadAndInstallPkg(const std::string &filename, pkg_header *header);
 }
 
 #endif

@@ -380,6 +380,7 @@ namespace WebDAV
     dict_t options();
 
     long http_code;
+    int result;
     int check_enabled = 0;
   };
 } // namespace WebDAV

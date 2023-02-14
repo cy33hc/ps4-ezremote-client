@@ -96,6 +96,7 @@ namespace WebDAV
     this->set(CURLOPT_FOLLOWLOCATION, 1);
     this->set(CURLOPT_COOKIEJAR, "/data/ps4-webdav-client/cookies.txt");
     this->set(CURLOPT_COOKIEFILE, "/data/ps4-webdav-client/cookies.txt");
+    this->set(CURLOPT_CONNECTTIMEOUT, 15L);
 
     if (!this->proxy_enabled())
       return;
@@ -151,7 +152,8 @@ namespace WebDAV
   {
     if (this->handle == nullptr)
       return false;
-    auto is_performed = check_code(curl_easy_perform(this->handle));
+    this->res = curl_easy_perform(this->handle);
+    auto is_performed = this->res == CURLE_OK;
     if (!is_performed)
       return false;
     this->http_code = 0;
@@ -195,4 +197,8 @@ namespace WebDAV
     return this->http_code;
   }
 
+  int Request::result() const noexcept
+  {
+    return this->res;
+  }
 } // namespace WebDAV

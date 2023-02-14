@@ -251,7 +251,7 @@ namespace Actions
             std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(files));
         else
             files.push_back(selected_local_file);
-        
+
         for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
         {
             FS::RmRecursive(it->path);
@@ -430,7 +430,7 @@ namespace Actions
     {
         file_transfering = true;
         std::vector<DirEntry> files;
-        if (multi_selected_local_files.size()>0)
+        if (multi_selected_local_files.size() > 0)
             std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(files));
         else
             files.push_back(selected_local_file);
@@ -578,7 +578,7 @@ namespace Actions
     {
         file_transfering = true;
         std::vector<DirEntry> files;
-        if (multi_selected_remote_files.size()>0)
+        if (multi_selected_remote_files.size() > 0)
             std::copy(multi_selected_remote_files.begin(), multi_selected_remote_files.end(), std::back_inserter(files));
         else
             files.push_back(selected_remote_file);
@@ -625,10 +625,35 @@ namespace Actions
         int skipped = 0;
 
         std::vector<DirEntry> files;
-        if (multi_selected_remote_files.size()>0)
+        if (multi_selected_remote_files.size() > 0)
             std::copy(multi_selected_remote_files.begin(), multi_selected_remote_files.end(), std::back_inserter(files));
         else
             files.push_back(selected_remote_file);
+
+        std::string url = INSTALLER::getRemoteUrl(files.begin()->path);
+        bool download_and_install = false;
+        sprintf(activity_message, "%s", lang_strings[STR_CHECKING_REMOTE_SERVER_MSG]);
+        if (!INSTALLER::canInstallRemotePkg(url))
+        {
+            confirm_state = CONFIRM_WAIT;
+            action_to_take = selected_action;
+            activity_inprogess = false;
+            while (confirm_state == CONFIRM_WAIT)
+            {
+                sceKernelUsleep(100000);
+            }
+            activity_inprogess = true;
+            selected_action = action_to_take;
+
+            if (confirm_state == CONFIRM_YES)
+            {
+                download_and_install = true;
+            }
+            else
+            {
+                goto finish;
+            }
+        }
 
         for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
         {
@@ -651,10 +676,20 @@ namespace Actions
                     {
                         if (BE32(header.pkg_magic) == PKG_MAGIC)
                         {
-                            if (INSTALLER::InstallRemotePkg(it->path, &header) == 0)
-                                failed++;
+                            if (download_and_install)
+                            {
+                                if (DownloadAndInstallPkg(it->path, &header) == 0)
+                                    failed++;
+                                else
+                                    success++;
+                            }
                             else
-                                success++;
+                            {
+                                if (INSTALLER::InstallRemotePkg(it->path, &header) == 0)
+                                    failed++;
+                                else
+                                    success++;
+                            }
                         }
                         else
                             skipped++;
@@ -670,6 +705,7 @@ namespace Actions
                     lang_strings[STR_INSTALL_SUCCESS], success, lang_strings[STR_INSTALL_FAILED], failed,
                     lang_strings[STR_INSTALL_SKIPPED], skipped);
         }
+    finish:
         activity_inprogess = false;
         multi_selected_remote_files.clear();
         Windows::SetModalMode(false);
@@ -696,7 +732,7 @@ namespace Actions
         int ret;
 
         std::vector<DirEntry> files;
-        if (multi_selected_local_files.size()>0)
+        if (multi_selected_local_files.size() > 0)
             std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(files));
         else
             files.push_back(selected_local_file);
@@ -774,7 +810,7 @@ namespace Actions
     {
         FS::MkDirs(extract_zip_folder, true);
         std::vector<DirEntry> files;
-        if (multi_selected_local_files.size()>0)
+        if (multi_selected_local_files.size() > 0)
             std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(files));
         else
             files.push_back(selected_local_file);
@@ -819,7 +855,7 @@ namespace Actions
         if (zf != NULL)
         {
             std::vector<DirEntry> files;
-            if (multi_selected_local_files.size()>0)
+            if (multi_selected_local_files.size() > 0)
                 std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(files));
             else
                 files.push_back(selected_local_file);
@@ -828,7 +864,7 @@ namespace Actions
             {
                 if (stop_activity)
                     break;
-                int res = ZipUtil::ZipAddPath(zf, it->path, strlen(it->directory)+1, Z_DEFAULT_COMPRESSION);
+                int res = ZipUtil::ZipAddPath(zf, it->path, strlen(it->directory) + 1, Z_DEFAULT_COMPRESSION);
                 if (res <= 0)
                 {
                     sprintf(status_message, "%s", lang_strings[STR_ERROR_CREATE_ZIP]);
@@ -954,7 +990,7 @@ namespace Actions
         sceRtcGetTick(&now, &tick);
         sprintf(filename, "%s/%lu.pkg", DATA_PATH, tick.mytick);
 
-        std::string full_url = std::string(install_pkg_url);
+        std::string full_url = std::string(install_pkg_url.url);
         if (full_url.find("https://drive.google.com") != std::string::npos)
             full_url = GetGoogleDownloadUrl(full_url);
 
@@ -971,7 +1007,7 @@ namespace Actions
         std::string path = full_url.substr(path_pos);
 
         WebDAV::WebDavClient tmp_client;
-        tmp_client.Connect(host.c_str(), "", "0", false);
+        tmp_client.Connect(host.c_str(), install_pkg_url.username, install_pkg_url.password, false);
 
         sprintf(activity_message, "%s URL to %s", lang_strings[STR_DOWNLOADING], filename);
         int s = sizeof(pkg_header);
@@ -1142,7 +1178,7 @@ namespace Actions
         long idle;
         while (remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_FTP && remoteclient->IsConnected())
         {
-            FtpClient *client = (FtpClient*) remoteclient;
+            FtpClient *client = (FtpClient *)remoteclient;
             idle = client->GetIdleTime();
             if (idle > 60000000)
             {
@@ -1417,7 +1453,7 @@ namespace Actions
                     continue;
                 }
             }
-            
+
             snprintf(activity_message, 1024, "%s %s", lang_strings[STR_MOVING], it->path);
             int res = CopyOrMoveRemoteFile(it->path, new_path, false);
             if (res == 0)
@@ -1555,5 +1591,25 @@ namespace Actions
             remote_paste_files.clear();
             Windows::SetModalMode(false);
         }
+    }
+
+    int DownloadAndInstallPkg(const std::string &filename, pkg_header *header)
+    {
+        char local_file[2000];
+        OrbisDateTime now;
+        OrbisTick tick;
+        sceRtcGetCurrentClockLocalTime(&now);
+        sceRtcGetTick(&now, &tick);
+        sprintf(local_file, "%s/%lu.pkg", DATA_PATH, tick.mytick);
+
+        sprintf(activity_message, "%s %s to %s", lang_strings[STR_DOWNLOADING], filename.c_str(), local_file);
+        remoteclient->Size(filename, &bytes_to_download);
+        bytes_transfered = 0;
+        file_transfering = true;
+        int ret = remoteclient->Get(local_file, filename);
+        if (ret == 0)
+            return 0;
+
+        return INSTALLER::InstallLocalPkg(local_file, header, true);
     }
 }

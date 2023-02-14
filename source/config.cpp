@@ -22,7 +22,7 @@ char display_site[32];
 char language[128];
 std::vector<std::string> sites;
 std::map<std::string, RemoteSettings> site_settings;
-char install_pkg_url[512];
+PackageUrlInfo install_pkg_url;
 char favorite_urls[MAX_FAVORITE_URLS][512];
 bool auto_delete_tmp_pkg;
 RemoteClient *remoteclient;

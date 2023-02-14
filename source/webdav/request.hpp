@@ -57,12 +57,14 @@ namespace WebDAV
 
     bool perform() noexcept;
     long status_code() const noexcept;
+    int result() const noexcept;
     void *handle;
 
   private:
     const dict_t options;
     dict_t response_header = {};
     long http_code;
+    int res;
     bool proxy_enabled() const noexcept;
     bool cert_required() const noexcept;
     auto swap(Request &other) noexcept -> void;

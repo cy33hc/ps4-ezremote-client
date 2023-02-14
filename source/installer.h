@@ -110,6 +110,8 @@ namespace INSTALLER
     int Init(void);
     void Exit(void);
 
+    bool canInstallRemotePkg(const std::string &url);
+    std::string getRemoteUrl(const std::string filename);
     int InstallRemotePkg(const std::string &filename, pkg_header *header);
     int InstallLocalPkg(const std::string &filename, pkg_header *header, bool remove_after_install=false);
 }

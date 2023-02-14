@@ -1186,12 +1186,12 @@ namespace Windows
                 if (ImGui::Button(lang_strings[STR_ONETIME_URL], ImVec2(535, 0)))
                 {
                     ResetImeCallbacks();
-                    sprintf(install_pkg_url, "%s", "");
-                    ime_single_field = install_pkg_url;
+                    sprintf(install_pkg_url.url, "%s", "");
+                    ime_single_field = install_pkg_url.url;
                     ime_field_size = 511;
                     ime_after_update = AfterPackageUrlCallback;
                     ime_callback = SingleValueImeCallback;
-                    Dialog::initImeDialog("URL", install_pkg_url, 511, ORBIS_TYPE_BASIC_LATIN, 600, 340);
+                    Dialog::initImeDialog("URL", install_pkg_url.url, 511, ORBIS_TYPE_BASIC_LATIN, 600, 340);
                     gui_mode = GUI_MODE_IME;
                     select_url_inprogress = false;
                     SetModalMode(false);
@@ -1224,7 +1224,9 @@ namespace Windows
                     ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 1.0f));
                     if (ImGui::Button(favorite_urls[j], ImVec2(875, 0)))
                     {
-                        sprintf(install_pkg_url, "%s", favorite_urls[j]);
+                        sprintf(install_pkg_url.url, "%s", favorite_urls[j]);
+                        memset(install_pkg_url.username, 0, sizeof(install_pkg_url.username));
+                        memset(install_pkg_url.password, 0, sizeof(install_pkg_url.password));
                         selected_action = ACTION_INSTALL_URL_PKG;
                         SetModalMode(false);
                         select_url_inprogress = false;
