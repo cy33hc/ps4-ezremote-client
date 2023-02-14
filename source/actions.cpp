@@ -1573,10 +1573,16 @@ namespace Actions
                     sprintf(status_message, "%s", lang_strings[STR_CANT_COPY_TO_SUBDIR_MSG]);
                     continue;
                 }
+                int res = CopyRemotePath(*it, new_path);
+                if (res == 0)
+                    sprintf(status_message, "%s - %s", it->name, lang_strings[STR_FAIL_COPY_MSG]);
             }
-            int res = CopyRemotePath(*it, new_path);
-            if (res == 0)
-                sprintf(status_message, "%s - %s", it->name, lang_strings[STR_FAIL_COPY_MSG]);
+            else
+            {
+                int res = CopyRemotePath(*it,  remote_directory);
+                if (res == 0)
+                    sprintf(status_message, "%s - %s", it->name, lang_strings[STR_FAIL_COPY_MSG]);
+            }
         }
         activity_inprogess = false;
         file_transfering = false;
