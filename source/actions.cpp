@@ -630,31 +630,38 @@ namespace Actions
         else
             files.push_back(selected_remote_file);
 
-        std::string url = INSTALLER::getRemoteUrl(files.begin()->path);
         bool download_and_install = false;
-        sprintf(activity_message, "%s", lang_strings[STR_CHECKING_REMOTE_SERVER_MSG]);
-        if (!INSTALLER::canInstallRemotePkg(url))
+        if (remote_settings->enable_rpi)
         {
-            confirm_state = CONFIRM_WAIT;
-            action_to_take = selected_action;
-            activity_inprogess = false;
-            while (confirm_state == CONFIRM_WAIT)
+            std::string url = INSTALLER::getRemoteUrl(files.begin()->path);
+            sprintf(activity_message, "%s", lang_strings[STR_CHECKING_REMOTE_SERVER_MSG]);
+            file_transfering = false;
+            if (!INSTALLER::canInstallRemotePkg(url))
             {
-                sceKernelUsleep(100000);
-            }
-            activity_inprogess = true;
-            selected_action = action_to_take;
+                confirm_state = CONFIRM_WAIT;
+                action_to_take = selected_action;
+                activity_inprogess = false;
+                while (confirm_state == CONFIRM_WAIT)
+                {
+                    sceKernelUsleep(100000);
+                }
+                activity_inprogess = true;
+                selected_action = action_to_take;
 
-            if (confirm_state == CONFIRM_YES)
-            {
-                download_and_install = true;
-            }
-            else
-            {
-                goto finish;
+                if (confirm_state == CONFIRM_YES)
+                {
+                    download_and_install = true;
+                }
+                else
+                {
+                    goto finish;
+                }
             }
         }
-
+        else
+        {
+            download_and_install = true;
+        }
         for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
         {
             if (stop_activity)

@@ -300,7 +300,7 @@ namespace Windows
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 1.0f));
         sprintf(id, "%s##server", remote_settings->server);
         pos = ImGui::GetCursorPos();
-        if (ImGui::Button(id, ImVec2(650, 0)))
+        if (ImGui::Button(id, ImVec2(550, 0)))
         {
             ime_single_field = remote_settings->server;
             ResetImeCallbacks();
@@ -344,7 +344,26 @@ namespace Windows
             gui_mode = GUI_MODE_IME;
         }
 
-        if (remote_settings->is_smb || remote_settings->is_ftp)
+        ImGui::SameLine();
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
+        ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_ENABLE_RPI]);
+        ImGui::SameLine();
+
+        if (ImGui::Checkbox("###enable_rpi", &remote_settings->enable_rpi))
+        {
+            CONFIG::SaveConfig();
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetNextWindowSize(ImVec2(450, 135));
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 440);
+            ImGui::Text("%s", (remote_settings->is_smb || remote_settings->is_ftp) ? lang_strings[STR_ENABLE_RPI_FTP_SMB_MSG] : lang_strings[STR_ENABLE_RPI_WEBDAV_MSG]);
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        }
+
+        if ((remote_settings->is_smb || remote_settings->is_ftp) && remote_settings->enable_rpi)
         {
             ImGui::SameLine();
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);

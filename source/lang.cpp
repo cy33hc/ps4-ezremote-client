@@ -123,6 +123,11 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Remote HTTP Server not reachable.",													// STR_CANNOT_CONNECT_REMOTE_MSG
 	"Remote Package Install not possible. Would you like to download package and install?", // STR_DOWNLOAD_INSTALL_MSG
 	"Checking remote server for Remote Package Install.",									// STR_CHECKING_REMOTE_SERVER_MSG
+	"RPI",																					// STR_ENABLE_RPI
+	"This option enables Remote Package Installation. "
+	"This requires a HTTP Server setup on the same host sharing the same folder.", // STR_ENABLE_RPI_FTP_SMB_MSG
+	"This option enables Remote Package Installation. "
+	"This requires a WebDAV Server with anonymous access that does not need username/password.", // STR_ENABLE_RPI_WEBDAV_MSG
 };
 
 bool needs_extended_font = false;

@@ -74,6 +74,9 @@ namespace CONFIG
             setting.http_port = ReadInt(sites[i].c_str(), CONFIG_REMOTE_SERVER_HTTP_PORT, 80);
             WriteInt(sites[i].c_str(), CONFIG_REMOTE_SERVER_HTTP_PORT, setting.http_port);
 
+            setting.enable_rpi = ReadBool(sites[i].c_str(), CONFIG_ENABLE_RPI, false);
+            WriteBool(sites[i].c_str(), CONFIG_ENABLE_RPI, setting.enable_rpi);
+
             site_settings.insert(std::make_pair(sites[i], setting));
         }
 
@@ -101,6 +104,7 @@ namespace CONFIG
         WriteString(last_site, CONFIG_REMOTE_SERVER_USER, remote_settings->username);
         WriteString(last_site, CONFIG_REMOTE_SERVER_PASSWORD, remote_settings->password);
         WriteInt(last_site, CONFIG_REMOTE_SERVER_HTTP_PORT, remote_settings->http_port);
+        WriteBool(last_site, CONFIG_ENABLE_RPI, remote_settings->enable_rpi);
         WriteString(CONFIG_GLOBAL, CONFIG_LAST_SITE, last_site);
         WriteBool(CONFIG_GLOBAL, CONFIG_AUTO_DELETE_TMP_PKG, auto_delete_tmp_pkg);
         WriteIniFile(CONFIG_INI_FILE);

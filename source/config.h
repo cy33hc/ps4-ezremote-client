@@ -20,6 +20,7 @@
 #define CONFIG_REMOTE_SERVER_USER "remote_server_user"
 #define CONFIG_REMOTE_SERVER_PASSWORD "remote_server_password"
 #define CONFIG_REMOTE_SERVER_HTTP_PORT "remote_server_http_port"
+#define CONFIG_ENABLE_RPI "remote_server_enable_rpi"
 
 #define CONFIG_FAVORITE_URLS "favorite_urls"
 #define MAX_FAVORITE_URLS 30
@@ -41,6 +42,7 @@ struct RemoteSettings
     int http_port;
     bool is_smb;
     bool is_ftp;
+    bool enable_rpi;
 };
 
 struct PackageUrlInfo
