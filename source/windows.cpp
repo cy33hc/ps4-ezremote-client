@@ -836,6 +836,23 @@ namespace Windows
                 dont_prompt_overwrite_cb = dont_prompt_overwrite;
                 ImGui::CloseCurrentPopup();
             }
+            if (ImGui::IsItemHovered())
+            {
+                int height = local_browser_selected ? (local_paste_files.size() * 30) + 42 : (remote_paste_files.size() * 30) + 42;
+                ImGui::SetNextWindowSize(ImVec2(500, height));
+                ImGui::BeginTooltip();
+                int text_width = ImGui::CalcTextSize(lang_strings[STR_FILES]).x;
+                int file_pos = ImGui::GetCursorPosX() + text_width + 15;
+                ImGui::Text("%s: %s", lang_strings[STR_TYPE], (paste_action == ACTION_LOCAL_CUT | paste_action == ACTION_REMOTE_CUT) ? lang_strings[STR_CUT] : lang_strings[STR_COPY]);
+                ImGui::Text("%s:", lang_strings[STR_FILES]); ImGui::SameLine();
+                std::vector<DirEntry> files = (local_browser_selected) ? local_paste_files : remote_paste_files;
+                for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
+                {
+                    ImGui::SetCursorPosX(file_pos);
+                    ImGui::Text("%s", it->path);
+                }
+                ImGui::EndTooltip();
+            }
             ImGui::PopID();
             ImGui::Separator();
 
