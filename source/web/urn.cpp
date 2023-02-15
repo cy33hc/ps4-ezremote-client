@@ -33,7 +33,7 @@ using std::vector;
 
 #include "urn.hpp"
 
-namespace WebDAV
+namespace Web
 {
   namespace Urn
   {
@@ -242,9 +242,9 @@ namespace WebDAV
       return lhs_path == rhs_path;
     }
   } // namespace Urn
-} // namespace WebDAV
+} // namespace Web
 
-auto operator<<(std::ostream& stream, const WebDAV::Urn::Path& path) -> std::ostream&
+auto operator<<(std::ostream& stream, const Web::Urn::Path& path) -> std::ostream&
 {
   return stream << path.path();
 }

@@ -20,49 +20,23 @@
 #
 ############################################################################*/
 
-#ifndef WEBDAV_URN_HPP
-#define WEBDAV_URN_HPP
+#include "fsinfo.hpp"
+#include <fstream>
 
-#include <cstddef>
-#include <iostream>
-#include <string>
-
-namespace WebDAV
+namespace Web
 {
-  namespace Urn
+  namespace FileInfo
   {
-    using std::string;
-    using std::nullptr_t;
-
-    class Path
+    auto exists(const std::string& path) -> bool
     {
-    public:
+      std::ifstream file(path);
+      return file.good();
+    }
 
-      explicit Path(const string& path_, bool force_dir = false);
-      explicit Path(nullptr_t);
-
-      auto operator+(const std::string& rhs) const -> Path;
-      auto operator==(const Path& rhs) const -> bool;
-
-      auto is_directory() const -> bool;
-      auto is_root() const -> bool;
-      auto name() const -> string;
-      auto parent() const -> Path;
-      auto path() const -> string;
-      auto quote(void* request) const -> string;
-
-    private:
-
-      string m_path;
-
-      static const string separate;
-      static const string root;
-      static const string param_separate;
-      static const string query_separate;
-    };
-  }
-}
-
-auto operator<<(std::ostream& stream, const WebDAV::Urn::Path& path) -> std::ostream&;
-
-#endif
+    auto size(const std::string& path_file) -> unsigned long long
+    {
+      std::ifstream file(path_file, std::ios::binary | std::ios::ate);
+      return static_cast<unsigned long long>(file.tellg());
+    }
+  } // namespace FileInfo
+} // namespace Web

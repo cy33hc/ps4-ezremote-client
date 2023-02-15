@@ -1,4 +1,4 @@
-/*#***************************************************************************
+﻿/*#***************************************************************************
 #                         __    __   _____       _____
 #   Project              |  |  |  | |     \     /  ___|
 #                        |  |__|  | |  |\  \   /  /
@@ -20,32 +20,31 @@
 #
 ############################################################################*/
 
-#ifndef WEBDAV_HEADER_HPP
-#define WEBDAV_HEADER_HPP
+#ifndef WEB_PUGIEXT_HPP
+#define WEB_PUGIEXT_HPP
 
-#include <initializer_list>
-#include <string>
+#include <pugixml.hpp>
 
-namespace WebDAV
+namespace pugi
 {
-  class Header final
+  class PUGIXML_CLASS xml_string_writer: public xml_writer
   {
   public:
-    void* handle;
+    std::string result;
 
-    Header(const std::initializer_list<std::string>& init_list) noexcept;
-    Header(const Header& other) = delete;
-    Header(Header&& other) noexcept;
-    ~Header() noexcept;
-
-    auto operator=(const Header& other) -> Header& = delete;
-    auto operator=(Header&& other) noexcept -> Header&;
-
-    void append(const std::string& item) noexcept;
-
-  private:
-    auto swap(Header& other) noexcept -> void;
+    void write(const void* data, size_t size) final
+    {
+      result += std::string(static_cast<const char*>(data), size);
+    }
   };
-} // namespace WebDAV
+
+  inline std::string node_to_string(const pugi::xml_node& node)
+  {
+    xml_string_writer writer;
+    node.print(writer);
+
+    return writer.result;
+  }
+} // namespace pugi
 
 #endif

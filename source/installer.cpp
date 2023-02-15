@@ -109,7 +109,7 @@ namespace INSTALLER
 			std::string host = full_url.substr(0, root_pos);
 			std::string path = full_url.substr(root_pos);
 
-			WebDAV::Urn::Path uri(path);
+			Web::Urn::Path uri(path);
 			CURL *curl = curl_easy_init();
 			path = uri.quote(curl);
 			curl_easy_cleanup(curl);
@@ -129,7 +129,7 @@ namespace INSTALLER
 				host = host.substr(0, port_pos);
 
 			std::string path = std::string(filename);
-			WebDAV::Urn::Path uri(path);
+			Web::Urn::Path uri(path);
 			CURL *curl = curl_easy_init();
 			path = uri.quote(curl);
 			return "http://" + host + ":" + std::to_string(remote_settings->http_port) + path;

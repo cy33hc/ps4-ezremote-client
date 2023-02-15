@@ -20,14 +20,14 @@
 #
 ############################################################################*/
 
-#ifndef WEBDAV_REQUEST_HPP
-#define WEBDAV_REQUEST_HPP
+#ifndef WEB_REQUEST_HPP
+#define WEB_REQUEST_HPP
 
 #include <curl/curl.h>
 #include <map>
 #include <string>
 
-namespace WebDAV
+namespace Web
 {
   bool inline check_code(CURLcode code)
   {
@@ -69,6 +69,6 @@ namespace WebDAV
     bool cert_required() const noexcept;
     auto swap(Request &other) noexcept -> void;
   };
-} // namespace WebDAV
+} // namespace Web
 
 #endif

@@ -26,7 +26,7 @@
 
 #include "callback.hpp"
 
-namespace WebDAV
+namespace Web
 {
   namespace Callback
   {
@@ -106,4 +106,4 @@ namespace WebDAV
       }
     } // namespace Append
   } // namespace Callback
-} // namespace WebDAV
+} // namespace Web

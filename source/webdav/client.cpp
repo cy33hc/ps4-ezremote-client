@@ -34,7 +34,10 @@
 
 namespace WebDAV
 {
-  using Urn::Path;
+  using Web::Urn::Path;
+  using Web::Request;
+  using Web::Data;
+  using Web::Header;
 
   using progress_funptr = int (*)(void *context, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow);
 
@@ -62,10 +65,9 @@ namespace WebDAV
   Client::options()
   {
     return dict_t{
-        {"webdav_hostname", this->webdav_hostname},
-        {"webdav_root", this->webdav_root},
-        {"webdav_username", this->webdav_username},
-        {"webdav_password", this->webdav_password},
+        {"hostname", this->webdav_hostname},
+        {"username", this->webdav_username},
+        {"password", this->webdav_password},
         {"proxy_hostname", this->proxy_hostname},
         {"proxy_username", this->proxy_username},
         {"proxy_password", this->proxy_password},
@@ -104,7 +106,7 @@ namespace WebDAV
     request.set(CURLOPT_URL, url.c_str());
     request.set(CURLOPT_HEADER, 0L);
     request.set(CURLOPT_WRITEDATA, reinterpret_cast<size_t>(&file_stream));
-    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Callback::Write::stream));
+    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Web::Callback::Write::stream));
 #ifdef WDC_VERBOSE
     request.set(CURLOPT_VERBOSE, 1);
 #endif
@@ -149,7 +151,7 @@ namespace WebDAV
     request.set(CURLOPT_URL, url.c_str());
     request.set(CURLOPT_HEADER, 0L);
     request.set(CURLOPT_WRITEDATA, reinterpret_cast<size_t>(&data));
-    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Callback::Append::buffer));
+    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Web::Callback::Append::buffer));
 #ifdef WDC_VERBOSE
     request.set(CURLOPT_VERBOSE, 1);
 #endif
@@ -207,7 +209,7 @@ bool
     request.set(CURLOPT_HEADER, 0L);
     request.set(CURLOPT_HTTPHEADER, list);
     request.set(CURLOPT_WRITEDATA, reinterpret_cast<size_t>(&data));
-    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Callback::Append::buffer));
+    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Web::Callback::Append::buffer));
 #ifdef WDC_VERBOSE
     request.set(CURLOPT_VERBOSE, 1);
 #endif
@@ -255,7 +257,7 @@ bool
     request.set(CURLOPT_URL, url.c_str());
     request.set(CURLOPT_HEADER, 0L);
     request.set(CURLOPT_WRITEDATA, reinterpret_cast<size_t>(&stream));
-    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Callback::Write::stream));
+    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Web::Callback::Write::stream));
 #ifdef WDC_VERBOSE
     request.set(CURLOPT_VERBOSE, 1);
 #endif
@@ -283,7 +285,7 @@ bool
       progress_data_t progress_data,
       progress_t progress)
   {
-    bool is_existed = FileInfo::exists(local_file);
+    bool is_existed = Web::FileInfo::exists(local_file);
     if (!is_existed)
       return false;
 
@@ -291,7 +293,7 @@ bool
     auto file_urn = root_urn + remote_file;
 
     std::ifstream file_stream(local_file, std::ios::binary);
-    auto size = FileInfo::size(local_file);
+    auto size = Web::FileInfo::size(local_file);
 
     Request request(this->options());
 
@@ -302,11 +304,11 @@ bool
     request.set(CURLOPT_UPLOAD, 1L);
     request.set(CURLOPT_URL, url.c_str());
     request.set(CURLOPT_READDATA, reinterpret_cast<size_t>(&file_stream));
-    request.set(CURLOPT_READFUNCTION, reinterpret_cast<size_t>(Callback::Read::stream));
+    request.set(CURLOPT_READFUNCTION, reinterpret_cast<size_t>(Web::Callback::Read::stream));
     request.set(CURLOPT_INFILESIZE_LARGE, static_cast<curl_off_t>(size));
     request.set(CURLOPT_BUFFERSIZE, static_cast<long>(Client::buffer_size));
     request.set(CURLOPT_WRITEDATA, reinterpret_cast<size_t>(&response));
-    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Callback::Append::buffer));
+    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Web::Callback::Append::buffer));
 #ifdef WDC_VERBOSE
     request.set(CURLOPT_VERBOSE, 1);
 #endif
@@ -348,11 +350,11 @@ bool
     request.set(CURLOPT_UPLOAD, 1L);
     request.set(CURLOPT_URL, url.c_str());
     request.set(CURLOPT_READDATA, reinterpret_cast<size_t>(&data));
-    request.set(CURLOPT_READFUNCTION, reinterpret_cast<size_t>(Callback::Read::buffer));
+    request.set(CURLOPT_READFUNCTION, reinterpret_cast<size_t>(Web::Callback::Read::buffer));
     request.set(CURLOPT_INFILESIZE_LARGE, static_cast<curl_off_t>(buffer_size));
     request.set(CURLOPT_BUFFERSIZE, static_cast<long>(Client::buffer_size));
     request.set(CURLOPT_WRITEDATA, reinterpret_cast<size_t>(&response));
-    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Callback::Append::buffer));
+    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Web::Callback::Append::buffer));
 #ifdef WDC_VERBOSE
     request.set(CURLOPT_VERBOSE, 1);
 #endif
@@ -396,11 +398,11 @@ bool
     request.set(CURLOPT_UPLOAD, 1L);
     request.set(CURLOPT_URL, url.c_str());
     request.set(CURLOPT_READDATA, reinterpret_cast<size_t>(&stream));
-    request.set(CURLOPT_READFUNCTION, reinterpret_cast<size_t>(Callback::Read::stream));
+    request.set(CURLOPT_READFUNCTION, reinterpret_cast<size_t>(Web::Callback::Read::stream));
     request.set(CURLOPT_INFILESIZE_LARGE, static_cast<curl_off_t>(stream_size));
     request.set(CURLOPT_BUFFERSIZE, static_cast<long>(Client::buffer_size));
     request.set(CURLOPT_WRITEDATA, reinterpret_cast<size_t>(&response));
-    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Callback::Append::buffer));
+    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Web::Callback::Append::buffer));
 #ifdef WDC_VERBOSE
     request.set(CURLOPT_VERBOSE, 1);
 #endif
@@ -471,7 +473,7 @@ bool
     request.set(CURLOPT_POSTFIELDSIZE, static_cast<long>(size));
     request.set(CURLOPT_HEADER, 0);
     request.set(CURLOPT_WRITEDATA, reinterpret_cast<size_t>(&data));
-    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Callback::Append::buffer));
+    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Web::Callback::Append::buffer));
 #ifdef WDC_VERBOSE
     request.set(CURLOPT_VERBOSE, 1);
 #endif
@@ -517,7 +519,7 @@ bool
     request.set(CURLOPT_URL, url.c_str());
     request.set(CURLOPT_HTTPHEADER, reinterpret_cast<curl_slist *>(header.handle));
     request.set(CURLOPT_WRITEDATA, reinterpret_cast<size_t>(&data));
-    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Callback::Append::buffer));
+    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Web::Callback::Append::buffer));
 #ifdef WDC_VERBOSE
     request.set(CURLOPT_VERBOSE, 1);
 #endif
@@ -549,7 +551,7 @@ bool
     request.set(CURLOPT_URL, url.c_str());
     request.set(CURLOPT_HTTPHEADER, reinterpret_cast<curl_slist *>(header.handle));
     request.set(CURLOPT_WRITEDATA, reinterpret_cast<size_t>(&data));
-    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Callback::Append::buffer));
+    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Web::Callback::Append::buffer));
 #ifdef WDC_VERBOSE
     request.set(CURLOPT_VERBOSE, 1);
 #endif
@@ -671,7 +673,7 @@ bool
     request.set(CURLOPT_HTTPHEADER, reinterpret_cast<curl_slist *>(header.handle));
     request.set(CURLOPT_HEADER, 0);
     request.set(CURLOPT_WRITEDATA, reinterpret_cast<size_t>(&data));
-    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Callback::Append::buffer));
+    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Web::Callback::Append::buffer));
 #ifdef WDC_VERBOSE
     request.set(CURLOPT_VERBOSE, 1);
 #endif

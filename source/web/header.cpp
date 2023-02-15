@@ -20,48 +20,50 @@
 #
 ############################################################################*/
 
-#ifndef WEBDAV_CALLBACK_HPP
-#define WEBDAV_CALLBACK_HPP
+#include "header.hpp"
 
-namespace WebDAV
+#include <curl/curl.h>
+
+namespace Web
 {
-  struct Data
+  Header::Header(const std::initializer_list<std::string>& init_list) noexcept : handle(nullptr)
   {
-    char* buffer;
-    unsigned long long position;
-    unsigned long long size;
-    void reset()
+    for (auto& item : init_list)
     {
-      buffer = nullptr;
-      position = 0;
-      size = 0;
-    }
-    ~Data()
-    {
-      delete[] buffer;
-    }
-  };
-
-  namespace Callback
-  {
-    namespace Read
-    {
-      size_t stream(char* data, size_t size, size_t count, void* stream);
-      size_t buffer(char* data, size_t size, size_t count, void* buffer);
-    }
-
-    namespace Write
-    {
-      size_t stream(char* data, size_t size, size_t count, void* stream);
-      size_t buffer(char* data, size_t size, size_t count, void* buffer);
-    }
-
-    namespace Append
-    {
-      size_t stream(char* data, size_t size, size_t count, void* stream);
-      size_t buffer(char* data, size_t size, size_t count, void* buffer);
+      this->append(item);
     }
   }
-} // namespace WebDAV
 
-#endif
+  Header::~Header() noexcept
+  {
+    curl_slist_free_all(reinterpret_cast<curl_slist*>(this->handle));
+  }
+
+  Header::Header(Header&& other) noexcept
+  {
+    handle = other.handle;
+    other.handle = nullptr;
+  }
+
+  auto Header::operator=(Header&& other) noexcept -> Header&
+  {
+    if (this != &other)
+    {
+      Header(std::move(other)).swap(*this);
+    }
+
+    return *this;
+  }
+
+  auto Header::swap(Header& other) noexcept -> void
+  {
+    using std::swap;
+    swap(handle, other.handle);
+  }
+
+  void
+  Header::append(const std::string& item) noexcept
+  {
+    this->handle = curl_slist_append(reinterpret_cast<curl_slist*>(this->handle), item.c_str());
+  }
+} // namespace Web

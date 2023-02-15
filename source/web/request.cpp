@@ -24,7 +24,7 @@
 #include "fsinfo.hpp"
 #include "util.h"
 
-namespace WebDAV
+namespace Web
 {
   static int sockopt_callback(void *clientp, curl_socket_t curlfd, curlsocktype purpose)
   {
@@ -56,9 +56,9 @@ namespace WebDAV
 
   Request::Request(dict_t &&options_) : options(options_)
   {
-    auto webdav_hostname = get(options, "webdav_hostname");
-    auto webdav_username = get(options, "webdav_username");
-    auto webdav_password = get(options, "webdav_password");
+    auto hostname = get(options, "hostname");
+    auto username = get(options, "username");
+    auto password = get(options, "password");
 
     auto proxy_hostname = get(options, "proxy_hostname");
     auto proxy_username = get(options, "proxy_username");
@@ -85,11 +85,11 @@ namespace WebDAV
       this->set(CURLOPT_SSLKEY, const_cast<char *>(key_path.c_str()));
     }
 
-    this->set(CURLOPT_URL, const_cast<char *>(webdav_hostname.c_str()));
-    if (!webdav_username.empty())
+    this->set(CURLOPT_URL, const_cast<char *>(hostname.c_str()));
+    if (!username.empty())
     {
       this->set(CURLOPT_HTTPAUTH, static_cast<int>(CURLAUTH_BASIC));
-      auto token = webdav_username + ":" + webdav_password;
+      auto token = username + ":" + password;
       this->set(CURLOPT_USERPWD, const_cast<char *>(token.c_str()));
     }
     this->set(CURLOPT_SOCKOPTFUNCTION, sockopt_callback);
@@ -113,7 +113,7 @@ namespace WebDAV
     }
     else
     {
-      if (!webdav_username.empty() && !webdav_password.empty())
+      if (!username.empty() && !password.empty())
       {
         auto token = proxy_username + ":" + proxy_password;
         this->set(CURLOPT_PROXYUSERPWD, const_cast<char *>(token.c_str()));
@@ -201,4 +201,4 @@ namespace WebDAV
   {
     return this->res;
   }
-} // namespace WebDAV
+} // namespace Web
