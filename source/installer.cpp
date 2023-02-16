@@ -10,8 +10,8 @@
 #include <orbis/AppInstUtil.h>
 #include <orbis/UserService.h>
 #include <curl/curl.h>
-#include <request.hpp>
-#include <urn.hpp>
+#include <web/request.hpp>
+#include <web/urn.hpp>
 #include "installer.h"
 #include "util.h"
 #include "config.h"

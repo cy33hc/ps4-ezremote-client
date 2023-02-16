@@ -7,8 +7,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
 
 include_directories(
   source
-  source/web
-  source/webdav
   source/pugixml
 )
 
@@ -20,6 +18,7 @@ add_executable(ezremote_client
   source/web/request.cpp
   source/web/urn.cpp
   source/webdav/client.cpp
+  source/http/client.cpp
   source/actions.cpp
   source/config.cpp
   source/fs.cpp

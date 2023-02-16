@@ -250,7 +250,7 @@ namespace Windows
         BeginGroupPanel(title, ImVec2(1905, 100));
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10);
         char id[256];
-        std::string hidden_password = std::string("xxxxxxx");
+        std::string hidden_password = (strlen(remote_settings->password) > 0)? std::string("*******") : "";
         ImVec2 pos;
 
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 4);

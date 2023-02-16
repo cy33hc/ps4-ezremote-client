@@ -20,14 +20,14 @@
 #
 ############################################################################*/
 
-#include <client.hpp>
+#include <webdav/client.hpp>
 
-#include "callback.hpp"
-#include "fsinfo.hpp"
-#include "header.hpp"
-#include "pugiext.hpp"
-#include "request.hpp"
-#include "urn.hpp"
+#include "web/callback.hpp"
+#include "web/fsinfo.hpp"
+#include "web/header.hpp"
+#include "web/pugiext.hpp"
+#include "web/request.hpp"
+#include "web/urn.hpp"
 #include "util.h"
 #include <algorithm>
 #include <thread>
