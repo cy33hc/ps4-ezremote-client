@@ -43,6 +43,18 @@ namespace Web
     const string Path::param_separate = "&";
     const string Path::query_separate = "?";
 
+    string encodeUrl(const string &url, void *request)
+    {
+      size_t scheme_pos = url.find("://");
+      size_t root_pos = url.find("/", scheme_pos+3);
+      if (root_pos == string::npos)
+        return url;
+
+      string uri = url.substr(root_pos);
+      auto path = Path(uri);
+      return url.substr(0, root_pos) + path.quote(request);
+    }
+
     Path::Path(const string& path_, bool force_dir)
     {
       string path = path_;

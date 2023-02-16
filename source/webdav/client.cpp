@@ -975,18 +975,5 @@ bool
     return is_performed;
   }
 
-  class Environment
-  {
-  public:
-    Environment()
-    {
-      curl_global_init(CURL_GLOBAL_ALL);
-    }
-    ~Environment()
-    {
-      curl_global_cleanup();
-    }
-  };
 } // namespace WebDAV
 
-static const WebDAV::Environment env;

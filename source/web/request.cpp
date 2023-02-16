@@ -59,6 +59,7 @@ namespace Web
     auto hostname = get(options, "hostname");
     auto username = get(options, "username");
     auto password = get(options, "password");
+    auto timeout = get(options, "password");
 
     auto proxy_hostname = get(options, "proxy_hostname");
     auto proxy_username = get(options, "proxy_username");
@@ -96,7 +97,14 @@ namespace Web
     this->set(CURLOPT_FOLLOWLOCATION, 1);
     this->set(CURLOPT_COOKIEJAR, "/data/ps4-webdav-client/cookies.txt");
     this->set(CURLOPT_COOKIEFILE, "/data/ps4-webdav-client/cookies.txt");
-    this->set(CURLOPT_CONNECTTIMEOUT, 15L);
+    if (timeout.empty())
+    {
+      this->set(CURLOPT_CONNECTTIMEOUT, 15L);
+    }
+    else
+    {
+      this->set(CURLOPT_CONNECTTIMEOUT, atoi(timeout.c_str()));
+    }
 
     if (!this->proxy_enabled())
       return;
@@ -201,4 +209,19 @@ namespace Web
   {
     return this->res;
   }
+
+  class Environment
+  {
+  public:
+    Environment()
+    {
+      curl_global_init(CURL_GLOBAL_ALL);
+    }
+    ~Environment()
+    {
+      curl_global_cleanup();
+    }
+  };
 } // namespace Web
+
+static const Web::Environment env;

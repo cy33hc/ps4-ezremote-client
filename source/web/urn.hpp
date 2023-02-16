@@ -34,6 +34,8 @@ namespace Web
     using std::string;
     using std::nullptr_t;
 
+    string encodeUrl(const string &url, void *request);
+
     class Path
     {
     public:

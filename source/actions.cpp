@@ -14,6 +14,7 @@
 #include "installer.h"
 #include "web/request.hpp"
 #include "web/urn.hpp"
+#include "http/client.hpp"
 #include "rtc.h"
 #include "ftpclient.h"
 #include "smbclient.h"

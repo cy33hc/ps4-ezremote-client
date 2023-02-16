@@ -8,6 +8,7 @@
 #include <vector>
 #include <curl/curl.h>
 #include "web/callback.hpp"
+#include "web/request.hpp"
 
 namespace HTTP
 {
@@ -33,27 +34,38 @@ namespace HTTP
 
     struct Response
     {
-        int err;
-        int status_code;
-        Web::Data body;
-        dict_t headers;
+        int result = 0;
+        int status_code = 0;
+        Web::Data body = { nullptr, 0, 0};
+        dict_t headers = {};
+
+        void reset()
+        {
+            result = 0;
+            status_code = 0;
+            headers.clear();
+            if (body.buffer != nullptr)
+                delete[] body.buffer;
+            body.reset();
+        }
     };
 
     class Client
     {
     public:
+        Client();
         Client(const dict_t &options);
-        bool Head(const std::string &url, dict_t *request_headers, Response &response);
-        bool Get(const std::string &url, dict_t *request_headers, Response &Response);
-        bool Delete(const std::string &url, void *post_data, dict_t *request_headers, Response &Response);
-        bool Post(const std::string &url, void *post_data, dict_t *request_headers, Response &Response);
-        bool Patch(const std::string &url, void *post_data, dict_t *request_headers, Response &Response);
-        bool Put(const std::string &url, void *post_data, dict_t *request_headers, Response &Response);
-        bool download(const std::string &url, const std::string &local_file,
-                      progress_data_t progress_data = nullptr, progress_t progress = nullptr);
+        bool Head(const std::string &url, dict_t &request_headers, Response &response);
+        bool Get(const std::string &url, dict_t &request_headers, Response &response);
+        bool Delete(const std::string &url, dict_t &request_headers, Response &response);
+        bool Post(const std::string &url, Web::Data &data, dict_t &request_headers, Response &response);
+        bool Put(const std::string &url, Web::Data &data, dict_t &request_headers, Response &response);
+        bool Download(const std::string &url, const std::string &local_file, dict_t &request_headers,
+                      Response &response, progress_data_t progress_data = nullptr, progress_t progress = nullptr);
         dict_t options();
 
     private:
+        bool InitRequest(const std::string &url, Web::Request &request, dict_t &request_headers, Response &response);
         std::string username;
         std::string password;
 
