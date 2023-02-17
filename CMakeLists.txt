@@ -5,6 +5,8 @@ project(ezremote_client)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DDONT_HAVE_STRUPR")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
 
+add_definitions(-DCPPHTTPLIB_OPENSSL_SUPPORT)
+
 include_directories(
   source
   source/pugixml
@@ -18,7 +20,7 @@ add_executable(ezremote_client
   source/web/request.cpp
   source/web/urn.cpp
   source/webdav/client.cpp
-  source/http/client.cpp
+  source/http/httplib.cpp
   source/actions.cpp
   source/config.cpp
   source/fs.cpp
