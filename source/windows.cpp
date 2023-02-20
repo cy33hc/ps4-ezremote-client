@@ -316,7 +316,7 @@ namespace Windows
             ResetImeCallbacks();
             ime_field_size = 255;
             ime_callback = SingleValueImeCallback;
-            Dialog::initImeDialog(lang_strings[STR_SERVER], remote_settings->server, 255, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
+            Dialog::initImeDialog(lang_strings[STR_SERVER], remote_settings->server, 255, ORBIS_TYPE_TYPE_URL, pos.x, pos.y);
             gui_mode = GUI_MODE_IME;
         }
         ImGui::SameLine();

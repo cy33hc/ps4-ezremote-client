@@ -11,7 +11,7 @@
 #include <orbis/Pad.h>
 #include <orbis/AudioOut.h>
 #include <orbis/Net.h>
-#include <dbglogger.h>
+// #include <dbglogger.h>
 
 #include "imgui.h"
 #include "SDL2/SDL.h"
@@ -257,8 +257,8 @@ static void terminate()
 
 int main()
 {
-	dbglogger_init();
-	dbglogger_log("If you see this you've set up dbglogger correctly.");
+	// dbglogger_init();
+	// dbglogger_log("If you see this you've set up dbglogger correctly.");
 	int rc;
 	// No buffering
 	setvbuf(stdout, NULL, _IONBF, 0);
@@ -269,44 +269,16 @@ int main()
 	}
 
 	// load common modules
-	int ret = sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_SYSTEM_SERVICE);
-	if (ret < 0)
-	{
-		return 0;
-	}
+	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_IME_DIALOG) < 0) return 0;
+	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_SYSTEM_SERVICE) < 0) return 0;
+	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_USER_SERVICE) < 0) return 0;
+	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_BGFT) < 0) return 0;
+	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_APP_INST_UTIL) < 0) return 0;
+	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_PAD) < 0) return 0;
+	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_AUDIOOUT) < 0 || sceAudioOutInit() != 0) return 0;
+	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_NET) < 0 || sceNetInit() != 0) return 0;
 
-	ret = sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_USER_SERVICE);
-	if (ret < 0)
-	{
-		return 0;
-	}
-
-	ret = sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_BGFT);
-	if (ret) {
-		return 0;
-	}
-
-	ret = sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_APP_INST_UTIL);
-	if (ret) {
-		return 0;
-	}
-
-	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_PAD) < 0)
-		return 0;
-
-	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_AUDIOOUT) < 0 ||
-		sceAudioOutInit() != 0)
-	{
-		return 0;
-	}
-
-	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_IME_DIALOG) < 0)
-		return 0;
-
-	if(sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_NET) < 0 || sceNetInit() != 0)
-		return 0;
-
-    sceNetPoolCreate("simple", NET_HEAP_SIZE, 0);
+	sceNetPoolCreate("simple", NET_HEAP_SIZE, 0);
 
 	if (INSTALLER::Init() < 0)
 		return 0;
