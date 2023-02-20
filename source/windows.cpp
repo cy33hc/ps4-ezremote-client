@@ -171,7 +171,7 @@ namespace Windows
         std::string zipfolder;
         std::string zipname;
         std::vector<DirEntry> files;
-        if (multi_selected_local_files.size()>0)
+        if (multi_selected_local_files.size() > 0)
             std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(files));
         else
             files.push_back(selected_local_file);
@@ -197,7 +197,7 @@ namespace Windows
         else
         {
             zipname = std::string(files.begin()->directory);
-            zipname = zipname.substr(zipname.find_last_of("/")+1);
+            zipname = zipname.substr(zipname.find_last_of("/") + 1);
         }
 
         std::string zip_path;
@@ -250,7 +250,7 @@ namespace Windows
         BeginGroupPanel(title, ImVec2(1905, 100));
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10);
         char id[256];
-        std::string hidden_password = (strlen(remote_settings->password) > 0)? std::string("*******") : "";
+        std::string hidden_password = (strlen(remote_settings->password) > 0) ? std::string("*******") : "";
         ImVec2 pos;
 
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 4);
@@ -368,12 +368,12 @@ namespace Windows
             ImGui::SetNextWindowSize(ImVec2(450, 135));
             ImGui::BeginTooltip();
             ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 440);
-            ImGui::Text("%s", (remote_settings->is_smb || remote_settings->is_ftp) ? lang_strings[STR_ENABLE_RPI_FTP_SMB_MSG] : lang_strings[STR_ENABLE_RPI_WEBDAV_MSG]);
+            ImGui::Text("%s", (remote_settings->type == CLIENT_TYPE_SMB || remote_settings->type == CLIENT_TYPE_FTP) ? lang_strings[STR_ENABLE_RPI_FTP_SMB_MSG] : lang_strings[STR_ENABLE_RPI_WEBDAV_MSG]);
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
         }
 
-        if ((remote_settings->is_smb || remote_settings->is_ftp) && remote_settings->enable_rpi)
+        if ((remote_settings->type == CLIENT_TYPE_SMB || remote_settings->type == CLIENT_TYPE_FTP) && remote_settings->enable_rpi)
         {
             ImGui::SameLine();
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
@@ -719,15 +719,17 @@ namespace Windows
         EndGroupPanel();
     }
 
-    int getSelectableFlag()
+    int getSelectableFlag(uint32_t remote_action)
     {
         int flag = ImGuiSelectableFlags_Disabled;
         bool local_browser_selected = saved_selected_browser & LOCAL_BROWSER;
         bool remote_browser_selected = saved_selected_browser & REMOTE_BROWSER;
+
         if ((local_browser_selected && selected_local_file.selectable) ||
-            (remote_browser_selected && selected_remote_file.selectable))
+            (remote_browser_selected && selected_remote_file.selectable &&
+             remoteclient != nullptr && (remoteclient->SupportedActions() & remote_action)))
         {
-                flag = ImGuiSelectableFlags_None;
+            flag = ImGuiSelectableFlags_None;
         }
         return flag;
     }
@@ -792,12 +794,7 @@ namespace Windows
             ImGui::Separator();
 
             ImGui::PushID("Cut##settings");
-            flags = ImGuiSelectableFlags_Disabled;
-            if ((local_browser_selected && selected_local_file.selectable) ||
-                (remote_browser_selected && selected_remote_file.selectable &&
-                 remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_WEBDAV))
-                flags = ImGuiSelectableFlags_None;
-            if (ImGui::Selectable(lang_strings[STR_CUT], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+            if (ImGui::Selectable(lang_strings[STR_CUT], false, getSelectableFlag(REMOTE_ACTION_CUT) | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
             {
                 selected_action = local_browser_selected ? ACTION_LOCAL_CUT : ACTION_REMOTE_CUT;
                 SetModalMode(false);
@@ -807,12 +804,7 @@ namespace Windows
             ImGui::Separator();
 
             ImGui::PushID("Copy##settings");
-            flags = ImGuiSelectableFlags_Disabled;
-            if ((local_browser_selected && selected_local_file.selectable) ||
-                (remote_browser_selected && selected_remote_file.selectable &&
-                 remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_WEBDAV))
-                flags = ImGuiSelectableFlags_None;
-            if (ImGui::Selectable(lang_strings[STR_COPY], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+            if (ImGui::Selectable(lang_strings[STR_COPY], false, getSelectableFlag(REMOTE_ACTION_COPY) | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
             {
                 selected_action = local_browser_selected ? ACTION_LOCAL_COPY : ACTION_REMOTE_COPY;
                 SetModalMode(false);
@@ -825,7 +817,7 @@ namespace Windows
             flags = ImGuiSelectableFlags_Disabled;
             if ((local_browser_selected && local_paste_files.size() > 0) ||
                 (remote_browser_selected && remote_paste_files.size() > 0 &&
-                 remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_WEBDAV))
+                 remoteclient != nullptr && (remoteclient->SupportedActions() | REMOTE_ACTION_PASTE)))
                 flags = ImGuiSelectableFlags_None;
             if (ImGui::Selectable(lang_strings[STR_PASTE], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
             {
@@ -844,7 +836,8 @@ namespace Windows
                 int text_width = ImGui::CalcTextSize(lang_strings[STR_FILES]).x;
                 int file_pos = ImGui::GetCursorPosX() + text_width + 15;
                 ImGui::Text("%s: %s", lang_strings[STR_TYPE], (paste_action == ACTION_LOCAL_CUT | paste_action == ACTION_REMOTE_CUT) ? lang_strings[STR_CUT] : lang_strings[STR_COPY]);
-                ImGui::Text("%s:", lang_strings[STR_FILES]); ImGui::SameLine();
+                ImGui::Text("%s:", lang_strings[STR_FILES]);
+                ImGui::SameLine();
                 std::vector<DirEntry> files = (local_browser_selected) ? local_paste_files : remote_paste_files;
                 for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
                 {
@@ -857,7 +850,7 @@ namespace Windows
             ImGui::Separator();
 
             ImGui::PushID("Delete##settings");
-            if (ImGui::Selectable(lang_strings[STR_DELETE], false, getSelectableFlag() | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+            if (ImGui::Selectable(lang_strings[STR_DELETE], false, getSelectableFlag(REMOTE_ACTION_DELETE) | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
             {
                 confirm_state = CONFIRM_WAIT;
                 sprintf(confirm_message, "%s", lang_strings[STR_DEL_CONFIRM_MSG]);
@@ -870,9 +863,9 @@ namespace Windows
             ImGui::Separator();
 
             ImGui::PushID("Rename##settings");
-            flags = getSelectableFlag();
-            if ((local_browser_selected && multi_selected_local_files.size()>1) ||
-                (remote_browser_selected && multi_selected_remote_files.size()>1))
+            flags = getSelectableFlag(REMOTE_ACTION_RENAME);
+            if ((local_browser_selected && multi_selected_local_files.size() > 1) ||
+                (remote_browser_selected && multi_selected_remote_files.size() > 1))
                 flags = ImGuiSelectableFlags_Disabled;
             if (ImGui::Selectable(lang_strings[STR_RENAME], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
             {
@@ -887,7 +880,12 @@ namespace Windows
             ImGui::Separator();
 
             ImGui::PushID("New Folder##settings");
-            if (ImGui::Selectable(lang_strings[STR_NEW_FOLDER], false, ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+            flags = ImGuiSelectableFlags_None;
+            if (remoteclient != nullptr && !(remoteclient->SupportedActions() & REMOTE_ACTION_NEW_FOLDER))
+            {
+                flags = ImGuiSelectableFlags_Disabled;
+            }
+            if (ImGui::Selectable(lang_strings[STR_NEW_FOLDER], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
             {
                 if (local_browser_selected)
                     selected_action = ACTION_NEW_LOCAL_FOLDER;
@@ -902,7 +900,7 @@ namespace Windows
             if (local_browser_selected)
             {
                 ImGui::PushID("Extract##settings");
-                if (ImGui::Selectable(lang_strings[STR_EXTRACT], false, getSelectableFlag() | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+                if (ImGui::Selectable(lang_strings[STR_EXTRACT], false, getSelectableFlag(REMOTE_ACTION_NONE) | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
                 {
                     ResetImeCallbacks();
                     sprintf(extract_zip_folder, "%s", getExtractFolder().c_str());
@@ -920,7 +918,7 @@ namespace Windows
                 ImGui::Separator();
 
                 ImGui::PushID("Compress##settings");
-                if (ImGui::Selectable(lang_strings[STR_COMPRESS], false, getSelectableFlag() | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+                if (ImGui::Selectable(lang_strings[STR_COMPRESS], false, getSelectableFlag(REMOTE_ACTION_NONE) | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
                 {
                     std::string zipname;
                     std::string zipfolder;
@@ -946,7 +944,7 @@ namespace Windows
                     flags = ImGuiSelectableFlags_None;
                 }
                 ImGui::PushID("Upload##settings");
-                if (ImGui::Selectable(lang_strings[STR_UPLOAD], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+                if (ImGui::Selectable(lang_strings[STR_UPLOAD], false, getSelectableFlag(REMOTE_ACTION_UPLOAD) | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
                 {
                     SetModalMode(false);
                     selected_action = ACTION_UPLOAD;
@@ -959,7 +957,7 @@ namespace Windows
                 ImGui::Separator();
 
                 ImGui::PushID("Install##local");
-                if (ImGui::Selectable(lang_strings[STR_INSTALL], false, getSelectableFlag() | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+                if (ImGui::Selectable(lang_strings[STR_INSTALL], false, getSelectableFlag(REMOTE_ACTION_INSTALL) | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
                 {
                     SetModalMode(false);
                     selected_action = ACTION_INSTALL_LOCAL_PKG;
@@ -972,7 +970,7 @@ namespace Windows
             if (remote_browser_selected)
             {
                 ImGui::PushID("Download##settings");
-                if (ImGui::Selectable(lang_strings[STR_DOWNLOAD], false, getSelectableFlag() | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+                if (ImGui::Selectable(lang_strings[STR_DOWNLOAD], false, getSelectableFlag(REMOTE_ACTION_DOWNLOAD) | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
                 {
                     SetModalMode(false);
                     selected_action = ACTION_DOWNLOAD;
@@ -985,11 +983,7 @@ namespace Windows
                 ImGui::Separator();
 
                 ImGui::PushID("Install##remote");
-                if (remoteclient != nullptr && remoteclient->clientType() != CLIENT_TYPE_WEBDAV)
-                {
-                    flags = ImGuiSelectableFlags_Disabled;
-                }
-                if (ImGui::Selectable(lang_strings[STR_INSTALL], false, getSelectableFlag() | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+                if (ImGui::Selectable(lang_strings[STR_INSTALL], false, getSelectableFlag(REMOTE_ACTION_INSTALL) | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
                 {
                     SetModalMode(false);
                     selected_action = ACTION_INSTALL_REMOTE_PKG;
@@ -1426,7 +1420,7 @@ namespace Windows
         case ACTION_RENAME_LOCAL:
             if (gui_mode != GUI_MODE_IME)
             {
-                if (multi_selected_local_files.size()>0)
+                if (multi_selected_local_files.size() > 0)
                     sprintf(editor_text, "%s", multi_selected_local_files.begin()->name);
                 else
                     sprintf(editor_text, "%s", selected_local_file.name);
@@ -1443,7 +1437,7 @@ namespace Windows
         case ACTION_RENAME_REMOTE:
             if (gui_mode != GUI_MODE_IME)
             {
-                if (multi_selected_remote_files.size()>0)
+                if (multi_selected_remote_files.size() > 0)
                     sprintf(editor_text, "%s", multi_selected_remote_files.begin()->name);
                 else
                     sprintf(editor_text, "%s", selected_remote_file.name);
@@ -1519,7 +1513,7 @@ namespace Windows
         case ACTION_LOCAL_COPY:
             paste_action = selected_action;
             local_paste_files.clear();
-            if (multi_selected_local_files.size()>0)
+            if (multi_selected_local_files.size() > 0)
                 std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(local_paste_files));
             else
                 local_paste_files.push_back(selected_local_file);
@@ -1530,7 +1524,7 @@ namespace Windows
         case ACTION_REMOTE_COPY:
             paste_action = selected_action;
             remote_paste_files.clear();
-            if (multi_selected_remote_files.size()>0)
+            if (multi_selected_remote_files.size() > 0)
                 std::copy(multi_selected_remote_files.begin(), multi_selected_remote_files.end(), std::back_inserter(remote_paste_files));
             else
                 remote_paste_files.push_back(selected_remote_file);
@@ -1690,14 +1684,14 @@ namespace Windows
         }
         else if (selected_action == ACTION_RENAME_LOCAL)
         {
-            if (multi_selected_local_files.size()>0)
+            if (multi_selected_local_files.size() > 0)
                 Actions::RenameLocalFolder(multi_selected_local_files.begin()->path, editor_text);
             else
                 Actions::RenameLocalFolder(selected_local_file.path, editor_text);
         }
         else if (selected_action == ACTION_RENAME_REMOTE)
         {
-            if (multi_selected_remote_files.size()>0)
+            if (multi_selected_remote_files.size() > 0)
                 Actions::RenameRemoteFolder(multi_selected_remote_files.begin()->path, editor_text);
             else
                 Actions::RenameRemoteFolder(selected_remote_file.path, editor_text);
@@ -1724,8 +1718,7 @@ namespace Windows
     {
         if (ime_result == IME_DIALOG_RESULT_FINISHED)
         {
-            remote_settings->is_smb = strncmp(remote_settings->server, "smb://", 6) == 0;
-            remote_settings->is_ftp = strncmp(remote_settings->server, "ftp://", 6) == 0;
+            CONFIG::SetClientType(remote_settings);
         }
     }
 

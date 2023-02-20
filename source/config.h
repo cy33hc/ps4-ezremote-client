@@ -40,9 +40,9 @@ struct RemoteSettings
     char username[33];
     char password[25];
     int http_port;
-    bool is_smb;
-    bool is_ftp;
+    ClientType type;
     bool enable_rpi;
+    uint32_t supported_actions;
 };
 
 struct PackageUrlInfo
@@ -71,6 +71,7 @@ namespace CONFIG
     void LoadConfig();
     void SaveConfig();
     void SaveFavoriteUrl(int index, char *url);
+    void SetClientType(RemoteSettings *settings);
     void RemoveFromMultiValues(std::vector<std::string> &multi_values, std::string value);
     void ParseMultiValueString(const char *prefix_list, std::vector<std::string> &prefixes, bool toLower);
     std::string GetMultiValueString(std::vector<std::string> &multi_values);

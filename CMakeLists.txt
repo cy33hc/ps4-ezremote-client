@@ -21,6 +21,7 @@ add_executable(ezremote_client
   source/web/urn.cpp
   source/webdav/client.cpp
   source/http/httplib.cpp
+  source/http/npxserve.cpp
   source/actions.cpp
   source/config.cpp
   source/fs.cpp

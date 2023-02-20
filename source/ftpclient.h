@@ -97,6 +97,7 @@ public:
 	int Quit();
 	std::string GetPath(std::string path1, std::string path2);
 	ClientType clientType();
+	uint32_t SupportedActions();
 
 private:
 	ftphandle *mp_ftphandle;

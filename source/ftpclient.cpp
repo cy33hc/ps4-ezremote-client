@@ -1683,6 +1683,11 @@ ClientType FtpClient::clientType()
 	return CLIENT_TYPE_FTP;
 }
 
+uint32_t FtpClient::SupportedActions()
+{
+	return REMOTE_ACTION_ALL ^ REMOTE_ACTION_CUT ^ REMOTE_ACTION_COPY ^ REMOTE_ACTION_PASTE;
+}
+
 std::string FtpClient::GetPath(std::string ppath1, std::string ppath2)
 {
 	std::string path1 = ppath1;

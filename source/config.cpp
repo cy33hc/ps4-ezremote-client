@@ -30,6 +30,30 @@ RemoteClient *remoteclient;
 namespace CONFIG
 {
 
+    void SetClientType(RemoteSettings *setting)
+    {
+        if (strncmp(setting->server, "smb://", 6) == 0)
+        {
+            setting->type = CLIENT_TYPE_SMB;
+        }
+        else if (strncmp(setting->server, "ftp://", 6) == 0)
+        {
+            setting->type = CLIENT_TYPE_FTP;
+        }
+        else if (strncmp(setting->server, "dav://", 6) == 0 || strncmp(setting->server, "davs://", 7) == 0)
+        {
+            setting->type = CLIENT_TYPE_WEBDAV;
+        }
+        else if (strncmp(setting->server, "http://", 7) == 0 || strncmp(setting->server, "https://", 87) == 0)
+        {
+            setting->type = CLIENT_TYPE_HTTP_SERVER;
+        }
+        else
+        {
+            setting->type = CLINET_TYPE_UNKNOWN;
+        }
+    }
+
     void LoadConfig()
     {
         if (!FS::FolderExists(DATA_PATH))
@@ -62,8 +86,6 @@ namespace CONFIG
 
             sprintf(setting.server, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_URL, ""));
             WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_URL, setting.server);
-            setting.is_smb = strncmp(setting.server, "smb://", 6) == 0;
-            setting.is_ftp = strncmp(setting.server, "ftp://", 6) == 0;
 
             sprintf(setting.username, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_USER, ""));
             WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_USER, setting.username);
@@ -77,6 +99,7 @@ namespace CONFIG
             setting.enable_rpi = ReadBool(sites[i].c_str(), CONFIG_ENABLE_RPI, false);
             WriteBool(sites[i].c_str(), CONFIG_ENABLE_RPI, setting.enable_rpi);
 
+            SetClientType(&setting);
             site_settings.insert(std::make_pair(sites[i], setting));
         }
 

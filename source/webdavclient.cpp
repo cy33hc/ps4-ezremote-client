@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <cstring>
+#include <regex>
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -43,7 +44,8 @@ namespace WebDAV
 
 	int WebDavClient::Connect(const std::string &host, const std::string &user, const std::string &pass, bool check_enabled)
 	{
-		std::string url = std::string(host);
+		std::string url = std::regex_replace(host, std::regex("dav://"), "http://");
+		url = std::regex_replace(url, std::regex("davs://"), "https://");
 		std::size_t scheme_pos = url.find_first_of("://");
 		std::string root_folder = "/";
 		if (scheme_pos != std::string::npos)
@@ -389,5 +391,10 @@ namespace WebDAV
 	ClientType WebDavClient::clientType()
 	{
 		return CLIENT_TYPE_WEBDAV;
+	}
+
+	uint32_t WebDavClient::SupportedActions()
+	{
+		return REMOTE_ACTION_ALL;
 	}
 }

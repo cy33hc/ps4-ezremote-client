@@ -18,6 +18,7 @@
 #include "ftpclient.h"
 #include "smbclient.h"
 #include "webdavclient.h"
+#include "http/npxserve.h"
 #include "zip_util.h"
 
 namespace Actions
@@ -1104,6 +1105,10 @@ namespace Actions
     {
         CONFIG::SaveConfig();
         if (strncmp(remote_settings->server, "https://", 8) == 0 || strncmp(remote_settings->server, "http://", 7) == 0)
+        {
+            remoteclient = new NpxServeClient();
+        }
+        else if (strncmp(remote_settings->server, "davs://", 7) == 0 || strncmp(remote_settings->server, "dav://", 6) == 0)
         {
             remoteclient = new WebDAV::WebDavClient();
         }

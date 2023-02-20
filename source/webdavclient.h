@@ -36,6 +36,7 @@ namespace WebDAV
 		bool GetHeaders(const std::string &path, dict_t *headers);
 		WebDAV::Client *GetClient();
 		ClientType clientType();
+		uint32_t SupportedActions();
 
 	private:
 		int _Rmdir(const std::string &path);

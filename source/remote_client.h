@@ -5,9 +5,28 @@
 #include <vector>
 #include "common.h"
 
+enum RemoteActions
+{
+    REMOTE_ACTION_NONE = 0,
+    REMOTE_ACTION_CUT = 1,
+    REMOTE_ACTION_COPY = 2,
+    REMOTE_ACTION_PASTE = 4,
+    REMOTE_ACTION_DELETE = 8,
+    REMOTE_ACTION_RENAME = 16,
+    REMOTE_ACTION_NEW_FOLDER = 32,
+    REMOTE_ACTION_DOWNLOAD = 64,
+    REMOTE_ACTION_UPLOAD = 128,
+    REMOTE_ACTION_INSTALL = 256,
+    REMOTE_ACTION_ALL = 511
+};
+
 enum ClientType
 {
-    CLIENT_TYPE_FTP, CLIENT_TYPE_SMB, CLIENT_TYPE_WEBDAV
+    CLIENT_TYPE_FTP,
+    CLIENT_TYPE_SMB,
+    CLIENT_TYPE_WEBDAV,
+    CLIENT_TYPE_HTTP_SERVER,
+    CLINET_TYPE_UNKNOWN
 };
 
 class RemoteClient
@@ -34,6 +53,7 @@ public:
     virtual const char *LastResponse() = 0;
     virtual int Quit() = 0;
     virtual ClientType clientType() = 0;
+    virtual uint32_t SupportedActions() = 0;
 };
 
 #endif
