@@ -1,9 +1,9 @@
 # ezRemote Client
 
-ezRemote Client is an application that allows you to connect the PS4 to remote FTP, SMB and WebDAV servers to transfer files. The interface is inspired by Filezilla client which provides a commander like GUI.
+ezRemote Client is an application that allows you to connect the PS4 to remote FTP, SMB, WebDAV and HTTP servers to transfer files. The interface is inspired by Filezilla client which provides a commander like GUI.
 ![Preview](/screenshot.jpg)
 ## Usage
-To distinguish between FTP, SMB or WebDAV, the URL must be prefix with **ftp://**, **smb://**, **http://** and **https://**
+To distinguish between FTP, SMB, WebDAV or HTTP, the URL must be prefix with **ftp://**, **smb://**, **dav://**, **davs://**, **http://** and **https://**
 
  - The url format for FTP is
    ```
@@ -24,12 +24,20 @@ To distinguish between FTP, SMB or WebDAV, the URL must be prefix with **ftp://*
 
  - The url format for WebDAV is
    ```
-   http://hostname[:port]/[url_path]
-   https://hostname[:port]/[url_path]
+   dav://hostname[:port]/[url_path]
+   davs://hostname[:port]/[url_path]
 
      - hostname can be the textual hostname or an IP address. hostname is required
-     - port is optional and defaults to 80(http) and 443(https) if not provided
+     - port is optional and defaults to 80(dav) and 443(davs) if not provided
      - url_path is optional based on your WebDAV hosting requiremets
+   ```
+
+- The url format for HTTP Server is
+   ```
+   http://hostname[:port]
+   https://hostname[:port]
+     - hostname can be the textual hostname or an IP address. hostname is required
+     - port is optional and defaults to 80(http) and 443(https) if not provided
    ```
 
 Tested with following WebDAV server:
