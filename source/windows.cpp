@@ -881,7 +881,7 @@ namespace Windows
 
             ImGui::PushID("New Folder##settings");
             flags = ImGuiSelectableFlags_None;
-            if (remoteclient != nullptr && !(remoteclient->SupportedActions() & REMOTE_ACTION_NEW_FOLDER))
+            if (remote_browser_selected && remoteclient != nullptr && !(remoteclient->SupportedActions() & REMOTE_ACTION_NEW_FOLDER))
             {
                 flags = ImGuiSelectableFlags_Disabled;
             }
@@ -939,7 +939,7 @@ namespace Windows
                 ImGui::Separator();
 
                 flags = getSelectableFlag(REMOTE_ACTION_UPLOAD);
-                if (remoteclient != nullptr && !(remoteclient->SupportedActions() & REMOTE_ACTION_UPLOAD))
+                if (remote_browser_selected && remoteclient != nullptr && !(remoteclient->SupportedActions() & REMOTE_ACTION_UPLOAD))
                 {
                     flags = ImGuiSelectableFlags_Disabled;
                 }

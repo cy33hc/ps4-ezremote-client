@@ -1,9 +1,11 @@
 #include <lexbor/html/parser.h>
 #include <lexbor/dom/interfaces/element.h>
 #include <fstream>
+#include <map>
+#include <vector>
 #include "common.h"
 #include "remote_client.h"
-#include "http/iis.h"
+#include "http/nginx.h"
 #include "lang.h"
 #include "util.h"
 #include "windows.h"
@@ -12,7 +14,12 @@ using httplib::Client;
 using httplib::Headers;
 using httplib::Result;
 
-std::vector<DirEntry> IISClient::ListDir(const std::string &path)
+static std::map<std::string, int> months = {
+    {"Jan", 1}, {"Feb", 2}, {"Mar", 3}, {"Apr", 4}, {"May", 5}, {"Jun", 6},
+    {"Jul", 7}, {"Aug", 8}, {"Sep", 9}, {"Oct", 10}, {"Nov", 11}, {"Dec", 12}
+};
+
+std::vector<DirEntry> NginxClient::ListDir(const std::string &path)
 {
     std::vector<DirEntry> out;
     DirEntry entry;
@@ -73,8 +80,8 @@ std::vector<DirEntry> IISClient::ListDir(const std::string &path)
         }
 
         element = lxb_dom_collection_element(collection, 0);
-        const lxb_char_t *name;
-        size_t name_len;
+        const lxb_char_t *value;
+        size_t value_len;
         std::string tmp;
         node = element->node.first_child;
 
@@ -84,13 +91,14 @@ std::vector<DirEntry> IISClient::ListDir(const std::string &path)
         {
             if (node->type == LXB_DOM_NODE_TYPE_ELEMENT)
             {
-                name = lxb_dom_element_local_name(lxb_dom_interface_element(node), &name_len);
-                tmp = std::string((const char *)name, name_len);
+                value = lxb_dom_element_local_name(lxb_dom_interface_element(node), &value_len);
+                tmp = std::string((const char *)value, value_len);
                 if (tmp.compare("a") == 0)
                 {
-                    name = lxb_dom_node_text_content(node, &name_len);
-                    tmp = std::string((const char *)name, name_len);
-                    if (tmp.compare("[To Parent Directory]") != 0)
+                    value = lxb_dom_node_text_content(node, &value_len);
+                    tmp = std::string((const char *)value, value_len);
+                    tmp = Util::Rtrim(tmp, "/");
+                    if (tmp.compare("..") != 0)
                     {
                         sprintf(entry.directory, "%s", path.c_str());
                         sprintf(entry.name, "%s", tmp.c_str());
@@ -102,18 +110,19 @@ std::vector<DirEntry> IISClient::ListDir(const std::string &path)
                         {
                             sprintf(entry.path, "%s/%s", path.c_str(), entry.name);
                         }
-                        out.push_back(entry);
-                        memset(&entry, 0, sizeof(DirEntry));
                     }
                 }
             }
             else if (node->type == LXB_DOM_NODE_TYPE_TEXT)
             {
-                name = lxb_dom_node_text_content(node, &name_len);
-                std::vector<std::string> tokens = Util::Split(std::string((const char *)name, name_len), " ");
-                if (tokens.size() == 4)
+                value = lxb_dom_node_text_content(node, &value_len);
+                tmp = std::string((const char *)value, value_len);
+                std::vector<std::string> tokens = Util::Split(tmp, " ");
+                if (tokens.size() == 3)
                 {
-                    if (tokens[3].compare("<dir>") == 0)
+                    tmp = Util::Trim(tokens[2], "\n");
+                    tmp = Util::Trim(tmp, "\r");
+                    if (tmp.compare("-") == 0)
                     {
                         entry.isDir = true;
                         entry.selectable = true;
@@ -124,16 +133,16 @@ std::vector<DirEntry> IISClient::ListDir(const std::string &path)
                     {
                         entry.isDir = false;
                         entry.selectable = true;
-                        entry.file_size = atoll(tokens[3].c_str());
+                        entry.file_size = atoll(tmp.c_str());
                         DirEntry::SetDisplaySize(&entry);
                     }
 
-                    std::vector<std::string> adate = Util::Split(tokens[0], "/");
+                    std::vector<std::string> adate = Util::Split(tokens[0], "-");
                     if (adate.size() == 3)
                     {
-                        entry.modified.month = atoi(adate[0].c_str());
-                        entry.modified.day = atoi(adate[1].c_str());
-                        entry.modified.year = atoi(adate[2].c_str()); 
+                        entry.modified.day = atoi(adate[0].c_str());
+                        entry.modified.month = months.find(adate[1])->second;
+                        entry.modified.year = atoi(adate[2].c_str());
                     }
 
                     std::vector<std::string> atime = Util::Split(tokens[1], ":");
@@ -142,12 +151,8 @@ std::vector<DirEntry> IISClient::ListDir(const std::string &path)
                         entry.modified.hours = atoi(atime[0].c_str());
                         entry.modified.minutes = atoi(atime[1].c_str());
                     }
-
-                    if (tokens[3].compare("PM") == 0)
-                    {
-                        if (entry.modified.hours < 12)
-                            entry.modified.hours += 11;
-                    }
+                    out.push_back(entry);
+                    memset(&entry, 0, sizeof(DirEntry));
                 }
             }
             node = node->next;

@@ -24,6 +24,7 @@ add_executable(ezremote_client
   source/http/baseclient.cpp
   source/http/apache.cpp
   source/http/iis.cpp
+  source/http/nginx.cpp
   source/http/npxserve.cpp
   source/actions.cpp
   source/config.cpp
