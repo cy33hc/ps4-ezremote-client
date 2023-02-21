@@ -84,4 +84,5 @@ target_link_libraries(ezremote_client
   SceNet
   SceBgft
   SceAppInstUtil
+  SceLncUtil
 )

@@ -938,13 +938,13 @@ namespace Windows
                 ImGui::PopID();
                 ImGui::Separator();
 
-                flags = ImGuiSelectableFlags_Disabled;
-                if (remoteclient != nullptr && selected_local_file.selectable)
+                flags = getSelectableFlag(REMOTE_ACTION_UPLOAD);
+                if (remoteclient != nullptr && !(remoteclient->SupportedActions() & REMOTE_ACTION_UPLOAD))
                 {
-                    flags = ImGuiSelectableFlags_None;
+                    flags = ImGuiSelectableFlags_Disabled;
                 }
                 ImGui::PushID("Upload##settings");
-                if (ImGui::Selectable(lang_strings[STR_UPLOAD], false, getSelectableFlag(REMOTE_ACTION_UPLOAD) | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+                if (ImGui::Selectable(lang_strings[STR_UPLOAD], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
                 {
                     SetModalMode(false);
                     selected_action = ACTION_UPLOAD;

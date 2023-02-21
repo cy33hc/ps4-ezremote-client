@@ -4,12 +4,20 @@
 #include <time.h>
 #include <string>
 #include <vector>
+#include <regex>
 #include "webdav/client.hpp"
 #include "common.h"
 #include "remote_client.h"
 
 namespace WebDAV
 {
+	inline std::string GetHttpUrl(std::string url)
+	{
+		std::string http_url = std::regex_replace(url, std::regex("dav://"), "http://");
+		http_url = std::regex_replace(http_url, std::regex("davs://"), "https://");
+		return http_url;
+	}
+
 	class WebDavClient : public RemoteClient
 	{
 	public:

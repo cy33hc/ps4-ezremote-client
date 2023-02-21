@@ -7,7 +7,6 @@
 #include "lang.h"
 #include "util.h"
 #include "windows.h"
-#include "dbglogger.h"
 
 using httplib::Client;
 using httplib::Headers;
@@ -28,6 +27,8 @@ int NpxServeClient::Connect(const std::string &url, const std::string &username,
         client->set_basic_auth(username, password);
     client->set_keep_alive(true);
     client->set_follow_location(true);
+    client->set_connection_timeout(30);
+    client->set_read_timeout(30);
     client->enable_server_certificate_verification(false);
     if (Ping())
         this->connected = true;
@@ -55,6 +56,10 @@ int NpxServeClient::Size(const std::string &path, int64_t *size)
             *size = atoll(content_length.c_str());
         return 1;
     }
+    else
+    {
+        sprintf(this->response, "%s", httplib::to_string(res.error()).c_str());
+    }
     return 0;
 }
 
@@ -62,15 +67,22 @@ int NpxServeClient::Get(const std::string &outputfile, const std::string &path, 
 {
     std::ofstream file_stream(outputfile, std::ios::binary);
     bytes_transfered = 0;
-    client->Get(path,
+    if (auto res = client->Get(path,
                 [&](const char *data, size_t data_length)
                 {
                     file_stream.write(data, data_length);
                     bytes_transfered += data_length;
                     return true;
-                });
-    file_stream.close();
-    return 1;
+                }))
+    {
+        file_stream.close();
+        return 1;
+    }
+    else
+    {
+        sprintf(this->response, "%s", httplib::to_string(res.error()).c_str());
+    }
+    return 0;
 }
 
 int NpxServeClient::Put(const std::string &inputfile, const std::string &path, uint64_t offset)
@@ -113,16 +125,17 @@ int NpxServeClient::Head(const std::string &path, void *buffer, uint64_t len)
     if (auto res = client->Get(path, headers,
                 [&](const char *data, size_t data_length)
                 {
-                    dbglogger_log("bytes=%d", data_length);
                     body.insert(body.end(), data, data+data_length);
                     return true;
                 }))
     {
-        dbglogger_log("body.length=%d", body.size());
         if (body.size() < len) return 0;
         memcpy(buffer, body.data(), len);
-
         return 1;
+    }
+    else
+    {
+        sprintf(this->response, "%s", httplib::to_string(res.error()).c_str());
     }
     return 0;
 }
@@ -186,7 +199,7 @@ std::vector<DirEntry> NpxServeClient::ListDir(const std::string &path)
         {
             DirEntry entry;
             std::string title, aclass;
-
+            memset(&entry.modified, 0, sizeof(DateTime));
             element = lxb_dom_collection_element(collection, i);
             attr = lxb_dom_element_attr_by_name(element, (lxb_char_t *)"title", 5);
             if (attr != nullptr)
@@ -212,14 +225,12 @@ std::vector<DirEntry> NpxServeClient::ListDir(const std::string &path)
 
             if (ent_type.compare("folder") == 0)
             {
-                dbglogger_log("in folder");
                 sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
                 entry.isDir = true;
                 entry.selectable = true;
             }
             else if (ent_type.compare("file") == 0)
             {
-                dbglogger_log("in file");
                 sprintf(entry.display_size, "%s", "???B");
                 entry.isDir = false;
                 entry.selectable = true;
@@ -232,6 +243,11 @@ std::vector<DirEntry> NpxServeClient::ListDir(const std::string &path)
         }
         lxb_dom_collection_destroy(collection, true);
         lxb_html_document_destroy(document);
+    }
+    else
+    {
+        sprintf(this->response, "%s", httplib::to_string(res.error()).c_str());
+        return out;
     }
 
 finish:
@@ -257,12 +273,11 @@ bool NpxServeClient::Ping()
 {
     if (auto res = client->Head("/"))
     {
-        dbglogger_log("status=%d", res->status);
         return true;
     }
     else
     {
-        dbglogger_log("error=%d", res.error());
+        sprintf(this->response, "%s", httplib::to_string(res.error()).c_str());
     }
     return false;
 }

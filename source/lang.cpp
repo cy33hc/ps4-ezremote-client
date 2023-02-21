@@ -125,10 +125,10 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Checking remote server for Remote Package Install.",									// STR_CHECKING_REMOTE_SERVER_MSG
 	"RPI",																					// STR_ENABLE_RPI
 	"This option enables Remote Package Installation. "
-	"This requires a HTTP Server setup on the same host sharing the same folder.", // STR_ENABLE_RPI_FTP_SMB_MSG
+	"This requires a HTTP Server setup on the same host sharing the same folder with anonymous access.", // STR_ENABLE_RPI_FTP_SMB_MSG
 	"This option enables Remote Package Installation. "
-	"This requires a WebDAV Server with anonymous access that does not need username/password.", // STR_ENABLE_RPI_WEBDAV_MSG
-	"Files",																					 // STR_FILES
+	"This requires the Server with anonymous access that does not need username/password.", // STR_ENABLE_RPI_WEBDAV_MSG
+	"Files",																				// STR_FILES
 };
 
 bool needs_extended_font = false;

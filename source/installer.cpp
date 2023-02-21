@@ -20,6 +20,7 @@
 #include "rtc.h"
 #include "fs.h"
 #include "webdavclient.h"
+#include "dbglogger.h"
 
 #define BGFT_HEAP_SIZE (1 * 1024 * 1024)
 
@@ -99,9 +100,9 @@ namespace INSTALLER
 
 	std::string getRemoteUrl(const std::string filename)
 	{
-		if (remoteclient->clientType() == CLIENT_TYPE_WEBDAV)
+		if (remoteclient->clientType() == CLIENT_TYPE_WEBDAV || remoteclient->clientType() == CLIENT_TYPE_HTTP_SERVER)
 		{
-			std::string full_url = remote_settings->server + filename;
+			std::string full_url = WebDAV::GetHttpUrl(remote_settings->server + filename);
 			size_t scheme_pos = full_url.find("://");
 			if (scheme_pos == std::string::npos)
 				return "";
