@@ -1109,7 +1109,14 @@ namespace Actions
         CONFIG::SaveConfig();
         if (strncmp(remote_settings->server, "https://", 8) == 0 || strncmp(remote_settings->server, "http://", 7) == 0)
         {
-            remoteclient = new NpxServeClient();
+            if (strcmp(remote_settings->http_server_type, HTTP_SERVER_APACHE) == 0)
+                remoteclient = new ApacheClient();
+            else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_MS_IIS) == 0)
+                remoteclient = new IISClient();
+            else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_NGINX) == 0)
+                remoteclient = new NginxClient();
+            else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_NPX_SERVE) == 0)
+                remoteclient = new NpxServeClient();
         }
         else if (strncmp(remote_settings->server, "davs://", 7) == 0 || strncmp(remote_settings->server, "dav://", 6) == 0)
         {

@@ -309,17 +309,42 @@ namespace Windows
 
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 1.0f));
         sprintf(id, "%s##server", remote_settings->server);
+        int width = 550;
+        if (remote_settings->type == CLIENT_TYPE_HTTP_SERVER)
+            width = 500;
         pos = ImGui::GetCursorPos();
-        if (ImGui::Button(id, ImVec2(550, 0)))
+        if (ImGui::Button(id, ImVec2(width, 0)))
         {
             ime_single_field = remote_settings->server;
             ResetImeCallbacks();
             ime_field_size = 255;
             ime_callback = SingleValueImeCallback;
+            ime_after_update = AferServerChangeCallback;
             Dialog::initImeDialog(lang_strings[STR_SERVER], remote_settings->server, 255, ORBIS_TYPE_TYPE_URL, pos.x, pos.y);
             gui_mode = GUI_MODE_IME;
         }
         ImGui::SameLine();
+
+        if (remote_settings->type == CLIENT_TYPE_HTTP_SERVER)
+        {
+            ImGui::SetNextItemWidth(120);
+            if (ImGui::BeginCombo("##HttpServer", remote_settings->http_server_type, ImGuiComboFlags_PopupAlignLeft | ImGuiComboFlags_HeightLargest | ImGuiComboFlags_NoArrowButton))
+            {
+                for (int n = 0; n < http_servers.size(); n++)
+                {
+                    const bool is_selected = strcmp(http_servers[n].c_str(), remote_settings->http_server_type) == 0;
+                    if (ImGui::Selectable(http_servers[n].c_str(), is_selected))
+                    {
+                        sprintf(remote_settings->http_server_type, "%s", http_servers[n].c_str());
+                    }
+                    // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+                    if (is_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            ImGui::SameLine();
+        }
 
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
         ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_USERNAME]);

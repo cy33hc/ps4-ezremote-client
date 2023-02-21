@@ -21,6 +21,7 @@
 #define CONFIG_REMOTE_SERVER_PASSWORD "remote_server_password"
 #define CONFIG_REMOTE_SERVER_HTTP_PORT "remote_server_http_port"
 #define CONFIG_ENABLE_RPI "remote_server_enable_rpi"
+#define CONFIG_REMOTE_HTTP_SERVER_TYPE "remote_server_http_server_type"
 
 #define CONFIG_FAVORITE_URLS "favorite_urls"
 #define MAX_FAVORITE_URLS 30
@@ -33,6 +34,11 @@
 
 #define CONFIG_LANGUAGE "language"
 
+#define HTTP_SERVER_APACHE "Apache"
+#define HTTP_SERVER_MS_IIS "MS IIS"
+#define HTTP_SERVER_NGINX "Nginx"
+#define HTTP_SERVER_NPX_SERVE "Npx Serve"
+
 struct RemoteSettings
 {
     char site_name[32];
@@ -43,6 +49,7 @@ struct RemoteSettings
     ClientType type;
     bool enable_rpi;
     uint32_t supported_actions;
+    char http_server_type[24];
 };
 
 struct PackageUrlInfo
@@ -53,6 +60,7 @@ struct PackageUrlInfo
 };
 
 extern std::vector<std::string> sites;
+extern std::vector<std::string> http_servers;
 extern std::map<std::string, RemoteSettings> site_settings;
 extern char local_directory[255];
 extern char remote_directory[255];

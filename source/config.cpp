@@ -21,6 +21,7 @@ char last_site[32];
 char display_site[32];
 char language[128];
 std::vector<std::string> sites;
+std::vector<std::string> http_servers;
 std::map<std::string, RemoteSettings> site_settings;
 PackageUrlInfo install_pkg_url;
 char favorite_urls[MAX_FAVORITE_URLS][512];
@@ -44,7 +45,7 @@ namespace CONFIG
         {
             setting->type = CLIENT_TYPE_WEBDAV;
         }
-        else if (strncmp(setting->server, "http://", 7) == 0 || strncmp(setting->server, "https://", 87) == 0)
+        else if (strncmp(setting->server, "http://", 7) == 0 || strncmp(setting->server, "https://", 8) == 0)
         {
             setting->type = CLIENT_TYPE_HTTP_SERVER;
         }
@@ -63,6 +64,8 @@ namespace CONFIG
 
         sites = {"Site 1", "Site 2", "Site 3", "Site 4", "Site 5", "Site 6", "Site 7", "Site 8", "Site 9", "Site 10",
                  "Site 11", "Site 12", "Site 13", "Site 14", "Site 15", "Site 16", "Site 17", "Site 18", "Site 19", "Site 20"};
+
+        http_servers = { HTTP_SERVER_APACHE, HTTP_SERVER_MS_IIS, HTTP_SERVER_NGINX, HTTP_SERVER_NPX_SERVE};
 
         OpenIniFile(CONFIG_INI_FILE);
 
@@ -99,6 +102,9 @@ namespace CONFIG
             setting.enable_rpi = ReadBool(sites[i].c_str(), CONFIG_ENABLE_RPI, false);
             WriteBool(sites[i].c_str(), CONFIG_ENABLE_RPI, setting.enable_rpi);
 
+            sprintf(setting.http_server_type, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_HTTP_SERVER_TYPE, HTTP_SERVER_APACHE));
+            WriteString(sites[i].c_str(), CONFIG_REMOTE_HTTP_SERVER_TYPE, setting.http_server_type);
+
             SetClientType(&setting);
             site_settings.insert(std::make_pair(sites[i], setting));
         }
@@ -128,6 +134,7 @@ namespace CONFIG
         WriteString(last_site, CONFIG_REMOTE_SERVER_PASSWORD, remote_settings->password);
         WriteInt(last_site, CONFIG_REMOTE_SERVER_HTTP_PORT, remote_settings->http_port);
         WriteBool(last_site, CONFIG_ENABLE_RPI, remote_settings->enable_rpi);
+        WriteString(last_site, CONFIG_REMOTE_HTTP_SERVER_TYPE, remote_settings->http_server_type);
         WriteString(CONFIG_GLOBAL, CONFIG_LAST_SITE, last_site);
         WriteBool(CONFIG_GLOBAL, CONFIG_AUTO_DELETE_TMP_PKG, auto_delete_tmp_pkg);
         WriteIniFile(CONFIG_INI_FILE);
