@@ -7,7 +7,6 @@
 #include "lang.h"
 #include "util.h"
 #include "windows.h"
-#include "dbglogger.h"
 
 using httplib::Client;
 using httplib::Headers;
@@ -124,7 +123,6 @@ std::vector<DirEntry> ApacheClient::ListDir(const std::string &path)
                 {
                     value = lxb_dom_element_get_attribute(lxb_dom_interface_element(img), (const lxb_char_t *)"alt", 3, &value_len);
                     tmp_string = std::string((const char *)value, value_len);
-                    dbglogger_log("alt=%s", tmp_string.c_str());
                     if (tmp_string.compare("[PARENTDIR]") == 0)
                         continue;
                     else if (tmp_string.compare("[DIR]") == 0)
@@ -153,7 +151,6 @@ std::vector<DirEntry> ApacheClient::ListDir(const std::string &path)
                 value = lxb_dom_node_text_content(node, &value_len);
                 tmp_string = std::string((const char *)value, value_len);
                 tmp_string = Util::Rtrim(tmp_string, "/");
-                dbglogger_log("name=%s", tmp_string.c_str());
                 sprintf(entry.name, "%s", tmp_string.c_str());
                 sprintf(entry.directory, "%s", path.c_str());
                 if (path.length() > 0 && path[path.length() - 1] == '/')
@@ -176,7 +173,6 @@ std::vector<DirEntry> ApacheClient::ListDir(const std::string &path)
             {
                 value = lxb_dom_node_text_content(node, &value_len);
                 tmp_string = std::string((const char *)value, value_len);
-                dbglogger_log("date=%s", tmp_string.c_str());
                 std::vector<std::string> date_time = Util::Split(tmp_string, " ");
                 if (date_time.size() == 2)
                 {
@@ -208,7 +204,6 @@ std::vector<DirEntry> ApacheClient::ListDir(const std::string &path)
                 value = lxb_dom_node_text_content(node, &value_len);
                 tmp_string = std::string((const char *)value, value_len);
                 tmp_string = Util::Trim(tmp_string, " ");
-                dbglogger_log("size=%s", tmp_string.c_str());
                 if (!entry.isDir)
                 {
                     char multiplier = tmp_string[tmp_string.length()-1];
