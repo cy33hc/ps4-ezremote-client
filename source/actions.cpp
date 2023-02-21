@@ -19,6 +19,7 @@
 #include "smbclient.h"
 #include "webdavclient.h"
 #include "http/npxserve.h"
+#include "http/iis.h"
 #include "zip_util.h"
 
 namespace Actions
@@ -1106,7 +1107,7 @@ namespace Actions
         CONFIG::SaveConfig();
         if (strncmp(remote_settings->server, "https://", 8) == 0 || strncmp(remote_settings->server, "http://", 7) == 0)
         {
-            remoteclient = new NpxServeClient();
+            remoteclient = new IISClient();
         }
         else if (strncmp(remote_settings->server, "davs://", 7) == 0 || strncmp(remote_settings->server, "dav://", 6) == 0)
         {

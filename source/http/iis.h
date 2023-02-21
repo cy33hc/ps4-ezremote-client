@@ -1,5 +1,5 @@
-#ifndef NPXSERVER_H
-#define NPXSERVER_H
+#ifndef IIS_H
+#define IIS_H
 
 #include <string>
 #include <vector>
@@ -8,7 +8,7 @@
 #include "common.h"
 #include "remote_client.h"
 
-class NpxServeClient : public BaseClient
+class IISClient : public BaseClient
 {
 public:
     std::vector<DirEntry> ListDir(const std::string &path);

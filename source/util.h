@@ -46,6 +46,25 @@ namespace Util
         return s;
     }
 
+    static inline std::vector<std::string> Split(const std::string &str, const std::string &delimiter)
+    {
+        std::string text = std::string(str);
+        std::vector<std::string> tokens;
+        size_t pos = 0;
+        while ((pos = text.find(delimiter)) != std::string::npos)
+        {
+            if (text.substr(0, pos).length() > 0)
+                tokens.push_back(text.substr(0, pos));
+            text.erase(0, pos + delimiter.length());
+        }
+        if (text.length() > 0)
+        {
+            tokens.push_back(text);
+        }
+
+        return tokens;
+    }
+
     static inline void Notify(const char *fmt, ...)
     {
         OrbisNotificationRequest request;

@@ -297,22 +297,7 @@ namespace WebDAV
 			if (!entry.isDir)
 			{
 				entry.file_size = std::stoll(WebDAV::get(files[i], "size"));
-				if (entry.file_size < 1024)
-				{
-					sprintf(entry.display_size, "%luB", entry.file_size);
-				}
-				else if (entry.file_size < 1024 * 1024)
-				{
-					sprintf(entry.display_size, "%.2fKB", entry.file_size * 1.0f / 1024);
-				}
-				else if (entry.file_size < 1024 * 1024 * 1024)
-				{
-					sprintf(entry.display_size, "%.2fMB", entry.file_size * 1.0f / (1024 * 1024));
-				}
-				else
-				{
-					sprintf(entry.display_size, "%.2fGB", entry.file_size * 1.0f / (1024 * 1024 * 1024));
-				}
+				DirEntry::SetDisplaySize(&entry);
 			}
 			else
 			{

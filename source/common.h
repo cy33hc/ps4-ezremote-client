@@ -60,6 +60,26 @@ struct DirEntry
     {
         qsort(&list[0], list.size(), sizeof(DirEntry), DirEntryComparator);
     }
+
+    static void SetDisplaySize(DirEntry *entry)
+    {
+        if (entry->file_size < 1024)
+        {
+            sprintf(entry->display_size, "%ldB", entry->file_size);
+        }
+        else if (entry->file_size < 1024 * 1024)
+        {
+            sprintf(entry->display_size, "%.2fKB", entry->file_size * 1.0f / 1024);
+        }
+        else if (entry->file_size < 1024 * 1024 * 1024)
+        {
+            sprintf(entry->display_size, "%.2fMB", entry->file_size * 1.0f / (1024 * 1024));
+        }
+        else
+        {
+            sprintf(entry->display_size, "%.2fGB", entry->file_size * 1.0f / (1024 * 1024 * 1024));
+        }
+    }
 };
 
 #endif

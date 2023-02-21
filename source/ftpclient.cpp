@@ -1628,22 +1628,7 @@ std::vector<DirEntry> FtpClient::ListDir(const std::string &path)
 				}
 				else
 				{
-					if (entry.file_size < 1024)
-					{
-						sprintf(entry.display_size, "%ldB", entry.file_size);
-					}
-					else if (entry.file_size < 1024 * 1024)
-					{
-						sprintf(entry.display_size, "%.2fKB", entry.file_size * 1.0f / 1024);
-					}
-					else if (entry.file_size < 1024 * 1024 * 1024)
-					{
-						sprintf(entry.display_size, "%.2fMB", entry.file_size * 1.0f / (1024 * 1024));
-					}
-					else
-					{
-						sprintf(entry.display_size, "%.2fGB", entry.file_size * 1.0f / (1024 * 1024 * 1024));
-					}
+					DirEntry::SetDisplaySize(&entry);
 				}
 				if (strcmp(entry.name, "..") != 0 && strcmp(entry.name, ".") != 0)
 					out.push_back(entry);
