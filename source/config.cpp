@@ -2,6 +2,7 @@
 #include <cstring>
 #include <map>
 #include <vector>
+#include <regex>
 #include <stdlib.h>
 #include "config.h"
 #include "fs.h"
@@ -41,7 +42,7 @@ namespace CONFIG
         {
             setting->type = CLIENT_TYPE_FTP;
         }
-        else if (strncmp(setting->server, "dav://", 6) == 0 || strncmp(setting->server, "davs://", 7) == 0)
+        else if (strncmp(setting->server, "webdav://", 9) == 0 || strncmp(setting->server, "webdavs://", 10) == 0)
         {
             setting->type = CLIENT_TYPE_WEBDAV;
         }
@@ -69,6 +70,14 @@ namespace CONFIG
 
         OpenIniFile(CONFIG_INI_FILE);
 
+        int version = ReadInt(CONFIG_GLOBAL, CONFIG_VERSION, 0);
+        bool conversion_needed = false;
+        if (version < CONFIG_VERSION_NUM)
+        {
+            conversion_needed = true;
+        }
+        WriteInt(CONFIG_GLOBAL, CONFIG_VERSION, CONFIG_VERSION_NUM);
+
         // Load global config
         sprintf(language, "%s", ReadString(CONFIG_GLOBAL, CONFIG_LANGUAGE, ""));
         WriteString(CONFIG_GLOBAL, CONFIG_LANGUAGE, language);
@@ -88,6 +97,13 @@ namespace CONFIG
             sprintf(setting.site_name, "%s", sites[i].c_str());
 
             sprintf(setting.server, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_URL, ""));
+            if (conversion_needed && strlen(setting.server)>0)
+            {
+                std::string tmp = std::string(setting.server);
+                tmp = std::regex_replace(tmp, std::regex("http://"), "webdav://");
+                tmp = std::regex_replace(tmp, std::regex("https://"), "webdavs://");
+                sprintf(setting.server, "%s", tmp.c_str());
+            }
             WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_URL, setting.server);
 
             sprintf(setting.username, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_USER, ""));

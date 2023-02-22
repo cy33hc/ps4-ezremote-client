@@ -13,8 +13,8 @@ namespace WebDAV
 {
 	inline std::string GetHttpUrl(std::string url)
 	{
-		std::string http_url = std::regex_replace(url, std::regex("dav://"), "http://");
-		http_url = std::regex_replace(http_url, std::regex("davs://"), "https://");
+		std::string http_url = std::regex_replace(url, std::regex("webdav://"), "http://");
+		http_url = std::regex_replace(http_url, std::regex("webdavs://"), "https://");
 		return http_url;
 	}
 

@@ -23,6 +23,9 @@
 #define CONFIG_ENABLE_RPI "remote_server_enable_rpi"
 #define CONFIG_REMOTE_HTTP_SERVER_TYPE "remote_server_http_server_type"
 
+#define CONFIG_VERSION "config_version"
+#define CONFIG_VERSION_NUM 1
+
 #define CONFIG_FAVORITE_URLS "favorite_urls"
 #define MAX_FAVORITE_URLS 30
 

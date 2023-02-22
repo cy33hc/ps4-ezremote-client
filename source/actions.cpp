@@ -1118,7 +1118,7 @@ namespace Actions
             else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_NPX_SERVE) == 0)
                 remoteclient = new NpxServeClient();
         }
-        else if (strncmp(remote_settings->server, "davs://", 7) == 0 || strncmp(remote_settings->server, "dav://", 6) == 0)
+        else if (strncmp(remote_settings->server, "webdavs://", 10) == 0 || strncmp(remote_settings->server, "webdav://", 9) == 0)
         {
             remoteclient = new WebDAV::WebDavClient();
         }
