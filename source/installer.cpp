@@ -20,7 +20,6 @@
 #include "rtc.h"
 #include "fs.h"
 #include "webdavclient.h"
-#include "dbglogger.h"
 
 #define BGFT_HEAP_SIZE (1 * 1024 * 1024)
 

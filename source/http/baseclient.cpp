@@ -22,7 +22,15 @@ BaseClient::~BaseClient()
 
 int BaseClient::Connect(const std::string &url, const std::string &username, const std::string &password)
 {
-    client = new httplib::Client(url);
+    std::string scheme_host_port = url;
+    size_t scheme_pos = url.find("://");
+    size_t root_pos = url.find("/", scheme_pos + 3);
+    if (root_pos != std::string::npos)
+    {
+        scheme_host_port = url.substr(0, root_pos);
+        this->base_path = url.substr(root_pos);
+    }
+    client = new httplib::Client(scheme_host_port);
     if (username.length() > 0)
         client->set_basic_auth(username, password);
     client->set_keep_alive(true);
@@ -49,7 +57,7 @@ int BaseClient::Rmdir(const std::string &path, bool recursive)
 
 int BaseClient::Size(const std::string &path, int64_t *size)
 {
-    if (auto res = client->Head(path))
+    if (auto res = client->Head(GetFullPath(path)))
     {
         std::string content_length = res->get_header_value("Content-Length");
         if (content_length.length() > 0)
@@ -67,7 +75,7 @@ int BaseClient::Get(const std::string &outputfile, const std::string &path, uint
 {
     std::ofstream file_stream(outputfile, std::ios::binary);
     bytes_transfered = 0;
-    if (auto res = client->Get(path,
+    if (auto res = client->Get(GetFullPath(path),
                 [&](const char *data, size_t data_length)
                 {
                     file_stream.write(data, data_length);
@@ -122,7 +130,7 @@ int BaseClient::Head(const std::string &path, void *buffer, uint64_t len)
     Headers headers = {{"Range", range_header}};
     size_t bytes_read = 0;
     std::vector<char> body;
-    if (auto res = client->Get(path, headers,
+    if (auto res = client->Get(GetFullPath(path), headers,
                 [&](const char *data, size_t data_length)
                 {
                     body.insert(body.end(), data, data+data_length);
@@ -177,9 +185,18 @@ std::string BaseClient::GetPath(std::string ppath1, std::string ppath2)
 {
     std::string path1 = ppath1;
     std::string path2 = ppath2;
-    path1 = Util::Rtrim(Util::Trim(path1, " "), "/");
-    path2 = Util::Rtrim(Util::Trim(path2, " "), "/");
-    path1 = path1 + "/" + path2;
+    path1 = Util::Trim(Util::Trim(path1, " "), "/");
+    path2 = Util::Trim(Util::Trim(path2, " "), "/");
+    path1 = this->base_path + "/" + path1 + "/" + path2;
+    return path1;
+}
+
+std::string BaseClient::GetFullPath(std::string ppath1)
+{
+    std::string path1 = ppath1;
+    path1 = Util::Trim(Util::Trim(path1, " "), "/");
+    path1 = this->base_path + "/" + path1;
+    Util::ReplaceAll(path1, "//", "/");
     return path1;
 }
 

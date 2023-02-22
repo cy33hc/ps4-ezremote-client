@@ -26,6 +26,7 @@ public:
     bool FileExists(const std::string &path);
     std::vector<DirEntry> ListDir(const std::string &path);
     std::string GetPath(std::string path1, std::string path2);
+    std::string GetFullPath(std::string path1);
     bool IsConnected();
     bool Ping();
     const char *LastResponse();
@@ -35,6 +36,7 @@ public:
 
 protected:
     httplib::Client *client;
+    std::string base_path;
     char response[512];
     bool connected = false;
 };

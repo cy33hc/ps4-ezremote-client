@@ -40,7 +40,7 @@ std::vector<DirEntry> NginxClient::ListDir(const std::string &path)
     entry.selectable = false;
     out.push_back(entry);
 
-    if (auto res = client->Get(path))
+    if (auto res = client->Get(GetFullPath(path)))
     {
         lxb_status_t status;
         lxb_dom_attr_t *attr;
