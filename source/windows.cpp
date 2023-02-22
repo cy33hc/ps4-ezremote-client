@@ -327,7 +327,7 @@ namespace Windows
 
         if (remote_settings->type == CLIENT_TYPE_HTTP_SERVER)
         {
-            ImGui::SetNextItemWidth(120);
+            ImGui::SetNextItemWidth(140);
             if (ImGui::BeginCombo("##HttpServer", remote_settings->http_server_type, ImGuiComboFlags_PopupAlignLeft | ImGuiComboFlags_HeightLargest | ImGuiComboFlags_NoArrowButton))
             {
                 for (int n = 0; n < http_servers.size(); n++)

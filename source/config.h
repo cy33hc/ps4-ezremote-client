@@ -35,7 +35,7 @@
 #define CONFIG_LANGUAGE "language"
 
 #define HTTP_SERVER_APACHE "Apache"
-#define HTTP_SERVER_MS_IIS "MS IIS"
+#define HTTP_SERVER_MS_IIS "Microsoft IIS"
 #define HTTP_SERVER_NGINX "Nginx"
 #define HTTP_SERVER_NPX_SERVE "Npx Serve"
 
