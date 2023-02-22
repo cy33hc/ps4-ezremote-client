@@ -24,11 +24,11 @@ To distinguish between FTP, SMB, WebDAV or HTTP, the URL must be prefix with **f
 
  - The url format for WebDAV is
    ```
-   dav://hostname[:port]/[url_path]
-   davs://hostname[:port]/[url_path]
+   webdav://hostname[:port]/[url_path]
+   webdavs://hostname[:port]/[url_path]
 
      - hostname can be the textual hostname or an IP address. hostname is required
-     - port is optional and defaults to 80(dav) and 443(davs) if not provided
+     - port is optional and defaults to 80(webdav) and 443(webdavs) if not provided
      - url_path is optional based on your WebDAV hosting requiremets
    ```
 
