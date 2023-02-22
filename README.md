@@ -34,10 +34,11 @@ To distinguish between FTP, SMB, WebDAV or HTTP, the URL must be prefix with **f
 
 - The url format for HTTP Server is
    ```
-   http://hostname[:port]
-   https://hostname[:port]
+   http://hostname[:port]/[url_path]
+   https://hostname[:port]/[url_path]
      - hostname can be the textual hostname or an IP address. hostname is required
      - port is optional and defaults to 80(http) and 443(https) if not provided
+     - url_path is optional based on your HTTP Server hosting requiremets
    ```
 
 Tested with following WebDAV server:
