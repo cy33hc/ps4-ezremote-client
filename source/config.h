@@ -37,7 +37,7 @@
 #define HTTP_SERVER_APACHE "Apache"
 #define HTTP_SERVER_MS_IIS "Microsoft IIS"
 #define HTTP_SERVER_NGINX "Nginx"
-#define HTTP_SERVER_NPX_SERVE "Npx Serve"
+#define HTTP_SERVER_NPX_SERVE "Serve"
 
 struct RemoteSettings
 {
