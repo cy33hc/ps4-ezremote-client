@@ -10,9 +10,16 @@ add_definitions(-DCPPHTTPLIB_OPENSSL_SUPPORT)
 include_directories(
   source
   source/pugixml
+  source/imgui
 )
 
 add_executable(ezremote_client
+  source/imgui/imgui_draw.cpp
+  source/imgui/imgui_impl_sdl.cpp
+  source/imgui/imgui_impl_sdlrenderer.cpp
+  source/imgui/imgui_tables.cpp
+  source/imgui/imgui_widgets.cpp
+  source/imgui/imgui.cpp
   source/pugixml/pugixml.cpp
   source/web/callback.cpp
   source/web/fsinfo.cpp
@@ -26,6 +33,8 @@ add_executable(ezremote_client
   source/http/iis.cpp
   source/http/nginx.cpp
   source/http/npxserve.cpp
+  source/xt_editor/editor.cpp
+  source/xt_editor/getline.c
   source/actions.cpp
   source/config.cpp
   source/fs.cpp
@@ -43,17 +52,11 @@ add_executable(ezremote_client
   source/windows.cpp
   source/webdavclient.cpp
   source/zip_util.cpp
-  source/imgui_draw.cpp
-  source/imgui_impl_sdl.cpp
-  source/imgui_impl_sdlrenderer.cpp
-  source/imgui_tables.cpp
-  source/imgui_widgets.cpp
-  source/imgui.cpp
 )
 
 add_self(ezremote_client)
 
-add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.01" 32 0)
+add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.02" 32 0)
 
 target_link_libraries(ezremote_client
   c
