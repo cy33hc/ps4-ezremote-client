@@ -54,7 +54,7 @@ Remote Package Installation only works if the WebDAV server allow anonymous acce
 
 ## Features ##
  - Transfer files back and forth between PS4 and FTP/SMB/WebDAV server
- - Support for connecting to Http Servers like (Apache/Nginx,Microsoft IIS, Serve) with directory listings to download or install pkg. 
+ - Support for connecting to Http Servers like (Apache/Nginx,Microsoft IIS, Serve) with html directory listings to download or install pkg. 
  - Install Remote Packages from connected WebDAV server
  - Install Remote Packages for FTP/SMB if HTTP server setup on same host sharing same folder as FTP/SMB
    - If Remote Package Install is not possible, optionally the user can choose to download package to PS4 local drive and install
