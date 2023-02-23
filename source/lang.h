@@ -120,7 +120,13 @@
 	FUNC(STR_ENABLE_RPI)                 \
 	FUNC(STR_ENABLE_RPI_FTP_SMB_MSG)     \
 	FUNC(STR_ENABLE_RPI_WEBDAV_MSG)      \
-	FUNC(STR_FILES)
+	FUNC(STR_FILES)                      \
+	FUNC(STR_EDITOR)                     \
+	FUNC(STR_SAVE)                       \
+	FUNC(STR_MAX_EDIT_FILE_SIZE_MSG)     \
+	FUNC(STR_DELETE_LINE)                \
+	FUNC(STR_INSERT_LINE)                \
+	FUNC(STR_MODIFIED)
 
 #define GET_VALUE(x) x,
 #define GET_STRING(x) #x,
@@ -130,7 +136,7 @@ enum
 	FOREACH_STR(GET_VALUE)
 };
 
-#define LANG_STRINGS_NUM 117
+#define LANG_STRINGS_NUM 123
 #define LANG_ID_SIZE 64
 #define LANG_STR_SIZE 384
 extern char lang_identifiers[LANG_STRINGS_NUM][LANG_ID_SIZE];

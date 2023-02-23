@@ -41,6 +41,7 @@ extern ACTIONS action_to_take;
 extern bool file_transfering;
 extern char extract_zip_folder[];
 extern char zip_file_path[];
+extern std::vector<std::string> edit_buffer;
 
 static ImVector<ImRect> s_GroupPanelLabelStack;
 
@@ -208,6 +209,7 @@ namespace Windows
     void AfterZipFileCallback(int ime_result);
     void AferServerChangeCallback(int ime_result);
     void AfterHttpPortChangeCallback(int ime_result);
+    void AfterEditorCallback(int ime_result);
 }
 
 #endif

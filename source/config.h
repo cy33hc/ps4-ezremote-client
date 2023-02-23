@@ -12,6 +12,7 @@
 #define DATA_PATH "/data/" APP_ID
 #define CONFIG_INI_FILE DATA_PATH "/config.ini"
 #define COOKIE_FILE DATA_PATH "/cookies.txt"
+#define TMP_EDITOR_FILE DATA_PATH "/tmp_editor.txt"
 
 #define CONFIG_GLOBAL "Global"
 
@@ -28,6 +29,7 @@
 
 #define CONFIG_FAVORITE_URLS "favorite_urls"
 #define MAX_FAVORITE_URLS 30
+#define CONFIG_MAX_EDIT_FILE_SIZE "max_edit_file_size"
 
 #define CONFIG_LAST_SITE "last_site"
 #define CONFIG_AUTO_DELETE_TMP_PKG "auto_delete_tmp_pkg"
@@ -41,6 +43,8 @@
 #define HTTP_SERVER_MS_IIS "Microsoft IIS"
 #define HTTP_SERVER_NGINX "Nginx"
 #define HTTP_SERVER_NPX_SERVE "Serve"
+
+#define MAX_EDIT_FILE_SIZE 262144
 
 struct RemoteSettings
 {
@@ -76,6 +80,7 @@ extern RemoteClient *remoteclient;
 extern PackageUrlInfo install_pkg_url;
 extern char favorite_urls[MAX_FAVORITE_URLS][512];
 extern bool auto_delete_tmp_pkg;
+extern int max_edit_file_size;
 
 namespace CONFIG
 {

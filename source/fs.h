@@ -51,6 +51,9 @@ namespace FS
     int Write(FILE *f, const void *buffer, uint32_t size);
 
     std::vector<char> Load(const std::string &path);
+    bool LoadText(std::vector<std::string> *lines, const std::string &path);
+    bool SaveText(std::vector<std::string> *lines, const std::string &path);
+
     void Save(const std::string &path, const void *data, uint32_t size);
 
     std::vector<std::string> ListFiles(const std::string &path);

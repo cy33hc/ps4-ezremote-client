@@ -23,7 +23,7 @@ namespace GUI
 				{
 					ImGui_ImplSDL2_ProcessEvent(&event);
 				}
-
+				GImGui->GcCompactAll = true;
 				ImGui_ImplSDLRenderer_NewFrame();
 				ImGui_ImplSDL2_NewFrame();
 				ImGui::NewFrame();

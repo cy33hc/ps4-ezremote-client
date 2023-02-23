@@ -27,6 +27,7 @@ std::map<std::string, RemoteSettings> site_settings;
 PackageUrlInfo install_pkg_url;
 char favorite_urls[MAX_FAVORITE_URLS][512];
 bool auto_delete_tmp_pkg;
+int max_edit_file_size;
 RemoteClient *remoteclient;
 
 namespace CONFIG
@@ -91,6 +92,9 @@ namespace CONFIG
         auto_delete_tmp_pkg = ReadBool(CONFIG_GLOBAL, CONFIG_AUTO_DELETE_TMP_PKG, true);
         WriteBool(CONFIG_GLOBAL, CONFIG_AUTO_DELETE_TMP_PKG, auto_delete_tmp_pkg);
 
+        max_edit_file_size = ReadInt(CONFIG_GLOBAL, CONFIG_MAX_EDIT_FILE_SIZE, MAX_EDIT_FILE_SIZE);
+        WriteInt(CONFIG_GLOBAL, CONFIG_MAX_EDIT_FILE_SIZE, max_edit_file_size);
+        
         for (int i = 0; i < sites.size(); i++)
         {
             RemoteSettings setting;

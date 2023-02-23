@@ -129,6 +129,12 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"This option enables Remote Package Installation. "
 	"This requires the Server with anonymous access that does not need username/password.", // STR_ENABLE_RPI_WEBDAV_MSG
 	"Files",																				// STR_FILES
+	"Editor",																				// STR_EDITOR
+	"Save",																					// STR_SAVE
+	"Cannot edit files bigger than",														// STR_MAX_EDIT_FILE_SIZE_MSG
+	"Delete Selected Line",																	// STR_DELETE_LINE
+	"Insert Below Selected Line",															// STR_INSERT_LINE
+	"Modified",																				// STR_MODIFIED
 };
 
 bool needs_extended_font = false;

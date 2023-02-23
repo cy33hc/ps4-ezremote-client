@@ -11,7 +11,7 @@
 #include <orbis/Pad.h>
 #include <orbis/AudioOut.h>
 #include <orbis/Net.h>
-// #include <dbglogger.h>
+#include <dbglogger.h>
 
 #include "imgui.h"
 #include "SDL2/SDL.h"
@@ -118,6 +118,10 @@ void InitImgui()
 		0xF56F, 0xF56F, // compress
 		0xF0F6, 0xF0F6, // properties
 		0xF112, 0xF112, // cancel
+		0xF0DA, 0xF0DA, // arrow right
+		0x0031, 0x0031, // 1
+		0x004C, 0x004C, // L
+		0x0052, 0x0052, // R
 		0,
 	};
 
@@ -240,7 +244,7 @@ void InitImgui()
 	colors[ImGuiCol_PlotHistogramHovered] = panelHoverColor;
 	colors[ImGuiCol_ModalWindowDimBg]     = bgColorBlur;
 	colors[ImGuiCol_DragDropTarget]       = bgColor;
-	colors[ImGuiCol_NavHighlight]         = bgColor;
+	colors[ImGuiCol_NavHighlight]         = titleColor;
 	colors[ImGuiCol_Tab]                  = bgColor;
 	colors[ImGuiCol_TabActive]            = panelActiveColor;
 	colors[ImGuiCol_TabUnfocused]         = bgColor;
@@ -257,8 +261,8 @@ static void terminate()
 
 int main()
 {
-	// dbglogger_init();
-	// dbglogger_log("If you see this you've set up dbglogger correctly.");
+	dbglogger_init();
+	dbglogger_log("If you see this you've set up dbglogger correctly.");
 	int rc;
 	// No buffering
 	setvbuf(stdout, NULL, _IONBF, 0);

@@ -64,8 +64,18 @@ bool select_url_inprogress = false;
 int favorite_url_idx = 0;
 char extract_zip_folder[256];
 char zip_file_path[384];
-char label[256];
 
+// Editor variables
+std::vector<std::string> edit_buffer;
+bool editor_inprogress = false;
+char edit_line[1024];
+int edit_line_num = 0;
+char label[256];
+bool editor_modified = false;
+char edit_file[256];
+int edit_line_to_select = -1;
+
+// Overwrite dialog variables
 bool dont_prompt_overwrite = false;
 bool dont_prompt_overwrite_cb = false;
 int confirm_transfer_state = -1;
@@ -789,7 +799,7 @@ namespace Windows
         {
             ImGui::SetNextWindowPos(ImVec2(1330, 300));
         }
-        ImGui::SetNextWindowSizeConstraints(ImVec2(230, 150), ImVec2(230, 550), NULL, NULL);
+        ImGui::SetNextWindowSizeConstraints(ImVec2(230, 150), ImVec2(230, 600), NULL, NULL);
         if (ImGui::BeginPopupModal(lang_strings[STR_ACTIONS], NULL, ImGuiWindowFlags_AlwaysAutoResize))
         {
             ImGui::PushID("Select All##settings");
@@ -916,6 +926,46 @@ namespace Windows
                     selected_action = ACTION_NEW_LOCAL_FOLDER;
                 else if (remote_browser_selected)
                     selected_action = ACTION_NEW_REMOTE_FOLDER;
+                SetModalMode(false);
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::PopID();
+            ImGui::Separator();
+
+            ImGui::PushID("Edit##settings");
+            flags = ImGuiSelectableFlags_None;
+            if (remote_browser_selected && remoteclient != nullptr && !(remoteclient->SupportedActions() & REMOTE_ACTION_EDIT))
+            {
+                flags = ImGuiSelectableFlags_Disabled;
+            }
+            if (ImGui::Selectable(lang_strings[STR_EDIT], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+            {
+                bool can_edit = true;
+                if (local_browser_selected)
+                {
+                    if (selected_local_file.file_size > max_edit_file_size)
+                        can_edit = false;
+                    else
+                    {
+                        snprintf(edit_file, 255, "%s", selected_local_file.path);
+                        FS::LoadText(&edit_buffer, selected_local_file.path);
+                    }
+                }
+                else
+                {
+                    if (selected_remote_file.file_size > max_edit_file_size)
+                        can_edit = false;
+                    else if (remoteclient != nullptr && remoteclient->Get(TMP_EDITOR_FILE, selected_remote_file.path))
+                    {
+                        snprintf(edit_file, 255, "%s", selected_remote_file.path);
+                        FS::LoadText(&edit_buffer, TMP_EDITOR_FILE);
+                    }
+                }
+                if (can_edit)
+                    editor_inprogress = true;
+                else
+                    sprintf(status_message, "%s %d", lang_strings[STR_MAX_EDIT_FILE_SIZE_MSG], max_edit_file_size);
+                editor_modified = false;
                 SetModalMode(false);
                 ImGui::CloseCurrentPopup();
             }
@@ -1329,6 +1379,131 @@ namespace Windows
         }
     }
 
+    void ShowEditorDialog()
+    {
+        if (editor_inprogress)
+        {
+            ImGuiIO &io = ImGui::GetIO();
+            (void)io;
+            ImGuiStyle *style = &ImGui::GetStyle();
+            ImVec4 *colors = style->Colors;
+
+            SetModalMode(true);
+            ImGui::OpenPopup(lang_strings[STR_EDITOR]);
+
+            ImGui::SetNextWindowPos(ImVec2(320, 115));
+            ImGui::SetNextWindowSizeConstraints(ImVec2(1280, 80), ImVec2(1280, 850), NULL, NULL);
+            if (ImGui::BeginPopupModal(lang_strings[STR_EDITOR], NULL, ImGuiWindowFlags_AlwaysAutoResize))
+            {
+                ImVec2 cur_pos = ImGui::GetCursorPos();
+                char id[128];
+                sprintf(id, "%s##editor", lang_strings[STR_CANCEL]);
+                if (ImGui::Button(id, ImVec2(635, 0)))
+                {
+                    editor_inprogress = false;
+                    SetModalMode(false);
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                sprintf(id, "%s##editor", lang_strings[STR_SAVE]);
+                if (ImGui::Button(id, ImVec2(635, 0)))
+                {
+                    bool local_browser_selected = saved_selected_browser & LOCAL_BROWSER;
+                    bool remote_browser_selected = saved_selected_browser & REMOTE_BROWSER;
+                    if (local_browser_selected)
+                    {
+                        FS::SaveText(&edit_buffer, selected_local_file.path);
+                        selected_action = ACTION_REFRESH_LOCAL_FILES;
+                    }
+                    else
+                    {
+                        FS::SaveText(&edit_buffer, TMP_EDITOR_FILE);
+                        if (remoteclient != nullptr)
+                        {
+                            remoteclient->Put(TMP_EDITOR_FILE, selected_remote_file.path);
+                            selected_action = ACTION_REFRESH_REMOTE_FILES;
+                        }
+                    }
+                    editor_inprogress = false;
+                    SetModalMode(false);
+                    ImGui::CloseCurrentPopup();
+                }
+
+                ImGui::Separator();
+                ImGui::BeginChild("Editor##ChildWindow", ImVec2(1275, 680));
+                int j = 0;
+                static int insert_item = -1;
+                for (std::vector<std::string>::iterator it = edit_buffer.begin(); it != edit_buffer.end(); it++)
+                {
+                    ImGui::Text("%s", ICON_FA_CARET_RIGHT);
+                    ImGui::SameLine();
+
+                    sprintf(id, "%d##editor", j);
+                    ImGui::PushID(id);
+                    ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 1.0f));
+                    if (ImGui::Selectable(it->c_str(), false, ImGuiSelectableFlags_DontClosePopups, ImVec2(1275, 0)))
+                    {
+                        edit_line_num = j;
+                        snprintf(edit_line, 1023, "%s", it->c_str());
+                        ResetImeCallbacks();
+                        ime_single_field = edit_line;
+                        ime_field_size = 1023;
+                        ime_after_update = AfterEditorCallback;
+                        ime_callback = SingleValueImeCallback;
+                        Dialog::initImeDialog(lang_strings[STR_EDIT], edit_line, 1023, ORBIS_TYPE_BASIC_LATIN, 420, 290);
+                        gui_mode = GUI_MODE_IME;
+                    }
+                    ImGui::PopStyleVar();
+                    ImGui::PopID();
+                    if ((gui_mode != GUI_MODE_IME && j == edit_line_num) || edit_line_to_select == j)
+                    {
+                        SetNavFocusHere();
+                        edit_line_num = -1;
+                        edit_line_to_select = -1;
+                    }
+                    if (ImGui::IsItemHovered())
+                    {
+                        if (ImGui::CalcTextSize(it->c_str()).x > 1275)
+                        {
+                            ImGui::BeginTooltip();
+                            ImGui::Text("%s", it->c_str());
+                            ImGui::EndTooltip();
+                        }
+                    }
+                    if (ImGui::IsItemFocused())
+                    {
+                        if (ImGui::IsKeyPressed(ImGuiKey_GamepadR1, false))
+                        {
+                            insert_item = j;
+                            editor_modified = true;
+                        }
+                        else if (ImGui::IsKeyPressed(ImGuiKey_GamepadL1, false))
+                        {
+                            edit_buffer.erase(it--);
+                            editor_modified = true;
+                            edit_line_to_select = j;
+                        }
+                    }
+                    j++;
+                }
+                if (insert_item > -1)
+                {
+                    if (insert_item == edit_buffer.size() - 1)
+                        edit_buffer.push_back(std::string());
+                    else
+                        edit_buffer.insert(edit_buffer.begin() + insert_item + 1, std::string());
+                }
+                insert_item = -1;
+                ImGui::EndChild();
+
+                ImGui::Text("%s%s", (editor_modified? "**" : ""), edit_file);
+                ImGui::Separator();
+                ImGui::Text("L1 - %s          R1 - %s", lang_strings[STR_DELETE_LINE], lang_strings[STR_INSERT_LINE]);
+                ImGui::EndPopup();
+            }
+        }
+    }
+
     void MainWindow()
     {
         Windows::SetupWindow();
@@ -1346,6 +1521,7 @@ namespace Windows
             ShowProgressDialog();
             ShowActionsDialog();
             ShowFavoriteUrlsDialog();
+            ShowEditorDialog();
         }
         ImGui::End();
     }
@@ -1626,7 +1802,6 @@ namespace Windows
                     {
                         ime_callback(ime_result);
                     }
-
                     if (ime_after_update != nullptr)
                     {
                         ime_after_update(ime_result);
@@ -1752,6 +1927,16 @@ namespace Windows
         if (ime_result == IME_DIALOG_RESULT_FINISHED)
         {
             remote_settings->http_port = atoi(txt_http_port);
+        }
+    }
+
+    void AfterEditorCallback(int ime_result)
+    {
+        if (ime_result == IME_DIALOG_RESULT_FINISHED)
+        {
+            std::string str = std::string(edit_line);
+            edit_buffer[edit_line_num] = str;
+            editor_modified = true;
         }
     }
 }

@@ -150,6 +150,67 @@ namespace FS
         return data;
     }
 
+    bool LoadText(std::vector<std::string> *lines, const std::string &path)
+    {
+        FILE *fd = fopen(path.c_str(), "r");
+        if (fd == nullptr)
+            return false;
+
+        lines->clear();
+
+        char buffer[1024];
+        short bytes_read;
+        std::vector<char> line = std::vector<char>(0);
+        do
+        {
+            bytes_read = fread(buffer, sizeof(char), 1024, fd);
+            if (bytes_read < 0)
+            {
+                fclose(fd);
+                return false;
+            }
+
+            for (short i = 0; i < bytes_read; i++)
+            {
+                if (buffer[i] != '\r' && buffer[i] != '\n')
+                {
+                    line.push_back(buffer[i]);
+                }
+                else
+                {
+                    lines->push_back(std::string(line.data(), line.size()));
+                    line = std::vector<char>(0);
+                    if (buffer[i] == '\r' && buffer[i+1] == '\n')
+                        i++;
+                }
+            }
+        } while (bytes_read == 1024);
+        if (line.size()>0)
+            lines->push_back(std::string(line.data(), line.size()));
+            
+        fclose(fd);
+
+        return true;
+    }
+
+    bool SaveText(std::vector<std::string> *lines, const std::string &path)
+    {
+        FILE *fd = OpenRW(path);
+        if (fd == nullptr)
+            return false;
+
+        char nl[1] = {'\n'};
+        for (int i=0; i < lines->size(); i++)
+        {
+            Write(fd, lines->at(i).c_str(), lines->at(i).length());
+            Write(fd, nl, 1);
+        }
+
+        fclose(fd);
+
+        return true;
+    }
+
     void Save(const std::string &path, const void *data, uint32_t size)
     {
         FILE *fd = fopen(path.c_str(), "w+");
