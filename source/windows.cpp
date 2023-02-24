@@ -1397,7 +1397,7 @@ namespace Windows
             {
                 ImVec2 cur_pos = ImGui::GetCursorPos();
                 char id[128];
-                sprintf(id, "%s##editor", lang_strings[STR_CANCEL]);
+                sprintf(id, "%s##editor", lang_strings[STR_CLOSE]);
                 if (ImGui::Button(id, ImVec2(635, 0)))
                 {
                     editor_inprogress = false;

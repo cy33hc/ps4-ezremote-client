@@ -2,13 +2,15 @@
 #include <orbis/libkernel.h>
 #include <orbis/Sysmodule.h>
 
-#include "rtc.h"
+#include "sys_modules.h"
 
 int (*sceRtcGetTick)(const OrbisDateTime *inOrbisDateTime, OrbisTick *outTick);
 int (*sceRtcSetTick)(OrbisDateTime *outOrbisDateTime, const OrbisTick *inputTick);
 int (*sceRtcConvertLocalTimeToUtc)(const OrbisTick *local_time, OrbisTick *utc);
 int (*sceRtcConvertUtcToLocalTime)(const OrbisTick *utc, OrbisTick *local_time);
 int (*sceRtcGetCurrentClockLocalTime)(OrbisDateTime *time);
+int (*sceShellUIUtilLaunchByUri)(const char *uri, SceShellUIUtilLaunchByUriParam *param);
+int (*sceShellUIUtilInitialize)();
 
 void convertUtcToLocalTime(const OrbisDateTime *utc, OrbisDateTime *local_time)
 {
@@ -28,43 +30,62 @@ void convertLocalTimeToUtc(const OrbisDateTime *local_time, OrbisDateTime *utc)
     sceRtcSetTick(utc, &utc_tick);
 }
 
-int load_rtc_module()
+int load_sys_modules()
 {
-    int rtc_handle = sceKernelLoadStartModule("/system/common/lib/libSceRtc.sprx", 0, NULL, 0, NULL, NULL);
-    if (rtc_handle == 0)
+    int handle = sceKernelLoadStartModule("/system/common/lib/libSceRtc.sprx", 0, NULL, 0, NULL, NULL);
+    if (handle == 0)
     {
         return -1;
     }
 
-    sceKernelDlsym(rtc_handle, "sceRtcGetTick", (void **)&sceRtcGetTick);
+    sceKernelDlsym(handle, "sceRtcGetTick", (void **)&sceRtcGetTick);
     if (sceRtcGetTick == NULL)
     {
         return -1;
     }
 
-    sceKernelDlsym(rtc_handle, "sceRtcSetTick", (void **)&sceRtcSetTick);
+    sceKernelDlsym(handle, "sceRtcSetTick", (void **)&sceRtcSetTick);
     if (sceRtcSetTick == NULL)
     {
         return -1;
     }
 
-    sceKernelDlsym(rtc_handle, "sceRtcConvertLocalTimeToUtc", (void **)&sceRtcConvertLocalTimeToUtc);
+    sceKernelDlsym(handle, "sceRtcConvertLocalTimeToUtc", (void **)&sceRtcConvertLocalTimeToUtc);
     if (sceRtcConvertLocalTimeToUtc == NULL)
     {
         return -1;
     }
 
-    sceKernelDlsym(rtc_handle, "sceRtcConvertUtcToLocalTime", (void **)&sceRtcConvertUtcToLocalTime);
+    sceKernelDlsym(handle, "sceRtcConvertUtcToLocalTime", (void **)&sceRtcConvertUtcToLocalTime);
     if (sceRtcConvertUtcToLocalTime == NULL)
     {
         return -1;
     }
 
-    sceKernelDlsym(rtc_handle, "sceRtcGetCurrentClockLocalTime", (void **)&sceRtcGetCurrentClockLocalTime);
+    sceKernelDlsym(handle, "sceRtcGetCurrentClockLocalTime", (void **)&sceRtcGetCurrentClockLocalTime);
     if (sceRtcGetCurrentClockLocalTime == NULL)
     {
         return -1;
     }
+
+    handle = sceKernelLoadStartModule("/system/common/lib/libSceShellUIUtil.sprx", 0, NULL, 0, 0, 0);
+    if (handle == 0)
+    {
+        return -1;
+    }
+
+    sceKernelDlsym(handle, "sceShellUIUtilInitialize", (void **)&sceShellUIUtilInitialize);
+    if (sceShellUIUtilInitialize == NULL)
+    {
+        return -1;
+    }
+
+    sceKernelDlsym(handle, "sceShellUIUtilLaunchByUri", (void **)&sceShellUIUtilLaunchByUri);
+    if (sceShellUIUtilLaunchByUri == NULL)
+    {
+        return -1;
+    }
+
 
     return 0;
 }

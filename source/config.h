@@ -44,7 +44,7 @@
 #define HTTP_SERVER_NGINX "Nginx"
 #define HTTP_SERVER_NPX_SERVE "Serve"
 
-#define MAX_EDIT_FILE_SIZE 262144
+#define MAX_EDIT_FILE_SIZE 32768
 
 struct RemoteSettings
 {

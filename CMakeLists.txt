@@ -45,7 +45,7 @@ add_executable(ezremote_client
   source/lang.cpp
   source/main.cpp
   source/orbis_jbc.c
-  source/rtc.cpp
+  source/sys_modules.cpp
   source/smbclient.cpp
   source/windows.cpp
   source/webdavclient.cpp
@@ -89,5 +89,4 @@ target_link_libraries(ezremote_client
   SceNet
   SceBgft
   SceAppInstUtil
-  SceLncUtil
 )

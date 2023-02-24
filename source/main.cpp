@@ -22,7 +22,7 @@
 #include "gui.h"
 #include "util.h"
 #include "installer.h"
-#include "rtc.h"
+#include "sys_modules.h"
 
 extern "C"
 {
@@ -311,7 +311,7 @@ int main()
 		terminate();
 	}
 
-	if (load_rtc_module() != 0)
+	if (load_sys_modules() != 0)
 		return 0;
 
 	atexit(terminate);

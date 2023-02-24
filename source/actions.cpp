@@ -14,7 +14,7 @@
 #include "installer.h"
 #include "web/request.hpp"
 #include "web/urn.hpp"
-#include "rtc.h"
+#include "sys_modules.h"
 #include "ftpclient.h"
 #include "smbclient.h"
 #include "webdavclient.h"
@@ -23,6 +23,7 @@
 #include "http/npxserve.h"
 #include "http/iis.h"
 #include "zip_util.h"
+#include "dbglogger.h"
 
 namespace Actions
 {
@@ -1107,6 +1108,15 @@ namespace Actions
     void Connect()
     {
         CONFIG::SaveConfig();
+
+        SceShellUIUtilLaunchByUriParam param;
+        param.size = sizeof(SceShellUIUtilLaunchByUriParam);
+        param.userId = -1; // DONT CARE
+
+        sceShellUIUtilInitialize();
+        int ret = sceShellUIUtilLaunchByUri("pswebbrowser:search?url=https%3A%2F%2Faccounts.google.com%2Fo%2Foauth2%2Fv2%2Fauth%3Fclient_id%3D370523371459-2300cv0n0qebc571p9aa5au87cjp1onf.apps.googleusercontent.com%26redirect_uri%3Dhttp%3A%2F%2Flocalhost%26response_type%3Dcode%26access_type%3Doffline%26scope%3Dhttps%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive.metadata.readonly%26include_granted_scopes%3Dtrue", &param);
+        dbglogger_log("sceShellUIUtilLaunchByUri - 0x%08x", ret);
+
         if (strncmp(remote_settings->server, "https://", 8) == 0 || strncmp(remote_settings->server, "http://", 7) == 0)
         {
             if (strcmp(remote_settings->http_server_type, HTTP_SERVER_APACHE) == 0)
@@ -1594,7 +1604,7 @@ namespace Actions
             }
             else
             {
-                int res = CopyRemotePath(*it,  remote_directory);
+                int res = CopyRemotePath(*it, remote_directory);
                 if (res == 0)
                     sprintf(status_message, "%s - %s", it->name, lang_strings[STR_FAIL_COPY_MSG]);
             }

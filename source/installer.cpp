@@ -17,7 +17,7 @@
 #include "config.h"
 #include "windows.h"
 #include "lang.h"
-#include "rtc.h"
+#include "sys_modules.h"
 #include "fs.h"
 #include "webdavclient.h"
 

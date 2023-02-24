@@ -678,7 +678,7 @@ void GetSections(char *sections[])
 	{
 		if (pEntry->Type == tpSECTION)
 		{
-			sprintf(sections[i], pEntry->Text);
+			sprintf(sections[i], "%s", pEntry->Text);
 			i++;
 		}
 		pEntry = pEntry->pNext;
