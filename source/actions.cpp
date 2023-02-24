@@ -1109,14 +1109,6 @@ namespace Actions
     {
         CONFIG::SaveConfig();
 
-        SceShellUIUtilLaunchByUriParam param;
-        param.size = sizeof(SceShellUIUtilLaunchByUriParam);
-        param.userId = -1; // DONT CARE
-
-        sceShellUIUtilInitialize();
-        int ret = sceShellUIUtilLaunchByUri("pswebbrowser:search?url=https%3A%2F%2Faccounts.google.com%2Fo%2Foauth2%2Fv2%2Fauth%3Fclient_id%3D370523371459-2300cv0n0qebc571p9aa5au87cjp1onf.apps.googleusercontent.com%26redirect_uri%3Dhttp%3A%2F%2Flocalhost%26response_type%3Dcode%26access_type%3Doffline%26scope%3Dhttps%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive.metadata.readonly%26include_granted_scopes%3Dtrue", &param);
-        dbglogger_log("sceShellUIUtilLaunchByUri - 0x%08x", ret);
-
         if (strncmp(remote_settings->server, "https://", 8) == 0 || strncmp(remote_settings->server, "http://", 7) == 0)
         {
             if (strcmp(remote_settings->http_server_type, HTTP_SERVER_APACHE) == 0)
