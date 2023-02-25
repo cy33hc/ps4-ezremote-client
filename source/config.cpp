@@ -1,3 +1,5 @@
+#include <orbis/UserService.h>
+#include <orbis/Net.h>
 #include <string>
 #include <cstring>
 #include <map>
@@ -7,7 +9,6 @@
 #include "config.h"
 #include "fs.h"
 #include "lang.h"
-#include <orbis/Net.h>
 #include "crypt.h"
 #include "base64.h"
 
@@ -46,7 +47,7 @@ namespace CONFIG
         int ret = openssl_encrypt((unsigned char *)text.c_str(), text.length(), cipher_key, cipher_iv, tmp_encrypt_text, &encrypt_text_len);
         if (ret == 0)
             return 0;
-        return Base64::Encode(std::string((const char*)tmp_encrypt_text, encrypt_text_len), encrypt_text);
+        return Base64::Encode(std::string((const char *)tmp_encrypt_text, encrypt_text_len), encrypt_text);
     }
 
     int Decrypt(const std::string &text, std::string &decrypt_text)
@@ -64,7 +65,7 @@ namespace CONFIG
             return 0;
 
         decrypt_text.clear();
-        decrypt_text.append(std::string((const char*)tmp_decrypt_text, decrypt_text_len));
+        decrypt_text.append(std::string((const char *)tmp_decrypt_text, decrypt_text_len));
 
         return 1;
     }
@@ -93,17 +94,34 @@ namespace CONFIG
         }
     }
 
-    void LoadConfig()
+    void LoadEncryptKeys()
     {
-        // Get the key and iv for encryption. Inject the MAC address as part of the key and iv.
+        // Get the key and iv for encryption. Inject the account_id/MAC address as part of the key and iv.
+        int user_id;
+        uint64_t account_id = 0;
+        sceUserServiceGetForegroundUser(&user_id);
+        sceUserServiceGetNpAccountId(user_id, &account_id);
+        unsigned char data[sizeof(account_id)];
+        memcpy(data, &account_id, sizeof(account_id));
         OrbisNetEtherAddr addr;
         memset(&addr, 0x0, sizeof(OrbisNetEtherAddr));
         sceNetGetMacAddress(&addr, 0);
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < sizeof(data); i++)
         {
-            cipher_key[i * 2] = addr.data[i];
-            cipher_iv[i * 2] = addr.data[i];
+            cipher_key[i] = data[i];
+            cipher_iv[i] = data[i];
         }
+        int offset = sizeof(data);
+        for (int i = 0; i < sizeof(addr.data); i++)
+        {
+            cipher_key[offset + i] = addr.data[i];
+            cipher_iv[offset + i] = addr.data[i];
+        }
+    }
+
+    void LoadConfig()
+    {
+        LoadEncryptKeys();
 
         if (!FS::FolderExists(DATA_PATH))
         {
