@@ -109,12 +109,14 @@ namespace CONFIG
         for (int i = 0; i < sizeof(data); i++)
         {
             cipher_key[i] = data[i];
+            cipher_key[i + 16] = data[i];
             cipher_iv[i] = data[i];
         }
         int offset = sizeof(data);
         for (int i = 0; i < sizeof(addr.data); i++)
         {
             cipher_key[offset + i] = addr.data[i];
+            cipher_key[offset + i + 16] = data[i];
             cipher_iv[offset + i] = addr.data[i];
         }
     }
