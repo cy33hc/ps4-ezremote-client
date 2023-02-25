@@ -51,7 +51,7 @@ struct RemoteSettings
     char site_name[32];
     char server[256];
     char username[33];
-    char password[25];
+    char password[64];
     int http_port;
     ClientType type;
     bool enable_rpi;
@@ -81,6 +81,8 @@ extern PackageUrlInfo install_pkg_url;
 extern char favorite_urls[MAX_FAVORITE_URLS][512];
 extern bool auto_delete_tmp_pkg;
 extern int max_edit_file_size;
+extern unsigned char cipher_key[32];
+extern unsigned char cipher_iv[16];
 
 namespace CONFIG
 {

@@ -7,6 +7,9 @@
 #include "config.h"
 #include "fs.h"
 #include "lang.h"
+#include <orbis/Net.h>
+#include "crypt.h"
+#include "base64.h"
 
 extern "C"
 {
@@ -28,10 +31,43 @@ PackageUrlInfo install_pkg_url;
 char favorite_urls[MAX_FAVORITE_URLS][512];
 bool auto_delete_tmp_pkg;
 int max_edit_file_size;
+unsigned char cipher_key[32] = {'s', '5', 'v', '8', 'y', '/', 'B', '?', 'E', '(', 'H', '+', 'M', 'b', 'Q', 'e', 'T', 'h', 'W', 'm', 'Z', 'q', '4', 't', '7', 'w', '9', 'z', '$', 'C', '&', 'F'};
+unsigned char cipher_iv[16] = {'Y', 'p', '3', 's', '6', 'v', '9', 'y', '$', 'B', '&', 'E', ')', 'H', '@', 'M'};
+
 RemoteClient *remoteclient;
 
 namespace CONFIG
 {
+    int Encrypt(const std::string &text, std::string &encrypt_text)
+    {
+        unsigned char tmp_encrypt_text[text.length() * 2];
+        int encrypt_text_len;
+        memset(tmp_encrypt_text, 0, sizeof(tmp_encrypt_text));
+        int ret = openssl_encrypt((unsigned char *)text.c_str(), text.length(), cipher_key, cipher_iv, tmp_encrypt_text, &encrypt_text_len);
+        if (ret == 0)
+            return 0;
+        return Base64::Encode(std::string((const char*)tmp_encrypt_text, encrypt_text_len), encrypt_text);
+    }
+
+    int Decrypt(const std::string &text, std::string &decrypt_text)
+    {
+        std::string tmp_decode_text;
+        int ret = Base64::Decode(text, tmp_decode_text);
+        if (ret == 0)
+            return 0;
+
+        unsigned char tmp_decrypt_text[tmp_decode_text.length() * 2];
+        int decrypt_text_len;
+        memset(tmp_decrypt_text, 0, sizeof(tmp_decrypt_text));
+        ret = openssl_decrypt((unsigned char *)tmp_decode_text.c_str(), tmp_decode_text.length(), cipher_key, cipher_iv, tmp_decrypt_text, &decrypt_text_len);
+        if (ret == 0)
+            return 0;
+
+        decrypt_text.clear();
+        decrypt_text.append(std::string((const char*)tmp_decrypt_text, decrypt_text_len));
+
+        return 1;
+    }
 
     void SetClientType(RemoteSettings *setting)
     {
@@ -59,6 +95,16 @@ namespace CONFIG
 
     void LoadConfig()
     {
+        // Get the key and iv for encryption. Inject the MAC address as part of the key and iv.
+        OrbisNetEtherAddr addr;
+        memset(&addr, 0x0, sizeof(OrbisNetEtherAddr));
+        sceNetGetMacAddress(&addr, 0);
+        for (int i = 0; i < 6; i++)
+        {
+            cipher_key[i * 2] = addr.data[i];
+            cipher_iv[i * 2] = addr.data[i];
+        }
+
         if (!FS::FolderExists(DATA_PATH))
         {
             FS::MkDirs(DATA_PATH);
@@ -67,7 +113,7 @@ namespace CONFIG
         sites = {"Site 1", "Site 2", "Site 3", "Site 4", "Site 5", "Site 6", "Site 7", "Site 8", "Site 9", "Site 10",
                  "Site 11", "Site 12", "Site 13", "Site 14", "Site 15", "Site 16", "Site 17", "Site 18", "Site 19", "Site 20"};
 
-        http_servers = { HTTP_SERVER_APACHE, HTTP_SERVER_MS_IIS, HTTP_SERVER_NGINX, HTTP_SERVER_NPX_SERVE};
+        http_servers = {HTTP_SERVER_APACHE, HTTP_SERVER_MS_IIS, HTTP_SERVER_NGINX, HTTP_SERVER_NPX_SERVE};
 
         OpenIniFile(CONFIG_INI_FILE);
 
@@ -94,14 +140,15 @@ namespace CONFIG
 
         max_edit_file_size = ReadInt(CONFIG_GLOBAL, CONFIG_MAX_EDIT_FILE_SIZE, MAX_EDIT_FILE_SIZE);
         WriteInt(CONFIG_GLOBAL, CONFIG_MAX_EDIT_FILE_SIZE, max_edit_file_size);
-        
+
         for (int i = 0; i < sites.size(); i++)
         {
             RemoteSettings setting;
+            memset(&setting, 0, sizeof(RemoteSettings));
             sprintf(setting.site_name, "%s", sites[i].c_str());
 
             sprintf(setting.server, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_URL, ""));
-            if (conversion_needed && strlen(setting.server)>0)
+            if (conversion_needed && strlen(setting.server) > 0)
             {
                 std::string tmp = std::string(setting.server);
                 tmp = std::regex_replace(tmp, std::regex("http://"), "webdav://");
@@ -113,8 +160,20 @@ namespace CONFIG
             sprintf(setting.username, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_USER, ""));
             WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_USER, setting.username);
 
-            sprintf(setting.password, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_PASSWORD, ""));
-            WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_PASSWORD, setting.password);
+            char tmp_password[64];
+            sprintf(tmp_password, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_PASSWORD, ""));
+            std::string encrypted_password;
+            if (strlen(tmp_password) > 0)
+            {
+                std::string decrypted_password;
+                int ret = Decrypt(tmp_password, decrypted_password);
+                if (ret == 0)
+                    sprintf(setting.password, "%s", tmp_password);
+                else
+                    sprintf(setting.password, "%s", decrypted_password.c_str());
+                Encrypt(setting.password, encrypted_password);
+            }
+            WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_PASSWORD, encrypted_password.c_str());
 
             setting.http_port = ReadInt(sites[i].c_str(), CONFIG_REMOTE_SERVER_HTTP_PORT, 80);
             WriteInt(sites[i].c_str(), CONFIG_REMOTE_SERVER_HTTP_PORT, setting.http_port);
@@ -149,9 +208,14 @@ namespace CONFIG
     {
         OpenIniFile(CONFIG_INI_FILE);
 
+        std::string encrypted_text;
+        if (strlen(remote_settings->password) > 0)
+            Encrypt(remote_settings->password, encrypted_text);
+        else
+            encrypted_text = std::string(remote_settings->password);
         WriteString(last_site, CONFIG_REMOTE_SERVER_URL, remote_settings->server);
         WriteString(last_site, CONFIG_REMOTE_SERVER_USER, remote_settings->username);
-        WriteString(last_site, CONFIG_REMOTE_SERVER_PASSWORD, remote_settings->password);
+        WriteString(last_site, CONFIG_REMOTE_SERVER_PASSWORD, encrypted_text.c_str());
         WriteInt(last_site, CONFIG_REMOTE_SERVER_HTTP_PORT, remote_settings->http_port);
         WriteBool(last_site, CONFIG_ENABLE_RPI, remote_settings->enable_rpi);
         WriteString(last_site, CONFIG_REMOTE_HTTP_SERVER_TYPE, remote_settings->http_server_type);

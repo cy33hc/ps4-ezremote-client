@@ -4,6 +4,7 @@
 #include <lexbor/html/parser.h>
 #include <lexbor/dom/interfaces/element.h>
 #include <minizip/unzip.h>
+#include "crypt.h"
 #include "common.h"
 #include "fs.h"
 #include "config.h"
@@ -23,7 +24,6 @@
 #include "http/npxserve.h"
 #include "http/iis.h"
 #include "zip_util.h"
-#include "dbglogger.h"
 
 namespace Actions
 {

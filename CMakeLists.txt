@@ -35,6 +35,7 @@ add_executable(ezremote_client
   source/http/npxserve.cpp
   source/actions.cpp
   source/config.cpp
+  source/crypt.c
   source/fs.cpp
   source/ftpclient.cpp
   source/gui.cpp
