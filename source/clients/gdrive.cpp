@@ -40,8 +40,9 @@ void RefreshAccessToken()
 {
     SSLClient client(GOOGLE_OAUTH_HOST);
     client.enable_server_certificate_verification(false);
-    std::string url = std::string("/token?code=") + gg_account.auth_code + "&client_id=" + gg_account.client_id + "&client_secret=" +
-                      gg_account.client_secret + "&grant_type=refresh_token&refresh_token=" + gg_account.refresh_token;
+    std::string url = std::string("/token?client_id=") + BaseClient::EncodeUrl(gg_account.client_id) + "&client_secret=" +
+                      BaseClient::EncodeUrl(gg_account.client_secret) + "&grant_type=refresh_token&refresh_token=" + 
+                      BaseClient::EncodeUrl(gg_account.refresh_token);
     Result result = client.Post(url);
 
     if (result.error() == Error::Success && result.value().status == 200)
@@ -59,6 +60,7 @@ void RefreshAccessToken()
                 gg_account.token_expiry = tick.mytick + (json_object_get_int(val) * 1000000);
             }
         }
+        dbglogger_log("token refreshed");
         CONFIG::SaveGoolgeAccountInfo();
     }
 }
