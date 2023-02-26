@@ -52,7 +52,7 @@
 
  ------------------------------------------------------------------------
   Copyright (c) 2000 Carsten Breuer
-/************************************************************************/
+************************************************************************/
 
 /* defines for, or consts and inline functions for C++ */
 
@@ -68,7 +68,7 @@
 
 struct ENTRY *Entry = NULL;
 struct ENTRY *CurEntry = NULL;
-char Result[4096] =
+char Result[520] =
 	{""};
 FILE *IniFile;
 
@@ -84,7 +84,7 @@ struct ENTRY *MakeNewEntry(void);
    strupr -de-
   -------------------------------------------------------------------------
    Job : String to Uppercase 22.03.2001 Dieter Engelbrecht dieter@wintop.net
-/*========================================================================*/
+*========================================================================*/
 #ifdef DONT_HAVE_STRUPR
 /* DONT_HAVE_STRUPR is set when INI_REMOVE_CR is defined */
 void strupr(char *str)
@@ -99,6 +99,7 @@ void strupr(char *str)
 		str++;
 	}
 }
+#else
 #endif
 
 /*=========================================================================
@@ -109,10 +110,10 @@ void strupr(char *str)
 
    Att : Be sure to call CloseIniFile to free all mem allocated during
 		 operation!
-/*========================================================================*/
+*========================================================================*/
 bool OpenIniFile(cchr *FileName)
 {
-	char Str[5120];
+	char Str[512];
 	char *pStr;
 	struct ENTRY *pEntry;
 
@@ -127,7 +128,7 @@ bool OpenIniFile(cchr *FileName)
 		return FALSE;
 	}
 
-	while (fgets(Str, 5120, IniFile) != NULL)
+	while (fgets(Str, 512, IniFile) != NULL)
 	{
 		pStr = strchr(Str, '\n');
 		if (pStr != NULL)
@@ -191,7 +192,7 @@ bool OpenIniFile(cchr *FileName)
    Job : Frees the memory and closes the ini file without any
 		 modifications. If you want to write the file use
 		 WriteIniFile instead.
-/*========================================================================*/
+*========================================================================*/
 void CloseIniFile(void)
 {
 	FreeAllMem();
@@ -207,7 +208,7 @@ void CloseIniFile(void)
   -------------------------------------------------------------------------
    Job : Writes the iniFile to the disk and close it. Frees all memory
 		 allocated by WriteIniFile;
-/*========================================================================*/
+==========================================================================*/
 bool WriteIniFile(const char *FileName)
 {
 	struct ENTRY *pEntry = Entry;
@@ -242,7 +243,7 @@ bool WriteIniFile(const char *FileName)
 void WriteString(cchr *Section, cchr *pKey, cchr *Value)
 {
 	EFIND List;
-	char Str[5120];
+	char Str[512];
 
 	if (ArePtrValid(Section, pKey, Value) == FALSE)
 	{
@@ -288,6 +289,16 @@ void WriteInt(cchr *Section, cchr *pKey, int Value)
 {
 	char Val[12]; /* 32bit maximum + sign + \0 */
 	sprintf(Val, "%d", Value);
+	WriteString(Section, pKey, Val);
+}
+
+/*=========================================================================
+   WriteLong : Writes an long to the ini file
+*========================================================================*/
+void WriteLong(cchr *Section, cchr *pKey, long Value)
+{
+	char Val[22]; /* 64bit maximum + sign + \0 */
+	sprintf(Val, "%ld", Value);
 	WriteString(Section, pKey, Val);
 }
 
@@ -341,6 +352,16 @@ int ReadInt(cchr *Section, cchr *pKey, int Default)
 	char Val[12];
 	sprintf(Val, "%d", Default);
 	return (atoi(ReadString(Section, pKey, Val)));
+}
+
+/*=========================================================================
+   ReadLong : Reads a long from the ini file
+*========================================================================*/
+long ReadLong(cchr *Section, cchr *pKey, long Default)
+{
+	char Val[22];
+	sprintf(Val, "%ld", Default);
+	return (atol(ReadString(Section, pKey, Val)));
 }
 
 /*=========================================================================
@@ -463,7 +484,7 @@ bool FindpKey(cchr *Section, cchr *pKey, EFIND *List)
 {
 	char Search[130];
 	char Found[130];
-	char Text[5120];
+	char Text[512];
 	char *pText;
 	struct ENTRY *pEntry;
 	List->pSec = NULL;
@@ -595,7 +616,7 @@ bool AddItemAt(struct ENTRY *EntryAt, char Mode, cchr *Text)
 *========================================================================*/
 bool AddSectionAndpKey(cchr *Section, cchr *pKey, cchr *Value)
 {
-	char Text[5120];
+	char Text[512];
 	sprintf(Text, "[%s]", Section);
 	if (AddItem(tpSECTION, Text) == FALSE)
 	{
@@ -610,7 +631,7 @@ bool AddSectionAndpKey(cchr *Section, cchr *pKey, cchr *Value)
 *========================================================================*/
 void AddpKey(struct ENTRY *SecEntry, cchr *pKey, cchr *Value)
 {
-	char Text[5120];
+	char Text[512];
 	sprintf(Text, "%s=%s", pKey, Value);
 	AddItemAt(SecEntry, tpKEYVALUE, Text);
 }

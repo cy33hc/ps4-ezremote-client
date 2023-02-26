@@ -17,12 +17,14 @@
 #include "SDL2/SDL.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
+#include "server/http_server.h"
+#include "clients/gdrive.h"
 #include "config.h"
 #include "lang.h"
 #include "gui.h"
 #include "util.h"
 #include "installer.h"
-#include "sys_modules.h"
+#include "system.h"
 
 extern "C"
 {
@@ -288,6 +290,7 @@ int main()
 		return 0;
 
 	CONFIG::LoadConfig();
+	HttpServer::Start();
 
 	// Create a window context
 	window = SDL_CreateWindow("main", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, FRAME_WIDTH, FRAME_HEIGHT, 0);
@@ -315,6 +318,11 @@ int main()
 		return 0;
 
 	atexit(terminate);
+
+	OrbisTick tick;
+	sceRtcGetCurrentTick(&tick);
+	if (gg_account.token_expiry > (tick.mytick - 300000000))
+		GDriveClient::StartRefreshToken();
 
 	GUI::RenderLoop(renderer);
 

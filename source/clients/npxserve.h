@@ -4,9 +4,9 @@
 #include <string>
 #include <vector>
 #include "http/httplib.h"
-#include "http/baseclient.h"
+#include "clients/baseclient.h"
+#include "clients/remote_client.h"
 #include "common.h"
-#include "remote_client.h"
 
 class NpxServeClient : public BaseClient
 {

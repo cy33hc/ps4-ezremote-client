@@ -13,6 +13,8 @@
 #include "lang.h"
 #include "ime_dialog.h"
 #include "IconsFontAwesome6.h"
+#include "server/http_server.h"
+#include "clients/gdrive.h"
 
 extern "C"
 {
@@ -1684,6 +1686,8 @@ namespace Windows
             break;
         case ACTION_DISCONNECT_AND_EXIT:
             Actions::Disconnect();
+            HttpServer::Stop();
+            GDriveClient::StopRefreshToken();
             done = true;
             break;
         case ACTION_INSTALL_REMOTE_PKG:

@@ -6,8 +6,8 @@
 #include <vector>
 #include <regex>
 #include "webdav/client.hpp"
+#include "clients/remote_client.h"
 #include "common.h"
-#include "remote_client.h"
 
 namespace WebDAV
 {

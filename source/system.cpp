@@ -2,13 +2,15 @@
 #include <orbis/libkernel.h>
 #include <orbis/Sysmodule.h>
 
-#include "sys_modules.h"
+#include "system.h"
 
 int (*sceRtcGetTick)(const OrbisDateTime *inOrbisDateTime, OrbisTick *outTick);
 int (*sceRtcSetTick)(OrbisDateTime *outOrbisDateTime, const OrbisTick *inputTick);
 int (*sceRtcConvertLocalTimeToUtc)(const OrbisTick *local_time, OrbisTick *utc);
 int (*sceRtcConvertUtcToLocalTime)(const OrbisTick *utc, OrbisTick *local_time);
 int (*sceRtcGetCurrentClockLocalTime)(OrbisDateTime *time);
+int (*sceRtcGetCurrentTick)(OrbisTick *outTick);
+unsigned int (*sceRtcGetTickResolution)();
 int (*sceShellUIUtilLaunchByUri)(const char *uri, SceShellUIUtilLaunchByUriParam *param);
 int (*sceShellUIUtilInitialize)();
 
@@ -68,6 +70,18 @@ int load_sys_modules()
         return -1;
     }
 
+    sceKernelDlsym(handle, "sceRtcGetCurrentTick", (void **)&sceRtcGetCurrentTick);
+    if (sceRtcGetCurrentTick == NULL)
+    {
+        return -1;
+    }
+
+    sceKernelDlsym(handle, "sceRtcGetTickResolution", (void **)&sceRtcGetTickResolution);
+    if (sceRtcGetTickResolution == NULL)
+    {
+        return -1;
+    }
+
     handle = sceKernelLoadStartModule("/system/common/lib/libSceShellUIUtil.sprx", 0, NULL, 0, 0, 0);
     if (handle == 0)
     {
@@ -86,6 +100,7 @@ int load_sys_modules()
         return -1;
     }
 
+    if (sceShellUIUtilInitialize() < 0) return -1;
 
     return 0;
 }

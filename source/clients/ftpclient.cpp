@@ -1,4 +1,4 @@
-#include <sys/errno.h>
+#include <errno.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -12,7 +12,7 @@
 #include <errno.h>
 
 #include "lang.h"
-#include "ftpclient.h"
+#include "clients/ftpclient.h"
 #include "util.h"
 #include "windows.h"
 

@@ -6,11 +6,13 @@
 #include <vector>
 #include <regex>
 #include <stdlib.h>
+#include "server/http_server.h"
 #include "config.h"
 #include "fs.h"
 #include "lang.h"
 #include "crypt.h"
 #include "base64.h"
+#include "dbglogger.h"
 
 extern "C"
 {
@@ -32,6 +34,8 @@ PackageUrlInfo install_pkg_url;
 char favorite_urls[MAX_FAVORITE_URLS][512];
 bool auto_delete_tmp_pkg;
 int max_edit_file_size;
+GoogleAccountInfo gg_account;
+
 unsigned char cipher_key[32] = {'s', '5', 'v', '8', 'y', '/', 'B', '?', 'E', '(', 'H', '+', 'M', 'b', 'Q', 'e', 'T', 'h', 'W', 'm', 'Z', 'q', '4', 't', '7', 'w', '9', 'z', '$', 'C', '&', 'F'};
 unsigned char cipher_iv[16] = {'Y', 'p', '3', 's', '6', 'v', '9', 'y', '$', 'B', '&', 'E', ')', 'H', '@', 'M'};
 
@@ -94,7 +98,7 @@ namespace CONFIG
         }
     }
 
-    void LoadEncryptKeys()
+    void LoadCipherKeys()
     {
         // Get the key and iv for encryption. Inject the account_id/MAC address as part of the key and iv.
         int user_id;
@@ -123,7 +127,7 @@ namespace CONFIG
 
     void LoadConfig()
     {
-        LoadEncryptKeys();
+        LoadCipherKeys();
 
         if (!FS::FolderExists(DATA_PATH))
         {
@@ -160,6 +164,67 @@ namespace CONFIG
 
         max_edit_file_size = ReadInt(CONFIG_GLOBAL, CONFIG_MAX_EDIT_FILE_SIZE, MAX_EDIT_FILE_SIZE);
         WriteInt(CONFIG_GLOBAL, CONFIG_MAX_EDIT_FILE_SIZE, max_edit_file_size);
+
+        // Load Google Account Info
+        sprintf(gg_account.client_id, "%s", ReadString(CONFIG_GOOGLE, CONFIG_GOOGLE_CLIENT_ID, ""));
+        WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_CLIENT_ID, gg_account.client_id);
+
+        // Token Expiry
+        gg_account.token_expiry = ReadLong(CONFIG_GOOGLE, CONFIG_GOOGLE_TOKEN_EXPIRY, 0);
+        WriteLong(CONFIG_GOOGLE, CONFIG_GOOGLE_TOKEN_EXPIRY, gg_account.token_expiry);
+
+        // Client Secret
+        char tmp_gg_secret[512];
+        sprintf(tmp_gg_secret, "%s", ReadString(CONFIG_GOOGLE, CONFIG_GOOGLE_CLIENT_SECRET, ""));
+        std::string encrypted_secret;
+        if (strlen(tmp_gg_secret) > 0)
+        {
+            std::string decrypted_secret;
+            int ret = Decrypt(tmp_gg_secret, decrypted_secret);
+            if (ret == 0)
+                sprintf(gg_account.client_secret, "%s", tmp_gg_secret);
+            else
+                sprintf(gg_account.client_secret, "%s", decrypted_secret.c_str());
+            Encrypt(gg_account.client_secret, encrypted_secret);
+        }
+        WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_CLIENT_SECRET, encrypted_secret.c_str());
+
+        // Access Token
+        sprintf(tmp_gg_secret, "%s", ReadString(CONFIG_GOOGLE, CONFIG_GOOGLE_ACCESS_TOKEN, ""));
+        std::string encrypted_token;
+        if (strlen(tmp_gg_secret) > 0)
+        {
+            std::string decrypted_secret;
+            int ret = Decrypt(tmp_gg_secret, decrypted_secret);
+            if (ret == 0)
+                sprintf(gg_account.access_token, "%s", tmp_gg_secret);
+            else
+                sprintf(gg_account.access_token, "%s", decrypted_secret.c_str());
+            Encrypt(gg_account.access_token, encrypted_token);
+        }
+        WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_ACCESS_TOKEN, encrypted_token.c_str());
+
+        // Refresh Token
+        sprintf(tmp_gg_secret, "%s", ReadString(CONFIG_GOOGLE, CONFIG_GOOGLE_REFRESH_TOKEN, ""));
+        std::string encrypted_refresh_token;
+        if (strlen(tmp_gg_secret) > 0)
+        {
+            std::string decrypted_secret;
+            int ret = Decrypt(tmp_gg_secret, decrypted_secret);
+            if (ret == 0)
+                sprintf(gg_account.refresh_token, "%s", tmp_gg_secret);
+            else
+                sprintf(gg_account.refresh_token, "%s", decrypted_secret.c_str());
+            Encrypt(gg_account.refresh_token, encrypted_refresh_token);
+        }
+        WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_REFRESH_TOKEN, encrypted_refresh_token.c_str());
+
+        sprintf(gg_account.permissions, "%s", ReadString(CONFIG_GOOGLE, CONFIG_GOOGLE_PERMISSIONS, GOOGLE_DEFAULT_PERMISSIONS));
+        WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_PERMISSIONS, gg_account.permissions);
+
+        // Http Server Info
+        http_server_port = ReadInt(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_PORT, 8080);
+        WriteInt(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_PORT, http_server_port);
 
         for (int i = 0; i < sites.size(); i++)
         {
@@ -212,14 +277,12 @@ namespace CONFIG
         WriteString(CONFIG_GLOBAL, CONFIG_LAST_SITE, last_site);
 
         remote_settings = &site_settings[std::string(last_site)];
-
         for (int i = 0; i < MAX_FAVORITE_URLS; i++)
         {
             const char *index = std::to_string(i).c_str();
             sprintf(favorite_urls[i], "%s", ReadString(CONFIG_FAVORITE_URLS, index, ""));
             WriteString(CONFIG_FAVORITE_URLS, index, favorite_urls[i]);
         }
-
         WriteIniFile(CONFIG_INI_FILE);
         CloseIniFile();
     }
@@ -245,6 +308,38 @@ namespace CONFIG
         CloseIniFile();
     }
 
+    void SaveGoolgeAccountInfo()
+    {
+        OpenIniFile(CONFIG_INI_FILE);
+
+        std::string encrypted_secret;
+        if (strlen(gg_account.client_secret) > 0)
+            Encrypt(gg_account.client_secret, encrypted_secret);
+        else
+            encrypted_secret = std::string(gg_account.client_secret);
+        WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_CLIENT_SECRET, encrypted_secret.c_str());
+
+        std::string encrypted_token;
+        if (strlen(gg_account.access_token) > 0)
+            Encrypt(gg_account.access_token, encrypted_token);
+        else
+            encrypted_token = std::string(gg_account.access_token);
+        WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_ACCESS_TOKEN, encrypted_token.c_str());
+
+        std::string encrypted_refresh_token;
+        if (strlen(gg_account.refresh_token) > 0)
+            Encrypt(gg_account.refresh_token, encrypted_refresh_token);
+        else
+            encrypted_refresh_token = std::string(gg_account.refresh_token);
+        WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_REFRESH_TOKEN, encrypted_refresh_token.c_str());
+
+        WriteLong(CONFIG_GOOGLE, CONFIG_GOOGLE_TOKEN_EXPIRY, gg_account.token_expiry);
+        WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_CLIENT_ID, gg_account.client_id);
+        WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_PERMISSIONS, gg_account.permissions);
+        WriteIniFile(CONFIG_INI_FILE);
+        CloseIniFile();
+    }
+
     void SaveFavoriteUrl(int index, char *url)
     {
         OpenIniFile(CONFIG_INI_FILE);
@@ -252,53 +347,5 @@ namespace CONFIG
         WriteString(CONFIG_FAVORITE_URLS, idx, url);
         WriteIniFile(CONFIG_INI_FILE);
         CloseIniFile();
-    }
-
-    void ParseMultiValueString(const char *prefix_list, std::vector<std::string> &prefixes, bool toLower)
-    {
-        std::string prefix = "";
-        int length = strlen(prefix_list);
-        for (int i = 0; i < length; i++)
-        {
-            char c = prefix_list[i];
-            if (c != ' ' && c != '\t' && c != ',')
-            {
-                if (toLower)
-                {
-                    prefix += std::tolower(c);
-                }
-                else
-                {
-                    prefix += c;
-                }
-            }
-
-            if (c == ',' || i == length - 1)
-            {
-                prefixes.push_back(prefix);
-                prefix = "";
-            }
-        }
-    }
-
-    std::string GetMultiValueString(std::vector<std::string> &multi_values)
-    {
-        std::string vts = std::string("");
-        if (multi_values.size() > 0)
-        {
-            for (int i = 0; i < multi_values.size() - 1; i++)
-            {
-                vts.append(multi_values[i]).append(",");
-            }
-            vts.append(multi_values[multi_values.size() - 1]);
-        }
-        return vts;
-    }
-
-    void RemoveFromMultiValues(std::vector<std::string> &multi_values, std::string value)
-    {
-        auto itr = std::find(multi_values.begin(), multi_values.end(), value);
-        if (itr != multi_values.end())
-            multi_values.erase(itr);
     }
 }

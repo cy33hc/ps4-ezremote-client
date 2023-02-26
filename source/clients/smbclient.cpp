@@ -12,7 +12,7 @@
 #include <orbis/Net.h>
 #include "fs.h"
 #include "lang.h"
-#include "smbclient.h"
+#include "clients/smbclient.h"
 #include "windows.h"
 #include "util.h"
 

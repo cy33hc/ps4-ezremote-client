@@ -4,8 +4,8 @@
 #include <map>
 #include <vector>
 #include "common.h"
-#include "remote_client.h"
-#include "http/nginx.h"
+#include "clients/remote_client.h"
+#include "clients/nginx.h"
 #include "lang.h"
 #include "util.h"
 #include "windows.h"

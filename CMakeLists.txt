@@ -28,16 +28,20 @@ add_executable(ezremote_client
   source/web/urn.cpp
   source/webdav/client.cpp
   source/http/httplib.cpp
-  source/http/baseclient.cpp
-  source/http/apache.cpp
-  source/http/iis.cpp
-  source/http/nginx.cpp
-  source/http/npxserve.cpp
+  source/clients/baseclient.cpp
+  source/clients/apache.cpp
+  source/clients/ftpclient.cpp
+  source/clients/gdrive.cpp
+  source/clients/iis.cpp
+  source/clients/nginx.cpp
+  source/clients/npxserve.cpp
+  source/clients/smbclient.cpp
+  source/clients/webdavclient.cpp
+  source/server/http_server.cpp
   source/actions.cpp
   source/config.cpp
   source/crypt.c
   source/fs.cpp
-  source/ftpclient.cpp
   source/gui.cpp
   source/getentropy.c
   source/ime_dialog.cpp
@@ -46,10 +50,8 @@ add_executable(ezremote_client
   source/lang.cpp
   source/main.cpp
   source/orbis_jbc.c
-  source/sys_modules.cpp
-  source/smbclient.cpp
+  source/system.cpp
   source/windows.cpp
-  source/webdavclient.cpp
   source/zip_util.cpp
 )
 
@@ -75,6 +77,7 @@ target_link_libraries(ezremote_client
   minizip
   un7zip
   unrar
+  json-c
   kernel
   SceShellCoreUtil
   SceSysmodule

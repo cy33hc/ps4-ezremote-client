@@ -4,7 +4,14 @@
 #include <lexbor/html/parser.h>
 #include <lexbor/dom/interfaces/element.h>
 #include <minizip/unzip.h>
-#include "crypt.h"
+#include "clients/gdrive.h"
+#include "clients/ftpclient.h"
+#include "clients/smbclient.h"
+#include "clients/webdavclient.h"
+#include "clients/apache.h"
+#include "clients/nginx.h"
+#include "clients/npxserve.h"
+#include "clients/iis.h"
 #include "common.h"
 #include "fs.h"
 #include "config.h"
@@ -15,15 +22,9 @@
 #include "installer.h"
 #include "web/request.hpp"
 #include "web/urn.hpp"
-#include "sys_modules.h"
-#include "ftpclient.h"
-#include "smbclient.h"
-#include "webdavclient.h"
-#include "http/apache.h"
-#include "http/nginx.h"
-#include "http/npxserve.h"
-#include "http/iis.h"
+#include "system.h"
 #include "zip_util.h"
+#include "dbglogger.h"
 
 namespace Actions
 {
@@ -1109,7 +1110,12 @@ namespace Actions
     {
         CONFIG::SaveConfig();
 
-        if (strncmp(remote_settings->server, "https://", 8) == 0 || strncmp(remote_settings->server, "http://", 7) == 0)
+        if (strncmp(remote_settings->server, GOOGLE_DRIVE_BASE_URL, strlen(GOOGLE_DRIVE_BASE_URL)) == 0)
+        {
+            remoteclient = new GDriveClient();
+            remoteclient->Connect("", "", "");
+        }
+        else if (strncmp(remote_settings->server, "https://", 8) == 0 || strncmp(remote_settings->server, "http://", 7) == 0)
         {
             if (strcmp(remote_settings->http_server_type, HTTP_SERVER_APACHE) == 0)
                 remoteclient = new ApacheClient();

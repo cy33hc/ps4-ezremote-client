@@ -1,9 +1,10 @@
 #include <lexbor/html/parser.h>
 #include <lexbor/dom/interfaces/element.h>
 #include <fstream>
+#include <curl/curl.h>
 #include "common.h"
-#include "remote_client.h"
-#include "http/npxserve.h"
+#include "clients/remote_client.h"
+#include "clients/baseclient.h"
 #include "lang.h"
 #include "util.h"
 #include "windows.h"
@@ -76,12 +77,12 @@ int BaseClient::Get(const std::string &outputfile, const std::string &path, uint
     std::ofstream file_stream(outputfile, std::ios::binary);
     bytes_transfered = 0;
     if (auto res = client->Get(GetFullPath(path),
-                [&](const char *data, size_t data_length)
-                {
-                    file_stream.write(data, data_length);
-                    bytes_transfered += data_length;
-                    return true;
-                }))
+                               [&](const char *data, size_t data_length)
+                               {
+                                   file_stream.write(data, data_length);
+                                   bytes_transfered += data_length;
+                                   return true;
+                               }))
     {
         file_stream.close();
         return 1;
@@ -126,21 +127,22 @@ int BaseClient::Move(const std::string &from, const std::string &to)
 int BaseClient::Head(const std::string &path, void *buffer, uint64_t len)
 {
     char range_header[64];
-    sprintf(range_header, "bytes=%lu-%lu", 0L, len-1);
+    sprintf(range_header, "bytes=%lu-%lu", 0L, len - 1);
     Headers headers = {{"Range", range_header}};
     size_t bytes_read = 0;
     std::vector<char> body;
     if (auto res = client->Get(GetFullPath(path), headers,
-                [&](const char *data, size_t data_length)
-                {
-                    body.insert(body.end(), data, data+data_length);
-                    bytes_read += data_length;
-                    if (bytes_read > len)
-                        return false;
-                    return true;
-                }))
+                               [&](const char *data, size_t data_length)
+                               {
+                                   body.insert(body.end(), data, data + data_length);
+                                   bytes_read += data_length;
+                                   if (bytes_read > len)
+                                       return false;
+                                   return true;
+                               }))
     {
-        if (body.size() < len) return 0;
+        if (body.size() < len)
+            return 0;
         memcpy(buffer, body.data(), len);
         return 1;
     }
@@ -241,4 +243,39 @@ ClientType BaseClient::clientType()
 uint32_t BaseClient::SupportedActions()
 {
     return REMOTE_ACTION_DOWNLOAD | REMOTE_ACTION_INSTALL;
+}
+
+std::string BaseClient::EncodeUrl(const std::string &url)
+{
+    CURL *curl = curl_easy_init();
+    if (curl)
+    {
+        char *output = curl_easy_escape(curl, url.c_str(), url.length());
+        if (output)
+        {
+            std::string encoded_url = std::string(output);
+            curl_free(output);
+            return encoded_url;
+        }
+        curl_easy_cleanup(curl);
+    }
+    return "";
+}
+
+std::string BaseClient::DecodeUrl(const std::string &url)
+{
+    CURL *curl = curl_easy_init();
+    if (curl)
+    {
+        int decode_len;
+        char *output = curl_easy_unescape(curl, url.c_str(), url.length(), &decode_len);
+        if (output)
+        {
+            std::string decoded_url = std::string(output, decode_len);
+            curl_free(output);
+            return decoded_url;
+        }
+        curl_easy_cleanup(curl);
+    }
+    return "";
 }

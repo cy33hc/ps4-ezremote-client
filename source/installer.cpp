@@ -17,9 +17,9 @@
 #include "config.h"
 #include "windows.h"
 #include "lang.h"
-#include "sys_modules.h"
+#include "system.h"
 #include "fs.h"
-#include "webdavclient.h"
+#include "clients/webdavclient.h"
 
 #define BGFT_HEAP_SIZE (1 * 1024 * 1024)
 

@@ -12,7 +12,7 @@
 #include "common.h"
 #include "fs.h"
 #include "lang.h"
-#include "sys_modules.h"
+#include "system.h"
 #include "windows.h"
 #include "zip_util.h"
 

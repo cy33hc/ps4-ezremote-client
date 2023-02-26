@@ -9,10 +9,10 @@
 #include <fcntl.h>
 #include "lang.h"
 #include "webdav/client.hpp"
-#include "webdavclient.h"
+#include "clients/webdavclient.h"
 #include "windows.h"
 #include "util.h"
-#include "sys_modules.h"
+#include "system.h"
 
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 
