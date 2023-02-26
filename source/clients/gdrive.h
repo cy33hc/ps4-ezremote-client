@@ -15,13 +15,18 @@ extern int login_state;
 class GDriveClient : public BaseClient
 {
 public:
+    GDriveClient();
     int Connect(const std::string &url, const std::string &user, const std::string &pass);
+    int Rename(const std::string &src, const std::string &dst);
     std::vector<DirEntry> ListDir(const std::string &path);
     static void *RefreshTokenThread(void *argp);
     static void StartRefreshToken();
     static void StopRefreshToken();
     ClientType clientType();
     uint32_t SupportedActions();
+
+private:
+    std::map<std::string, std::string> path_id_map;
 };
 
 #endif
