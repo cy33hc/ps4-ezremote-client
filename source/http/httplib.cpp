@@ -932,6 +932,10 @@ socket_t create_client_socket(
           tv.tv_usec = static_cast<decltype(tv.tv_usec)>(write_timeout_usec);
           setsockopt(sock2, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv, sizeof(tv));
 #endif
+
+          int const size = 1048576;
+          setsockopt(sock2, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
+          setsockopt(sock2, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size));
         }
 
         error = Error::Success;

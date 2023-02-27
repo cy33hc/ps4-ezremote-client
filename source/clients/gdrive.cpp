@@ -194,19 +194,28 @@ int GDriveClient::Rename(const std::string &src, const std::string &dst)
 
 int GDriveClient::Get(const std::string &outputfile, const std::string &path, uint64_t offset)
 {
-    return 0;
+    std::ofstream file_stream(outputfile, std::ios::binary);
+    bytes_transfered = 0;
+
     std::string id = GetValue(path_id_map, path);
     std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id) + "?alt=media";
-    if (auto res = client->Get(url))
+    if (auto res = client->Get(url,
+                               [&](const char *data, size_t data_length)
+                               {
+                                   file_stream.write(data, data_length);
+                                   bytes_transfered += data_length;
+                                   return true;
+                               }))
     {
-        sprintf(response, "%d", res->status);
+        file_stream.close();
+        return 1;
     }
     else
     {
-        sprintf(response, "%s", to_string(res.error()).c_str());
-        return 0;
+        sprintf(this->response, "%s", httplib::to_string(res.error()).c_str());
     }
-    return 1;
+    return 0;
+
 }
 
 int GDriveClient::Size(const std::string &path, int64_t *size)
