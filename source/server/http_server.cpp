@@ -7,7 +7,6 @@
 #include "windows.h"
 #include "lang.h"
 #include "system.h"
-#include "dbglogger.h"
 
 #define SERVER_CERT_FILE "/app0/assets/certs/domain.crt"
 #define SERVER_PRIVATE_KEY_FILE "/app0/assets/certs/domain.key"
@@ -81,35 +80,46 @@ namespace HttpServer
         svr->Get("/google_auth", [](const Request &req, Response &res)
         {
             sprintf(gg_account.auth_code, "%s", req.get_param_value("code").c_str());
-            SSLClient client(GOOGLE_OAUTH_HOST);
+            Client client(GOOGLE_OAUTH_HOST);
             client.enable_server_certificate_verification(false);
-            std::string url = std::string("/token?code=") + gg_account.auth_code + "&client_id=" + gg_account.client_id + "&client_secret=" +
-                    gg_account.client_secret + "&redirect_uri=https%3A//localhost%3A8080/google_auth&grant_type=authorization_code";
-            Result result = client.Post(url);
-
-            if (result.error() == Error::Success && result.value().status == 200)
+            
+            std::string url = std::string("/token");
+            std::string post_data = std::string("code=") + gg_account.auth_code +
+                                                "&client_id=" + gg_account.client_id +
+                                                "&client_secret=" + gg_account.client_secret +
+                                                "&redirect_uri=https%3A//localhost%3A" + std::to_string(http_server_port) + "/google_auth"
+                                                "&grant_type=authorization_code";
+                            
+            if (auto result = client.Post(url, post_data.c_str(), post_data.length(),  "application/x-www-form-urlencoded"))
             {
-                json_object *jobj = json_tokener_parse(result.value().body.c_str());
-                enum json_type type;
-                json_object_object_foreach(jobj, key, val)
-                    {
-                        if (strcmp(key, "access_token")==0)
-                            snprintf(gg_account.access_token, 255, "%s", json_object_get_string(val));
-                        else if (strcmp(key, "refresh_token")==0)
-                            snprintf(gg_account.refresh_token, 63, "%s", json_object_get_string(val));
-                        else if (strcmp(key, "expires_in")==0)
+                if (HTTP_SUCCESS(result->status))
+                {
+                    json_object *jobj = json_tokener_parse(result.value().body.c_str());
+                    enum json_type type;
+                    json_object_object_foreach(jobj, key, val)
                         {
-                            OrbisTick tick;
-                            sceRtcGetCurrentTick(&tick);
-                            dbglogger_log("tick=%ld", tick.mytick);
-                            gg_account.token_expiry = tick.mytick + (json_object_get_uint64(val)*1000000);
-                            dbglogger_log("token_expiry=%ld", gg_account.token_expiry);
+                            if (strcmp(key, "access_token")==0)
+                                snprintf(gg_account.access_token, 255, "%s", json_object_get_string(val));
+                            else if (strcmp(key, "refresh_token")==0)
+                                snprintf(gg_account.refresh_token, 255, "%s", json_object_get_string(val));
+                            else if (strcmp(key, "expires_in")==0)
+                            {
+                                OrbisTick tick;
+                                sceRtcGetCurrentTick(&tick);
+                                gg_account.token_expiry = tick.mytick + (json_object_get_uint64(val)*1000000);
+                            }
                         }
-                    }
-                CONFIG::SaveGoolgeAccountInfo();
-                login_state = 1;
-                res.set_content(lang_strings[STR_GET_TOKEN_SUCCESS_MSG], "text/plain");
-                return;
+                    CONFIG::SaveGoolgeAccountInfo();
+                    login_state = 1;
+                    res.set_content(lang_strings[STR_GET_TOKEN_SUCCESS_MSG], "text/plain");
+                    return;
+                }
+                else
+                {
+                    login_state = -1;
+                    std::string str = std::string(lang_strings[STR_FAIL_GET_TOKEN_MSG]) + " Google";
+                    res.set_content(str.c_str(), "text/plain");
+                }
             }
             login_state = -1;
             std::string str = std::string(lang_strings[STR_FAIL_GET_TOKEN_MSG]) + " Google";
@@ -147,14 +157,9 @@ namespace HttpServer
             svr = new SSLServer(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE, nullptr, nullptr, SERVER_PRIVATE_KEY_PASSWORD);
         if (!svr->is_valid())
         {
-            dbglogger_log("Not valid");
             return;
         }
         int ret = pthread_create(&http_server_thid, NULL, ServerThread, NULL);
-        if (ret != 0)
-        {
-            dbglogger_log("Failed to start thread");
-        }
     }
 
     void Stop()

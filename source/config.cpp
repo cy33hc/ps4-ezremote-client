@@ -12,7 +12,6 @@
 #include "lang.h"
 #include "crypt.h"
 #include "base64.h"
-#include "dbglogger.h"
 
 extern "C"
 {

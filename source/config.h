@@ -25,7 +25,7 @@
 #define CONFIG_GOOGLE_REFRESH_TOKEN "google_refresh_token"
 #define CONFIG_GOOGLE_TOKEN_EXPIRY "google_token_expiry"
 
-#define GOOGLE_OAUTH_HOST "oauth2.googleapis.com"
+#define GOOGLE_OAUTH_HOST "https://oauth2.googleapis.com"
 #define GOOGLE_AUTH_URL "https://accounts.google.com/o/oauth2/v2/auth"
 #define GOOGLE_API_URL "https://www.googleapis.com"
 #define GOOGLE_DRIVE_API_PATH "/drive/v2/files"
@@ -35,7 +35,7 @@
 #define GOOGLE_PERM_DRIVE_FILE "drive.file"
 #define GOOGLE_PERM_DRIVE_METADATA "drive.metadata"
 #define GOOGLE_PERM_DRIVE_METADATA_RO "drive.metadata.readonly"
-#define GOOGLE_DEFAULT_PERMISSIONS GOOGLE_PERM_DRIVE "," GOOGLE_PERM_DRIVE_METADATA
+#define GOOGLE_DEFAULT_PERMISSIONS GOOGLE_PERM_DRIVE
 
 #define CONFIG_HTTP_SERVER "HttpServer"
 #define CONFIG_HTTP_SERVER_PORT "http_server_port"
@@ -96,7 +96,7 @@ struct GoogleAccountInfo
     char client_secret[64];
     char auth_code[128];
     char access_token[256];
-    char refresh_token[64];
+    char refresh_token[256];
     uint64_t token_expiry;
     char permissions[92];
 };

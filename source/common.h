@@ -5,6 +5,8 @@
 #include <vector>
 #include <string.h>
 
+#define HTTP_SUCCESS(x) (x >= 200 && x < 300)
+
 typedef struct
 {
     uint16_t year;

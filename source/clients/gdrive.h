@@ -18,6 +18,11 @@ public:
     GDriveClient();
     int Connect(const std::string &url, const std::string &user, const std::string &pass);
     int Rename(const std::string &src, const std::string &dst);
+    int Get(const std::string &outputfile, const std::string &path, uint64_t offset=0);
+    int Size(const std::string &path, int64_t *size);
+    int Mkdir(const std::string &path);
+    int Rmdir(const std::string &path, bool recursive);
+    int Delete(const std::string &path);
     std::vector<DirEntry> ListDir(const std::string &path);
     static void *RefreshTokenThread(void *argp);
     static void StartRefreshToken();
@@ -26,6 +31,7 @@ public:
     uint32_t SupportedActions();
 
 private:
+    int RequestAuthorization();
     std::map<std::string, std::string> path_id_map;
 };
 

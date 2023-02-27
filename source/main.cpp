@@ -323,6 +323,8 @@ int main()
 	sceRtcGetCurrentTick(&tick);
 	if (gg_account.token_expiry > (tick.mytick - 300000000))
 		GDriveClient::StartRefreshToken();
+	else
+		dbglogger_log("refresh token thread skipped");
 
 	GUI::RenderLoop(renderer);
 

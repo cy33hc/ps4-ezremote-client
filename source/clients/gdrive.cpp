@@ -36,33 +36,46 @@ std::string GetScopes()
     return scopes;
 }
 
-void RefreshAccessToken()
+int RefreshAccessToken()
 {
-    SSLClient client(GOOGLE_OAUTH_HOST);
+    Client client(GOOGLE_OAUTH_HOST);
     client.enable_server_certificate_verification(false);
-    std::string url = std::string("/token?client_id=") + BaseClient::EncodeUrl(gg_account.client_id) + "&client_secret=" +
-                      BaseClient::EncodeUrl(gg_account.client_secret) + "&grant_type=refresh_token&refresh_token=" + 
-                      BaseClient::EncodeUrl(gg_account.refresh_token);
-    Result result = client.Post(url);
-
-    if (result.error() == Error::Success && result.value().status == 200)
+    client.set_follow_location(true);
+    std::string url = std::string("/token");
+    std::string post_data = std::string("grant_type=refresh_token") + 
+                                        "&client_id=" + gg_account.client_id +
+                                        "&client_secret=" + gg_account.client_secret +
+                                        "&refresh_token=" + gg_account.refresh_token;
+                      
+    if (auto res = client.Post(url, post_data.c_str(), post_data.length(), "application/x-www-form-urlencoded"))
     {
-        json_object *jobj = json_tokener_parse(result.value().body.c_str());
-        enum json_type type;
-        json_object_object_foreach(jobj, key, val)
+        if (HTTP_SUCCESS(res->status))
         {
-            if (strcmp(key, "access_token") == 0)
-                snprintf(gg_account.access_token, 255, "%s", json_object_get_string(val));
-            else if (strcmp(key, "expires_in") == 0)
+            json_object *jobj = json_tokener_parse(res->body.c_str());
+            enum json_type type;
+            json_object_object_foreach(jobj, key, val)
             {
-                OrbisTick tick;
-                sceRtcGetCurrentTick(&tick);
-                gg_account.token_expiry = tick.mytick + (json_object_get_int(val) * 1000000);
+                if (strcmp(key, "access_token") == 0)
+                    snprintf(gg_account.access_token, 255, "%s", json_object_get_string(val));
+                else if (strcmp(key, "expires_in") == 0)
+                {
+                    OrbisTick tick;
+                    sceRtcGetCurrentTick(&tick);
+                    gg_account.token_expiry = tick.mytick + (json_object_get_uint64(val) * 1000000);
+                }
             }
+            CONFIG::SaveGoolgeAccountInfo();
         }
-        dbglogger_log("token refreshed");
-        CONFIG::SaveGoolgeAccountInfo();
+        else
+        {
+            return 0;
+        }
     }
+    else
+    {
+        return 0;
+    }
+    return 1;
 }
 
 int login_state;
@@ -80,6 +93,47 @@ std::string GetValue(const std::map<std::string, std::string> &options, const st
     }
 }
 
+int GDriveClient::RequestAuthorization()
+{
+    SceShellUIUtilLaunchByUriParam param;
+    param.size = sizeof(SceShellUIUtilLaunchByUriParam);
+    sceUserServiceGetForegroundUser((int *)&param.userId);
+
+    std::string auth_url = std::string(GOOGLE_AUTH_URL "?client_id=") + gg_account.client_id + "&redirect_uri=" + GetRedirectUrl() +
+                        "&response_type=code&access_type=offline&scope=" + GetScopes() + "&include_granted_scopes=true";
+    auth_url = EncodeUrl(auth_url);
+    std::string launch_uri = std::string("pswebbrowser:search?url=") + auth_url;
+    int ret = sceShellUIUtilLaunchByUri(launch_uri.c_str(), &param);
+
+    login_state = 0;
+    OrbisTick tick;
+    sceRtcGetCurrentTick(&tick);
+    while (login_state == 0)
+    {
+        OrbisTick cur_tick;
+        sceRtcGetCurrentTick(&cur_tick);
+        if (cur_tick.mytick - tick.mytick > 120000000)
+        {
+            login_state = -2;
+            break;
+        }
+        sceKernelUsleep(100000);
+    }
+
+    if (login_state == -1)
+    {
+        sprintf(response, "%s", lang_strings[STR_GOOGLE_LOGIN_FAIL_MSG]);
+        return 0;
+    }
+    else if (login_state == -2)
+    {
+        sprintf(response, "%s", lang_strings[STR_GOOGLE_LOGIN_TIMEOUT_MSG]);
+        return 0;
+    }
+
+    return 1;
+}
+
 GDriveClient::GDriveClient()
 {
     path_id_map.insert(std::make_pair("/", "root"));
@@ -87,45 +141,17 @@ GDriveClient::GDriveClient()
 
 int GDriveClient::Connect(const std::string &url, const std::string &user, const std::string &pass)
 {
-    OrbisTick tick;
-    sceRtcGetCurrentTick(&tick);
-    if (gg_account.token_expiry < (tick.mytick - 300000000))
+    if (strlen(gg_account.refresh_token) > 0)
     {
-        SceShellUIUtilLaunchByUriParam param;
-        param.size = sizeof(SceShellUIUtilLaunchByUriParam);
-        sceUserServiceGetForegroundUser((int *)&param.userId);
-
-        std::string auth_url = std::string(GOOGLE_AUTH_URL "?client_id=") + gg_account.client_id + "&redirect_uri=" + GetRedirectUrl() +
-                               "&response_type=code&access_type=offline&scope=" + GetScopes() + "&include_granted_scopes=true";
-        auth_url = EncodeUrl(auth_url);
-        std::string launch_uri = std::string("pswebbrowser:search?url=") + auth_url;
-        int ret = sceShellUIUtilLaunchByUri(launch_uri.c_str(), &param);
-
-        login_state = 0;
-        OrbisTick tick;
-        sceRtcGetCurrentTick(&tick);
-        while (login_state == 0)
+        int ret = RefreshAccessToken();
+        if (ret == 0)
         {
-            OrbisTick cur_tick;
-            sceRtcGetCurrentTick(&cur_tick);
-            if (cur_tick.mytick - tick.mytick > 120000000)
-            {
-                login_state = -2;
-                break;
-            }
-            sceKernelUsleep(100000);
+            RequestAuthorization();
         }
-
-        if (login_state == -1)
-        {
-            sprintf(response, "%s", lang_strings[STR_GOOGLE_LOGIN_FAIL_MSG]);
-            return 0;
-        }
-        else if (login_state == -2)
-        {
-            sprintf(response, "%s", lang_strings[STR_GOOGLE_LOGIN_TIMEOUT_MSG]);
-            return 0;
-        }
+    }
+    else
+    {
+        RequestAuthorization();
     }
     StartRefreshToken();
 
@@ -145,14 +171,150 @@ int GDriveClient::Rename(const std::string &src, const std::string &dst)
 {
     std::string id = GetValue(path_id_map, src);
     std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id);
-    std::string filename = dst.substr(dst.find_last_of("/")+1);
-    std::string body = "{\"name\" : \"" + filename +"\"}";
+    std::string filename = dst.substr(dst.find_last_of("/") + 1);
+    std::string body = "{'name' : '" + filename + "'}";
     if (auto res = client->Patch(url, body.c_str(), body.length(), "application/json; charset=UTF-8"))
     {
         sprintf(response, "%d", res->status);
-        path_id_map.erase(src);
-        path_id_map.insert(std::make_pair(dst, id));
-        dbglogger_log("res=%s", res->body.c_str());
+        if (HTTP_SUCCESS(res->status))
+        {
+            path_id_map.erase(src);
+            path_id_map.insert(std::make_pair(dst, id));
+        }
+        else
+            return 0;
+    }
+    else
+    {
+        sprintf(response, "%s", to_string(res.error()).c_str());
+        return 0;
+    }
+    return 1;
+}
+
+int GDriveClient::Get(const std::string &outputfile, const std::string &path, uint64_t offset)
+{
+    return 0;
+    std::string id = GetValue(path_id_map, path);
+    std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id) + "?alt=media";
+    if (auto res = client->Get(url))
+    {
+        sprintf(response, "%d", res->status);
+    }
+    else
+    {
+        sprintf(response, "%s", to_string(res.error()).c_str());
+        return 0;
+    }
+    return 1;
+}
+
+int GDriveClient::Size(const std::string &path, int64_t *size)
+{
+    std::string id = GetValue(path_id_map, path);
+    std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id) + "?fields=size";
+    if (auto res = client->Get(url))
+    {
+        sprintf(response, "%d", res->status);
+        if (HTTP_SUCCESS(res->status))
+        {
+            json_object *jobj = json_tokener_parse(res->body.c_str());
+            *size = json_object_get_uint64(json_object_object_get(jobj, "size"));
+        }
+        else
+            return 0;
+    }
+    else
+    {
+        sprintf(response, "%s", to_string(res.error()).c_str());
+        return 0;
+    }
+    return 1;
+}
+
+int GDriveClient::Mkdir(const std::string &path)
+{
+    size_t path_pos = path.find_last_of("/");
+    std::string parent_dir;
+    if (path_pos == 0)
+        parent_dir = "/";
+    else
+        parent_dir = path.substr(0, path_pos);
+
+    std::string folder_name = path.substr(path_pos + 1);
+    std::string parent_id = GetValue(path_id_map, parent_dir);
+
+    // if parent dir does not exists, create it first
+    if (parent_id.length() == 0 || parent_id.empty())
+    {
+        Mkdir(parent_dir);
+        parent_id = GetValue(path_id_map, parent_dir);
+    }
+
+    std::string url = std::string("/drive/v3/files?fields=id");
+    std::string folder_metadata = "{'name' : '" + folder_name + "'," +
+                                  "'parents' : ['" + parent_id + "']," +
+                                  "'mimeType' : 'application/vnd.google-apps.folder'}";
+
+    if (auto res = client->Post(url, folder_metadata.c_str(), folder_metadata.length(), "application/json; charset=UTF-8"))
+    {
+        sprintf(response, "%d", res->status);
+        if (HTTP_SUCCESS(res->status))
+        {
+            json_object *jobj = json_tokener_parse(res->body.c_str());
+            const char *id = json_object_get_string(json_object_object_get(jobj, "id"));
+            path_id_map.insert(std::make_pair(path, id));
+        }
+        else
+            return 0;
+    }
+    else
+    {
+        sprintf(response, "%s", to_string(res.error()).c_str());
+        return 0;
+    }
+    return 1;
+}
+
+/*
+ * Rmdir in google drive deletes all files/folders in subdirectories also.
+ * Delete file/folder is the same api
+ */
+int GDriveClient::Rmdir(const std::string &path, bool recursive)
+{
+    int ret = Delete(path);
+    if (ret != 0)
+    {
+        std::string subfolders = path + "/";
+        for (std::map<std::string, std::string>::iterator it = path_id_map.begin(); it != path_id_map.end(); )
+        {
+            if (strncmp(it->first.c_str(), subfolders.c_str(), path.length()) == 0)
+            {
+                it = path_id_map.erase(it);
+            }
+            else
+                ++it;
+        }
+    }
+    return ret;
+}
+
+int GDriveClient::Delete(const std::string &path)
+{
+    std::string id = GetValue(path_id_map, path);
+    if (strcmp(id.c_str(), "root") == 0)
+        return 0;
+
+    std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id);
+    if (auto res = client->Delete(url))
+    {
+        if (HTTP_SUCCESS(res->status))
+        {
+            path_id_map.erase(path);
+            sprintf(response, "%d", res->status);
+        }
+        else
+            return 0;
     }
     else
     {
@@ -185,73 +347,76 @@ std::vector<DirEntry> GDriveClient::ListDir(const std::string &path)
 
     std::string id = GetValue(path_id_map, path);
     std::string url = std::string("/drive/v3/files?q=") + BaseClient::EncodeUrl("\"" + id + "\" in parents") +
-        "&pageSize=1000&fields=" + BaseClient::EncodeUrl("files(id,mimeType,name,modifiedTime,size)");
+                      "&pageSize=1000&fields=" + BaseClient::EncodeUrl("files(id,mimeType,name,modifiedTime,size)");
     if (auto res = client->Get(url))
     {
-        json_object *jobj = json_tokener_parse(res->body.c_str());
-        json_object *files = json_object_object_get(jobj, "files");
-        if (json_object_get_type(files) == json_type_array)
+        if (HTTP_SUCCESS(res->status))
         {
-            struct array_list *afiles = json_object_get_array(files);
-            for (size_t idx = 0; idx < afiles->length; ++idx)
+            json_object *jobj = json_tokener_parse(res->body.c_str());
+            json_object *files = json_object_object_get(jobj, "files");
+            if (json_object_get_type(files) == json_type_array)
             {
-                json_object *file = (json_object*)array_list_get_idx(afiles, idx);
-                DirEntry entry;
-                memset(&entry, 0, sizeof(DirEntry));
-
-                sprintf(entry.directory, "%s", path.c_str());
-                entry.selectable = true;
-                entry.file_size = 0;
-
-                const char *id = json_object_get_string(json_object_object_get(file, "id"));
-                const char *name = json_object_get_string(json_object_object_get(file, "name"));
-                const char *mime_type = json_object_get_string(json_object_object_get(file, "mimeType"));
-                const char *modified_time = json_object_get_string(json_object_object_get(file, "modifiedTime"));
-
-                snprintf(entry.name, 255, "%s", name);
-                if (path.length() > 0 && path[path.length() - 1] == '/')
+                struct array_list *afiles = json_object_get_array(files);
+                for (size_t idx = 0; idx < afiles->length; ++idx)
                 {
-                    snprintf(entry.path, 767, "%s%s", path.c_str(), entry.name);
+                    json_object *file = (json_object *)array_list_get_idx(afiles, idx);
+                    DirEntry entry;
+                    memset(&entry, 0, sizeof(DirEntry));
+
+                    sprintf(entry.directory, "%s", path.c_str());
+                    entry.selectable = true;
+                    entry.file_size = 0;
+
+                    const char *id = json_object_get_string(json_object_object_get(file, "id"));
+                    const char *name = json_object_get_string(json_object_object_get(file, "name"));
+                    const char *mime_type = json_object_get_string(json_object_object_get(file, "mimeType"));
+                    const char *modified_time = json_object_get_string(json_object_object_get(file, "modifiedTime"));
+
+                    snprintf(entry.name, 255, "%s", name);
+                    if (path.length() > 0 && path[path.length() - 1] == '/')
+                    {
+                        snprintf(entry.path, 767, "%s%s", path.c_str(), entry.name);
+                    }
+                    else
+                    {
+                        sprintf(entry.path, "%s/%s", path.c_str(), entry.name);
+                    }
+                    path_id_map.insert(std::make_pair(entry.path, id));
+
+                    if (strncmp(mime_type, "application/vnd.google-apps.folder", 35) != 0)
+                    {
+                        entry.file_size = json_object_get_uint64(json_object_object_get(file, "size"));
+                        entry.isDir = false;
+                        DirEntry::SetDisplaySize(&entry);
+                    }
+                    else
+                    {
+                        entry.isDir = true;
+                        sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
+                    }
+
+                    std::vector<std::string> date_time_arr = Util::Split(modified_time, "T");
+                    std::vector<std::string> adate = Util::Split(date_time_arr[0], "-");
+                    std::vector<std::string> atime = Util::Split(Util::Split(date_time_arr[1], ".")[0], ":");
+                    OrbisDateTime utc, local;
+                    utc.year = std::atoi(adate[0].c_str());
+                    utc.month = std::atoi(adate[1].c_str());
+                    utc.day = std::atoi(adate[2].c_str());
+                    utc.hour = std::atoi(atime[0].c_str());
+                    utc.minute = std::atoi(atime[1].c_str());
+                    utc.second = std::atoi(atime[2].c_str());
+
+                    convertUtcToLocalTime(&utc, &local);
+
+                    entry.modified.year = local.year;
+                    entry.modified.month = local.month;
+                    entry.modified.day = local.day;
+                    entry.modified.hours = local.hour;
+                    entry.modified.minutes = local.minute;
+                    entry.modified.seconds = local.second;
+
+                    out.push_back(entry);
                 }
-                else
-                {
-                    sprintf(entry.path, "%s/%s", path.c_str(), entry.name);
-                }
-                path_id_map.insert(std::make_pair(entry.path, id));
-
-                if (strncmp(mime_type, "application/vnd.google-apps.folder", 35) != 0)
-                {
-                    entry.file_size = json_object_get_uint64(json_object_object_get(file, "size"));
-                    entry.isDir = false;
-                    DirEntry::SetDisplaySize(&entry);
-                }
-                else
-                {
-                    entry.isDir = true;
-                    sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
-                }
-
-                std::vector<std::string> date_time_arr = Util::Split(modified_time, "T");
-                std::vector<std::string> adate = Util::Split(date_time_arr[0], "-");
-                std::vector<std::string> atime = Util::Split(Util::Split(date_time_arr[1], ".")[0], ":");
-                OrbisDateTime utc, local;
-                utc.year = std::atoi(adate[0].c_str());
-                utc.month = std::atoi(adate[1].c_str());
-                utc.day = std::atoi(adate[2].c_str());
-                utc.hour = std::atoi(atime[0].c_str());
-                utc.minute = std::atoi(atime[1].c_str());
-                utc.second = std::atoi(atime[2].c_str());
-
-                convertUtcToLocalTime(&utc, &local);
-
-                entry.modified.year = local.year;
-                entry.modified.month = local.month;
-                entry.modified.day = local.day;
-                entry.modified.hours = local.hour;
-                entry.modified.minutes = local.minute;
-                entry.modified.seconds = local.second;
-
-                out.push_back(entry);
             }
         }
     }
@@ -277,12 +442,13 @@ void *GDriveClient::RefreshTokenThread(void *argp)
     while (refresh_token_running)
     {
         OrbisTick tick;
+        memset(&tick, 0, sizeof(OrbisTick));
         sceRtcGetCurrentTick(&tick);
         if (tick.mytick >= (gg_account.token_expiry - 300000000)) // refresh token 5mins before expiry
         {
             RefreshAccessToken();
         }
-        sceKernelUsleep(5000000); // sleep for 5s
+        sceKernelUsleep(30000000); // sleep for 5s
     }
     return NULL;
 }
@@ -296,7 +462,8 @@ void GDriveClient::StartRefreshToken()
     int ret = pthread_create(&refresh_token_thid, NULL, RefreshTokenThread, NULL);
     if (ret != 0)
     {
-        dbglogger_log("Failed to start refresh token thread");
+        refresh_token_running = false;
+        return;
     }
 }
 
