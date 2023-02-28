@@ -144,6 +144,7 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"See information about your Google Drive files",											// STR_PERM_DRIVE_METADATA_RO
 	"Google login failed",																		// STR_GOOGLE_LOGIN_FAIL_MSG
 	"Google login timed out",																	// STR_GOOGLE_LOGIN_TIMEOUT_MSG
+	"New File",																					// STR_NEW_FILE
 };
 
 bool needs_extended_font = false;

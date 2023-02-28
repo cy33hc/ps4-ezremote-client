@@ -795,13 +795,13 @@ namespace Windows
         bool remote_browser_selected = saved_selected_browser & REMOTE_BROWSER;
         if (local_browser_selected)
         {
-            ImGui::SetNextWindowPos(ImVec2(410, 300));
+            ImGui::SetNextWindowPos(ImVec2(410, 280));
         }
         else if (remote_browser_selected)
         {
-            ImGui::SetNextWindowPos(ImVec2(1330, 300));
+            ImGui::SetNextWindowPos(ImVec2(1330, 280));
         }
-        ImGui::SetNextWindowSizeConstraints(ImVec2(230, 150), ImVec2(230, 600), NULL, NULL);
+        ImGui::SetNextWindowSizeConstraints(ImVec2(230, 150), ImVec2(230, 625), NULL, NULL);
         if (ImGui::BeginPopupModal(lang_strings[STR_ACTIONS], NULL, ImGuiWindowFlags_AlwaysAutoResize))
         {
             ImGui::PushID("Select All##settings");
@@ -934,9 +934,28 @@ namespace Windows
             ImGui::PopID();
             ImGui::Separator();
 
+            ImGui::PushID("New File##settings");
+            flags = ImGuiSelectableFlags_None;
+            if (remote_browser_selected && remoteclient != nullptr && !(remoteclient->SupportedActions() & REMOTE_ACTION_NEW_FILE))
+            {
+                flags = ImGuiSelectableFlags_Disabled;
+            }
+            if (ImGui::Selectable(lang_strings[STR_NEW_FILE], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+            {
+                if (local_browser_selected)
+                    selected_action = ACTION_NEW_LOCAL_FILE;
+                else if (remote_browser_selected)
+                    selected_action = ACTION_NEW_REMOTE_FILE;
+                SetModalMode(false);
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::PopID();
+            ImGui::Separator();
+
             ImGui::PushID("Edit##settings");
             flags = ImGuiSelectableFlags_None;
-            if (remote_browser_selected && remoteclient != nullptr && !(remoteclient->SupportedActions() & REMOTE_ACTION_EDIT))
+            if ((remote_browser_selected && remoteclient != nullptr && (!(remoteclient->SupportedActions() & REMOTE_ACTION_EDIT) || selected_remote_file.isDir)) ||
+                (local_browser_selected && selected_local_file.isDir))
             {
                 flags = ImGuiSelectableFlags_Disabled;
             }
@@ -1422,6 +1441,7 @@ namespace Windows
                         FS::SaveText(&edit_buffer, TMP_EDITOR_FILE);
                         if (remoteclient != nullptr)
                         {
+                            remoteclient->Delete(selected_remote_file.path);
                             remoteclient->Put(TMP_EDITOR_FILE, selected_remote_file.path);
                             selected_action = ACTION_REFRESH_REMOTE_FILES;
                         }

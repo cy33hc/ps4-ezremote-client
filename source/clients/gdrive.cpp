@@ -7,11 +7,15 @@
 #include "server/http_server.h"
 #include "clients/remote_client.h"
 #include "clients/gdrive.h"
+#include "fs.h"
 #include "lang.h"
 #include "util.h"
 #include "windows.h"
 #include "system.h"
 #include "dbglogger.h"
+
+#define GOOGLE_BUF_SIZE 262144
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 using namespace httplib;
 
@@ -42,11 +46,11 @@ int RefreshAccessToken()
     client.enable_server_certificate_verification(false);
     client.set_follow_location(true);
     std::string url = std::string("/token");
-    std::string post_data = std::string("grant_type=refresh_token") + 
-                                        "&client_id=" + gg_account.client_id +
-                                        "&client_secret=" + gg_account.client_secret +
-                                        "&refresh_token=" + gg_account.refresh_token;
-                      
+    std::string post_data = std::string("grant_type=refresh_token") +
+                            "&client_id=" + gg_account.client_id +
+                            "&client_secret=" + gg_account.client_secret +
+                            "&refresh_token=" + gg_account.refresh_token;
+
     if (auto res = client.Post(url, post_data.c_str(), post_data.length(), "application/x-www-form-urlencoded"))
     {
         if (HTTP_SUCCESS(res->status))
@@ -100,7 +104,7 @@ int GDriveClient::RequestAuthorization()
     sceUserServiceGetForegroundUser((int *)&param.userId);
 
     std::string auth_url = std::string(GOOGLE_AUTH_URL "?client_id=") + gg_account.client_id + "&redirect_uri=" + GetRedirectUrl() +
-                        "&response_type=code&access_type=offline&scope=" + GetScopes() + "&include_granted_scopes=true";
+                           "&response_type=code&access_type=offline&scope=" + GetScopes() + "&include_granted_scopes=true";
     auth_url = EncodeUrl(auth_url);
     std::string launch_uri = std::string("pswebbrowser:search?url=") + auth_url;
     int ret = sceShellUIUtilLaunchByUri(launch_uri.c_str(), &param);
@@ -192,6 +196,29 @@ int GDriveClient::Rename(const std::string &src, const std::string &dst)
     return 1;
 }
 
+bool GDriveClient::FileExists(const std::string &path)
+{
+    std::string id = GetValue(path_id_map, path);
+    dbglogger_log("path=%s,id=%s", path.c_str(), id.c_str());
+    if (id.empty()) // then find it parent folder to see if it exists
+    {
+        size_t name_separator = path.find_last_of("/");
+        std::string parent = path.substr(0, name_separator);
+        dbglogger_log("parent=%s", parent.c_str());
+        if (FileExists(parent))
+        {
+            ListDir(parent);
+            id = GetValue(path_id_map, path);
+            dbglogger_log("after listdir path=%s,id=%s", path.c_str(), id.c_str());
+            if (!id.empty())
+                return true;
+        }
+    }
+    else
+        return true;
+    return false;
+}
+
 int GDriveClient::Get(const std::string &outputfile, const std::string &path, uint64_t offset)
 {
     std::ofstream file_stream(outputfile, std::ios::binary);
@@ -215,7 +242,77 @@ int GDriveClient::Get(const std::string &outputfile, const std::string &path, ui
         sprintf(this->response, "%s", httplib::to_string(res.error()).c_str());
     }
     return 0;
+}
 
+int GDriveClient::Put(const std::string &inputfile, const std::string &path, uint64_t offset)
+{
+    bytes_to_download = FS::GetSize(inputfile);
+    dbglogger_log("bytes_to_download=%ld", bytes_to_download);
+    bytes_transfered = 0;
+
+    std::ifstream file_stream(inputfile, std::ios::binary);
+    bytes_transfered = 0;
+
+    size_t path_pos = path.find_last_of("/");
+    std::string parent_dir;
+    if (path_pos == 0)
+        parent_dir = "/";
+    else
+        parent_dir = path.substr(0, path_pos);
+
+    std::string filename = path.substr(path_pos + 1);
+    std::string parent_id = GetValue(path_id_map, parent_dir);
+
+    std::string url = "/upload/drive/v3/files?uploadType=resumable";
+    std::string post_data = std::string("{'name': '") + filename + "', 'parents': ['" + parent_id + "']}";
+    Headers headers;
+    headers.insert(std::make_pair("X-Upload-Content-Type", "application/octet-stream"));
+    headers.insert(std::make_pair("X-Upload-Content-Length", std::to_string(bytes_to_download)));
+    char *buf = new char[GOOGLE_BUF_SIZE];
+    if (auto res = client->Post(url, headers, post_data.c_str(), post_data.length(), "application/json"))
+    {
+        if (HTTP_SUCCESS(res->status))
+        {
+            std::string upload_uri = res->get_header_value("location");
+            upload_uri = std::regex_replace(upload_uri, std::regex(GOOGLE_API_URL), "");
+            dbglogger_log("upload_uri=%s", upload_uri.c_str());
+            Headers headers;
+            headers.insert(std::make_pair("Content-Length", std::to_string(bytes_to_download)));
+            std::string range_value = "bytes 0-" + std::to_string(bytes_to_download-1) + "/" + std::to_string(bytes_to_download);
+            headers.insert(std::make_pair("Content-Range", range_value));
+            dbglogger_log("range_value=%s", range_value.c_str());
+
+            auto res = client->Put(
+                    upload_uri, bytes_to_download,
+                    [&file_stream, &buf](size_t offset, size_t length, DataSink &sink)
+                    {
+                        dbglogger_log("offset=%ld, length=%ld", offset, length);
+                        uint32_t count = 0;
+                        uint32_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length-count);
+                        do
+                        {
+                            file_stream.read(buf, bytes_to_transfer);
+                            sink.write(buf, bytes_to_transfer);
+                            count += bytes_to_transfer;
+                            bytes_transfered += bytes_to_transfer;
+                            bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length-count);
+                            dbglogger_log("count=%ld, bytes_to_transfer=%ld, bytes_transfered=%d", count, bytes_to_transfer, bytes_transfered);
+                        } while (count < length);
+                        return true;
+                    },
+                    "application/octet-stream");
+            dbglogger_log("bytes_left=%ld", bytes_to_download-bytes_transfered);
+        }
+        else
+        {
+            delete[] buf;
+            file_stream.close();
+            return 0;
+        }
+    }
+    delete[] buf;
+    file_stream.close();
+    return 1;
 }
 
 int GDriveClient::Size(const std::string &path, int64_t *size)
@@ -243,6 +340,10 @@ int GDriveClient::Size(const std::string &path, int64_t *size)
 
 int GDriveClient::Mkdir(const std::string &path)
 {
+    // if path already exists return;
+    if (FileExists(path))
+        return 1;
+
     size_t path_pos = path.find_last_of("/");
     std::string parent_dir;
     if (path_pos == 0)
@@ -295,7 +396,7 @@ int GDriveClient::Rmdir(const std::string &path, bool recursive)
     if (ret != 0)
     {
         std::string subfolders = path + "/";
-        for (std::map<std::string, std::string>::iterator it = path_id_map.begin(); it != path_id_map.end(); )
+        for (std::map<std::string, std::string>::iterator it = path_id_map.begin(); it != path_id_map.end();)
         {
             if (strncmp(it->first.c_str(), subfolders.c_str(), path.length()) == 0)
             {

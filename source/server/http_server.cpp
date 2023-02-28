@@ -81,6 +81,7 @@ namespace HttpServer
         {
             sprintf(gg_account.auth_code, "%s", req.get_param_value("code").c_str());
             Client client(GOOGLE_OAUTH_HOST);
+            client.set_follow_location(true);
             client.enable_server_certificate_verification(false);
             
             std::string url = std::string("/token");
