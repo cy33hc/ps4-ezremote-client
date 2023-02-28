@@ -613,7 +613,7 @@ ClientType GDriveClient::clientType()
     return CLIENT_TYPE_GOOGLE;
 }
 
-uint32_t FtpClient::SupportedActions()
+uint32_t GDriveClient::SupportedActions()
 {
 	return REMOTE_ACTION_ALL ^ REMOTE_ACTION_CUT ^ REMOTE_ACTION_COPY ^ REMOTE_ACTION_PASTE;
 }
