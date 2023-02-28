@@ -613,9 +613,9 @@ ClientType GDriveClient::clientType()
     return CLIENT_TYPE_GOOGLE;
 }
 
-uint32_t GDriveClient::SupportedActions()
+uint32_t FtpClient::SupportedActions()
 {
-    return REMOTE_ACTION_ALL;
+	return REMOTE_ACTION_ALL ^ REMOTE_ACTION_CUT ^ REMOTE_ACTION_COPY ^ REMOTE_ACTION_PASTE;
 }
 
 void *GDriveClient::RefreshTokenThread(void *argp)
