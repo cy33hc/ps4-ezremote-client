@@ -203,6 +203,9 @@ bool GDriveClient::FileExists(const std::string &path)
     {
         size_t name_separator = path.find_last_of("/");
         std::string parent = path.substr(0, name_separator);
+        if (parent.empty())
+            parent = "/";
+
         if (FileExists(parent))
         {
             ListDir(parent);
