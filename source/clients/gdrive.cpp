@@ -199,17 +199,14 @@ int GDriveClient::Rename(const std::string &src, const std::string &dst)
 bool GDriveClient::FileExists(const std::string &path)
 {
     std::string id = GetValue(path_id_map, path);
-    dbglogger_log("path=%s,id=%s", path.c_str(), id.c_str());
     if (id.empty()) // then find it parent folder to see if it exists
     {
         size_t name_separator = path.find_last_of("/");
         std::string parent = path.substr(0, name_separator);
-        dbglogger_log("parent=%s", parent.c_str());
         if (FileExists(parent))
         {
             ListDir(parent);
             id = GetValue(path_id_map, path);
-            dbglogger_log("after listdir path=%s,id=%s", path.c_str(), id.c_str());
             if (!id.empty())
                 return true;
         }
@@ -244,10 +241,77 @@ int GDriveClient::Get(const std::string &outputfile, const std::string &path, ui
     return 0;
 }
 
-int GDriveClient::Put(const std::string &inputfile, const std::string &path, uint64_t offset)
+int GDriveClient::Update(const std::string &inputfile, const std::string &path)
 {
     bytes_to_download = FS::GetSize(inputfile);
-    dbglogger_log("bytes_to_download=%ld", bytes_to_download);
+    bytes_transfered = 0;
+
+    std::ifstream file_stream(inputfile, std::ios::binary);
+    bytes_transfered = 0;
+
+    std::string id = GetValue(path_id_map, path);
+
+    std::string url = "/upload/drive/v3/files/" + BaseClient::EncodeUrl(id) + "?uploadType=resumable";
+    Headers headers;
+    headers.insert(std::make_pair("X-Upload-Content-Type", "application/octet-stream"));
+    headers.insert(std::make_pair("X-Upload-Content-Length", std::to_string(bytes_to_download)));
+    char *buf = new char[GOOGLE_BUF_SIZE];
+    if (auto res = client->Patch(url))
+    {
+        if (HTTP_SUCCESS(res->status))
+        {
+            std::string upload_uri = res->get_header_value("location");
+            upload_uri = std::regex_replace(upload_uri, std::regex(GOOGLE_API_URL), "");
+            Headers headers;
+            headers.insert(std::make_pair("Content-Length", std::to_string(bytes_to_download)));
+            std::string range_value = "bytes 0-" + std::to_string(bytes_to_download-1) + "/" + std::to_string(bytes_to_download);
+            headers.insert(std::make_pair("Content-Range", range_value));
+
+            if (auto res = client->Put(
+                upload_uri, bytes_to_download,
+                [&file_stream, &buf](size_t offset, size_t length, DataSink &sink)
+                {
+                    uint32_t count = 0;
+                    uint32_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length-count);
+                    do
+                    {
+                        file_stream.read(buf, bytes_to_transfer);
+                        sink.write(buf, bytes_to_transfer);
+                        count += bytes_to_transfer;
+                        bytes_transfered += bytes_to_transfer;
+                        bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length-count);
+                    } while (count < length);
+                    return true;
+                },
+                "application/octet-stream"))
+            {
+                // success
+            }
+            else
+            {
+                delete[] buf;
+                file_stream.close();
+                return 0;
+            }
+        }
+        else
+        {
+            delete[] buf;
+            file_stream.close();
+            return 0;
+        }
+    }
+    delete[] buf;
+    file_stream.close();
+    return 1;
+}
+
+int GDriveClient::Put(const std::string &inputfile, const std::string &path, uint64_t offset)
+{
+    if (FileExists(path))
+        return Update(inputfile, path);
+        
+    bytes_to_download = FS::GetSize(inputfile);
     bytes_transfered = 0;
 
     std::ifstream file_stream(inputfile, std::ios::binary);
@@ -275,33 +339,37 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
         {
             std::string upload_uri = res->get_header_value("location");
             upload_uri = std::regex_replace(upload_uri, std::regex(GOOGLE_API_URL), "");
-            dbglogger_log("upload_uri=%s", upload_uri.c_str());
             Headers headers;
             headers.insert(std::make_pair("Content-Length", std::to_string(bytes_to_download)));
             std::string range_value = "bytes 0-" + std::to_string(bytes_to_download-1) + "/" + std::to_string(bytes_to_download);
             headers.insert(std::make_pair("Content-Range", range_value));
-            dbglogger_log("range_value=%s", range_value.c_str());
 
-            auto res = client->Put(
-                    upload_uri, bytes_to_download,
-                    [&file_stream, &buf](size_t offset, size_t length, DataSink &sink)
+            if (auto res = client->Put(
+                upload_uri, bytes_to_download,
+                [&file_stream, &buf](size_t offset, size_t length, DataSink &sink)
+                {
+                    uint32_t count = 0;
+                    uint32_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length-count);
+                    do
                     {
-                        dbglogger_log("offset=%ld, length=%ld", offset, length);
-                        uint32_t count = 0;
-                        uint32_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length-count);
-                        do
-                        {
-                            file_stream.read(buf, bytes_to_transfer);
-                            sink.write(buf, bytes_to_transfer);
-                            count += bytes_to_transfer;
-                            bytes_transfered += bytes_to_transfer;
-                            bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length-count);
-                            dbglogger_log("count=%ld, bytes_to_transfer=%ld, bytes_transfered=%d", count, bytes_to_transfer, bytes_transfered);
-                        } while (count < length);
-                        return true;
-                    },
-                    "application/octet-stream");
-            dbglogger_log("bytes_left=%ld", bytes_to_download-bytes_transfered);
+                        file_stream.read(buf, bytes_to_transfer);
+                        sink.write(buf, bytes_to_transfer);
+                        count += bytes_to_transfer;
+                        bytes_transfered += bytes_to_transfer;
+                        bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length-count);
+                    } while (count < length);
+                    return true;
+                },
+                "application/octet-stream"))
+            {
+                //success
+            }
+            else
+            {
+                delete[] buf;
+                file_stream.close();
+                return 0;
+            }
         }
         else
         {

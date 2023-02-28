@@ -1441,7 +1441,6 @@ namespace Windows
                         FS::SaveText(&edit_buffer, TMP_EDITOR_FILE);
                         if (remoteclient != nullptr)
                         {
-                            remoteclient->Delete(selected_remote_file.path);
                             remoteclient->Put(TMP_EDITOR_FILE, selected_remote_file.path);
                             selected_action = ACTION_REFRESH_REMOTE_FILES;
                         }
