@@ -1646,4 +1646,47 @@ namespace Actions
 
         return INSTALLER::InstallLocalPkg(local_file, header, true);
     }
+
+    void CreateLocalFile(char *filename)
+    {
+        std::string new_file = FS::GetPath(local_directory, filename);
+        std::string temp_file = new_file;
+        int i = 1;
+        while (true)
+        {
+            if (!FS::FileExists(temp_file))
+                break;
+            temp_file = new_file + "." + std::to_string(i);
+            i++;
+        }
+        FILE* f = FS::Create(temp_file);
+        FS::Close(f);
+        RefreshLocalFiles(false);
+        sprintf(local_file_to_select, "%s", temp_file.c_str());
+    }
+
+    void CreateRemoteFile(char *filename)
+    {
+        std::string new_file = FS::GetPath(remote_directory, filename);
+        std::string temp_file = new_file;
+        int i = 1;
+        while (true)
+        {
+            if (!remoteclient->FileExists(temp_file))
+                break;
+            temp_file = new_file + "." + std::to_string(i);
+            i++;
+        }
+
+        OrbisTick tick;
+        sceRtcGetCurrentTick(&tick);
+        std::string local_tmp = std::string(DATA_PATH) + "/" + std::to_string(tick.mytick);
+        FILE *f = FS::Create(local_tmp);
+        FS::Close(f);
+        remoteclient->Put(local_tmp, temp_file);
+        FS::Rm(local_tmp);
+        RefreshRemoteFiles(false);
+        sprintf(remote_file_to_select, "%s", temp_file.c_str());
+    }
+
 }

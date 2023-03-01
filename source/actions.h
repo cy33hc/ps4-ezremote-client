@@ -108,6 +108,8 @@ namespace Actions
     void *CopyRemoteFilesThread(void *argp);
     void CopyRemoteFiles();
     int DownloadAndInstallPkg(const std::string &filename, pkg_header *header);
+    void CreateLocalFile(char *filename);
+    void CreateRemoteFile(char *filename);
 }
 
 #endif

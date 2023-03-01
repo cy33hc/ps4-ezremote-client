@@ -53,7 +53,7 @@ char local_file_to_select[256];
 char remote_file_to_select[256];
 char local_filter[32];
 char remote_filter[32];
-char editor_text[1024];
+char dialog_editor_text[1024];
 char activity_message[1024];
 int selected_browser = 0;
 int saved_selected_browser;
@@ -1566,13 +1566,16 @@ namespace Windows
             {
                 ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_GLOBAL]);
                 ImGui::Separator();
-                ImGui::SetCursorPosX(ImGui::GetCursorPosX()+15); ImGui::Text("%s", lang_strings[STR_AUTO_DELETE_TMP_PKG]);
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                ImGui::Text("%s", lang_strings[STR_AUTO_DELETE_TMP_PKG]);
                 ImGui::SameLine();
-                ImGui::SetCursorPosX(705); ImGui::Checkbox("##auto_delete_tmp_pkg", &auto_delete_tmp_pkg);
+                ImGui::SetCursorPosX(705);
+                ImGui::Checkbox("##auto_delete_tmp_pkg", &auto_delete_tmp_pkg);
                 ImGui::Separator();
                 ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_GOOGLE]);
                 ImGui::Separator();
-                ImGui::SetCursorPosX(ImGui::GetCursorPosX()+15); ImGui::Text("%s", lang_strings[STR_CLIENT_ID]);
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                ImGui::Text("%s", lang_strings[STR_CLIENT_ID]);
                 ImGui::SameLine();
                 ImGui::SetCursorPosX(163);
                 ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 1.0f));
@@ -1586,11 +1589,12 @@ namespace Windows
                     gui_mode = GUI_MODE_IME;
                 }
                 ImGui::Separator();
-                ImGui::SetCursorPosX(ImGui::GetCursorPosX()+15); ImGui::Text("%s", lang_strings[STR_CLIENT_SECRET]);
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                ImGui::Text("%s", lang_strings[STR_CLIENT_SECRET]);
                 ImGui::SameLine();
                 char id[128];
                 ImGui::SetCursorPosX(163);
-                if (strlen(gg_app.client_secret)>0)
+                if (strlen(gg_app.client_secret) > 0)
                     sprintf(id, "%s", "*********************************************##client_secret_input");
                 else
                     sprintf(id, "%s", "##client_secret_input");
@@ -1672,17 +1676,19 @@ namespace Windows
             break;
         case ACTION_NEW_LOCAL_FOLDER:
         case ACTION_NEW_REMOTE_FOLDER:
+        case ACTION_NEW_LOCAL_FILE:
+        case ACTION_NEW_REMOTE_FILE:
             if (gui_mode != GUI_MODE_IME)
             {
-                sprintf(editor_text, "");
-                ime_single_field = editor_text;
+                sprintf(dialog_editor_text, "");
+                ime_single_field = dialog_editor_text;
                 ResetImeCallbacks();
                 ime_field_size = 128;
                 ime_after_update = AfterFolderNameCallback;
                 ime_cancelled = CancelActionCallBack;
                 ime_callback = SingleValueImeCallback;
                 ImVec2 pos = selected_action == ACTION_NEW_LOCAL_FOLDER ? ImVec2(410, 350) : ImVec2(1330, 350);
-                Dialog::initImeDialog(lang_strings[STR_NEW_FOLDER], editor_text, 128, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
+                Dialog::initImeDialog(lang_strings[STR_NEW_FOLDER], dialog_editor_text, 128, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
                 gui_mode = GUI_MODE_IME;
             }
             break;
@@ -1742,16 +1748,16 @@ namespace Windows
             if (gui_mode != GUI_MODE_IME)
             {
                 if (multi_selected_local_files.size() > 0)
-                    sprintf(editor_text, "%s", multi_selected_local_files.begin()->name);
+                    sprintf(dialog_editor_text, "%s", multi_selected_local_files.begin()->name);
                 else
-                    sprintf(editor_text, "%s", selected_local_file.name);
-                ime_single_field = editor_text;
+                    sprintf(dialog_editor_text, "%s", selected_local_file.name);
+                ime_single_field = dialog_editor_text;
                 ResetImeCallbacks();
                 ime_field_size = 128;
                 ime_after_update = AfterFolderNameCallback;
                 ime_cancelled = CancelActionCallBack;
                 ime_callback = SingleValueImeCallback;
-                Dialog::initImeDialog(lang_strings[STR_RENAME], editor_text, 128, ORBIS_TYPE_BASIC_LATIN, 410, 350);
+                Dialog::initImeDialog(lang_strings[STR_RENAME], dialog_editor_text, 128, ORBIS_TYPE_BASIC_LATIN, 410, 350);
                 gui_mode = GUI_MODE_IME;
             }
             break;
@@ -1759,16 +1765,16 @@ namespace Windows
             if (gui_mode != GUI_MODE_IME)
             {
                 if (multi_selected_remote_files.size() > 0)
-                    sprintf(editor_text, "%s", multi_selected_remote_files.begin()->name);
+                    sprintf(dialog_editor_text, "%s", multi_selected_remote_files.begin()->name);
                 else
-                    sprintf(editor_text, "%s", selected_remote_file.name);
-                ime_single_field = editor_text;
+                    sprintf(dialog_editor_text, "%s", selected_remote_file.name);
+                ime_single_field = dialog_editor_text;
                 ResetImeCallbacks();
                 ime_field_size = 128;
                 ime_after_update = AfterFolderNameCallback;
                 ime_cancelled = CancelActionCallBack;
                 ime_callback = SingleValueImeCallback;
-                Dialog::initImeDialog(lang_strings[STR_RENAME], editor_text, 128, ORBIS_TYPE_BASIC_LATIN, 1330, 350);
+                Dialog::initImeDialog(lang_strings[STR_RENAME], dialog_editor_text, 128, ORBIS_TYPE_BASIC_LATIN, 1330, 350);
                 gui_mode = GUI_MODE_IME;
             }
             break;
@@ -1996,27 +2002,34 @@ namespace Windows
 
     void AfterFolderNameCallback(int ime_result)
     {
-        if (selected_action == ACTION_NEW_LOCAL_FOLDER)
+        switch (selected_action)
         {
-            Actions::CreateNewLocalFolder(editor_text);
-        }
-        else if (selected_action == ACTION_NEW_REMOTE_FOLDER)
-        {
-            Actions::CreateNewRemoteFolder(editor_text);
-        }
-        else if (selected_action == ACTION_RENAME_LOCAL)
-        {
+        case ACTION_NEW_LOCAL_FOLDER:
+            Actions::CreateNewLocalFolder(dialog_editor_text);
+            break;
+        case ACTION_NEW_REMOTE_FOLDER:
+            Actions::CreateNewRemoteFolder(dialog_editor_text);
+            break;
+        case ACTION_RENAME_LOCAL:
             if (multi_selected_local_files.size() > 0)
-                Actions::RenameLocalFolder(multi_selected_local_files.begin()->path, editor_text);
+                Actions::RenameLocalFolder(multi_selected_local_files.begin()->path, dialog_editor_text);
             else
-                Actions::RenameLocalFolder(selected_local_file.path, editor_text);
-        }
-        else if (selected_action == ACTION_RENAME_REMOTE)
-        {
+                Actions::RenameLocalFolder(selected_local_file.path, dialog_editor_text);
+            break;
+        case ACTION_RENAME_REMOTE:
             if (multi_selected_remote_files.size() > 0)
-                Actions::RenameRemoteFolder(multi_selected_remote_files.begin()->path, editor_text);
+                Actions::RenameRemoteFolder(multi_selected_remote_files.begin()->path, dialog_editor_text);
             else
-                Actions::RenameRemoteFolder(selected_remote_file.path, editor_text);
+                Actions::RenameRemoteFolder(selected_remote_file.path, dialog_editor_text);
+            break;
+        case ACTION_NEW_LOCAL_FILE:
+            Actions::CreateLocalFile(dialog_editor_text);
+            break;
+        case ACTION_NEW_REMOTE_FILE:
+            Actions::CreateRemoteFile(dialog_editor_text);
+            break;
+        default:
+            break;
         }
         selected_action = ACTION_NONE;
     }
