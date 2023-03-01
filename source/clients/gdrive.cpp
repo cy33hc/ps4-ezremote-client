@@ -145,6 +145,7 @@ int GDriveClient::RequestAuthorization()
 
 GDriveClient::GDriveClient()
 {
+    client = nullptr;
     path_id_map.insert(std::make_pair("/", "root"));
 }
 
@@ -702,6 +703,6 @@ int GDriveClient::Quit()
 
 void GDriveClient::SetAccessToken(const std::string &token)
 {
-    if (client != nullptr)
-        client->set_bearer_token_auth(token);
+    if (this->client != nullptr)
+        this->client->set_bearer_token_auth(token);
 }
