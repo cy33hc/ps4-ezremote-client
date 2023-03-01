@@ -2,8 +2,8 @@
 #include <lexbor/dom/interfaces/element.h>
 #include <fstream>
 #include "common.h"
-#include "remote_client.h"
-#include "http/apache.h"
+#include "clients/remote_client.h"
+#include "clients/apache.h"
 #include "lang.h"
 #include "util.h"
 #include "windows.h"

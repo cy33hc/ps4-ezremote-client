@@ -17,9 +17,9 @@
 #include "config.h"
 #include "windows.h"
 #include "lang.h"
-#include "sys_modules.h"
+#include "system.h"
 #include "fs.h"
-#include "webdavclient.h"
+#include "clients/webdavclient.h"
 
 #define BGFT_HEAP_SIZE (1 * 1024 * 1024)
 
@@ -332,6 +332,11 @@ namespace INSTALLER
 				if (ret != 0)
 					goto err;
 				goto retry;
+			}
+			else
+			{
+				if (auto_delete_tmp_pkg)
+					FS::Rm(filename);
 			}
 		}
 		else if (ret > 0) goto err;

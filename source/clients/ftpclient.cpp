@@ -1,4 +1,4 @@
-#include <sys/errno.h>
+#include <errno.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -12,7 +12,7 @@
 #include <errno.h>
 
 #include "lang.h"
-#include "ftpclient.h"
+#include "clients/ftpclient.h"
 #include "util.h"
 #include "windows.h"
 
@@ -1578,21 +1578,7 @@ std::vector<DirEntry> FtpClient::ListDir(const std::string &path)
 {
 	std::vector<DirEntry> out;
 	DirEntry entry;
-	memset(&entry, 0, sizeof(DirEntry));
-	if (path[path.length() - 1] == '/' && path.length() > 1)
-	{
-		strlcpy(entry.directory, path.c_str(), path.length() - 1);
-	}
-	else
-	{
-		sprintf(entry.directory, "%s", path.c_str());
-	}
-	sprintf(entry.name, "..");
-	sprintf(entry.path, "%s", entry.directory);
-	sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
-	entry.file_size = 0;
-	entry.isDir = true;
-	entry.selectable = false;
+	Util::SetupPreviousFolder(path, &entry);
 	out.push_back(entry);
 
 	ftphandle *nData;

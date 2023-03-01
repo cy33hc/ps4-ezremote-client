@@ -6,7 +6,7 @@
 #include <time.h>
 #include <string>
 #include <vector>
-#include "remote_client.h"
+#include "clients/remote_client.h"
 
 #define FTP_CLIENT_MAX_FILENAME_LEN 128
 

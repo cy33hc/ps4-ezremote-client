@@ -127,14 +127,29 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"This option enables Remote Package Installation. "
 	"This requires a HTTP Server setup on the same host sharing the same folder with anonymous access.", // STR_ENABLE_RPI_FTP_SMB_MSG
 	"This option enables Remote Package Installation. "
-	"This requires the Server with anonymous access that does not need username/password.", // STR_ENABLE_RPI_WEBDAV_MSG
-	"Files",																				// STR_FILES
-	"Editor",																				// STR_EDITOR
-	"Save",																					// STR_SAVE
-	"Cannot edit files bigger than",														// STR_MAX_EDIT_FILE_SIZE_MSG
-	"Delete Selected Line",																	// STR_DELETE_LINE
-	"Insert Below Selected Line",															// STR_INSERT_LINE
-	"Modified",																				// STR_MODIFIED
+	"This requires the Server with anonymous access that does not need username/password.",		// STR_ENABLE_RPI_WEBDAV_MSG
+	"Files",																					// STR_FILES
+	"Editor",																					// STR_EDITOR
+	"Save",																						// STR_SAVE
+	"Cannot edit files bigger than",															// STR_MAX_EDIT_FILE_SIZE_MSG
+	"Delete Selected Line",																		// STR_DELETE_LINE
+	"Insert Below Selected Line",																// STR_INSERT_LINE
+	"Modified",																					// STR_MODIFIED
+	"Failed to obtain an access token from",													// STR_FAIL_GET_TOKEN_MSG
+	"Login Success. You may close the browser and return to the application",					// STR_GET_TOKEN_SUCCESS_MSG
+	"See, edit, create, and delete all of your Google Drive files",								// STR_PERM_DRIVE
+	"See, create, and delete its own configuration data in your Google Drive",					// STR_PERM_DRIVE_APPDATA
+	"See, edit, create, and delete only the specific Google Drive files you use with this app", // STR_PERM_DRIVE_FILE
+	"View and manage metadata of files in your Google Drive",									// STR_PERM_DRIVE_METADATA
+	"See information about your Google Drive files",											// STR_PERM_DRIVE_METADATA_RO
+	"Google login failed",																		// STR_GOOGLE_LOGIN_FAIL_MSG
+	"Google login timed out",																	// STR_GOOGLE_LOGIN_TIMEOUT_MSG
+	"New File",																					// STR_NEW_FILE
+	"Settings",																					// STR_SETTINGS
+	"Client ID",																				// STR_CLIENT_ID
+	"Client Secret",																			// STR_CLIENT_SECRET
+	"Global",																					// STR_GLOBAL
+	"Google",																					// STR_GOOGLE
 };
 
 bool needs_extended_font = false;

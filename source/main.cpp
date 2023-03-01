@@ -11,18 +11,20 @@
 #include <orbis/Pad.h>
 #include <orbis/AudioOut.h>
 #include <orbis/Net.h>
-#include <dbglogger.h>
+// #include <dbglogger.h>
 
 #include "imgui.h"
 #include "SDL2/SDL.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
+#include "server/http_server.h"
+#include "clients/gdrive.h"
 #include "config.h"
 #include "lang.h"
 #include "gui.h"
 #include "util.h"
 #include "installer.h"
-#include "sys_modules.h"
+#include "system.h"
 
 extern "C"
 {
@@ -111,7 +113,7 @@ void InitImgui()
 		0xE0AC, 0xE0AC, // rename
 		0xE5A1, 0xE5A1, // delete
 		0xF002, 0xF002, // search
-		0x2699, 0x2699, // settings
+		0xF013, 0xF013, // settings
 		0xF0ED, 0xF0ED, // download
 		0xF0EE, 0xF0EE, // upload
 		0xF56E, 0xF56E, // extract
@@ -261,8 +263,8 @@ static void terminate()
 
 int main()
 {
-	dbglogger_init();
-	dbglogger_log("If you see this you've set up dbglogger correctly.");
+	// dbglogger_init();
+	// dbglogger_log("If you see this you've set up dbglogger correctly.");
 	int rc;
 	// No buffering
 	setvbuf(stdout, NULL, _IONBF, 0);
@@ -288,6 +290,7 @@ int main()
 		return 0;
 
 	CONFIG::LoadConfig();
+	HttpServer::Start();
 
 	// Create a window context
 	window = SDL_CreateWindow("main", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, FRAME_WIDTH, FRAME_HEIGHT, 0);
@@ -317,7 +320,6 @@ int main()
 	atexit(terminate);
 
 	GUI::RenderLoop(renderer);
-
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 

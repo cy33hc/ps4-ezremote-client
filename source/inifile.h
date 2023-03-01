@@ -5,7 +5,7 @@
    Author(s)  : Carsten Breuer
  ------------------------------------------------------------------------
  Copyright (c) 2000 by Carsten Breuer (C.Breuer@openwin.de)
-/************************************************************************/
+************************************************************************/
 
 #ifndef INIFILE_H
 #define INIFILE_H
@@ -54,11 +54,13 @@ bool OpenIniFile(cchr *FileName);
 
 bool ReadBool(cchr *Section, cchr *Key, bool Default);
 int ReadInt(cchr *Section, cchr *Key, int Default);
+long ReadLong(cchr *Section, cchr *Key, long Default);
 double ReadDouble(cchr *Section, cchr *Key, double Default);
 cchr *ReadString(cchr *Section, cchr *Key, cchr *Default);
 
 void WriteBool(cchr *Section, cchr *Key, bool Value);
 void WriteInt(cchr *Section, cchr *Key, int Value);
+void WriteLong(cchr *Section, cchr *Key, long Value);
 void WriteDouble(cchr *Section, cchr *Key, double Value);
 void WriteString(cchr *Section, cchr *Key, cchr *Value);
 

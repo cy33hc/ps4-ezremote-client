@@ -9,10 +9,10 @@
 #include <fcntl.h>
 #include "lang.h"
 #include "webdav/client.hpp"
-#include "webdavclient.h"
+#include "clients/webdavclient.h"
 #include "windows.h"
 #include "util.h"
-#include "sys_modules.h"
+#include "system.h"
 
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 
@@ -256,21 +256,7 @@ namespace WebDAV
 	{
 		std::vector<DirEntry> out;
 		DirEntry entry;
-		memset(&entry, 0, sizeof(DirEntry));
-		if (path.length() > 1 && path[path.length() - 1] == '/')
-		{
-			strlcpy(entry.directory, path.c_str(), path.length() - 1);
-		}
-		else
-		{
-			sprintf(entry.directory, "%s", path.c_str());
-		}
-		sprintf(entry.name, "..");
-		sprintf(entry.path, "%s", entry.directory);
-		sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
-		entry.file_size = 0;
-		entry.isDir = true;
-		entry.selectable = false;
+		Util::SetupPreviousFolder(path, &entry);
 		out.push_back(entry);
 
 		WebDAV::dict_items_t files = client->list(path);

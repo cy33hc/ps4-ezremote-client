@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 #include "http/httplib.h"
+#include "clients/remote_client.h"
 #include "common.h"
-#include "remote_client.h"
 
 class BaseClient : public RemoteClient
 {
@@ -33,6 +33,8 @@ public:
     int Quit();
     ClientType clientType();
     uint32_t SupportedActions();
+    static std::string EncodeUrl(const std::string &url);
+    static std::string DecodeUrl(const std::string &url);
 
 protected:
     httplib::Client *client;

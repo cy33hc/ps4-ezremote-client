@@ -29,6 +29,8 @@ extern int (*sceRtcSetTick)(OrbisDateTime *outOrbisDateTime, const OrbisTick *in
 extern int (*sceRtcConvertLocalTimeToUtc)(const OrbisTick *local_time, OrbisTick *utc);
 extern int (*sceRtcConvertUtcToLocalTime)(const OrbisTick *utc, OrbisTick *local_time);
 extern int (*sceRtcGetCurrentClockLocalTime)(OrbisDateTime *time);
+extern int (*sceRtcGetCurrentTick)(OrbisTick *outTick);
+extern unsigned int (*sceRtcGetTickResolution)();
 extern int (*sceShellUIUtilLaunchByUri)(const char *uri, SceShellUIUtilLaunchByUriParam *param);
 extern int (*sceShellUIUtilInitialize)();
 

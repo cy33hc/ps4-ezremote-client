@@ -126,7 +126,22 @@
 	FUNC(STR_MAX_EDIT_FILE_SIZE_MSG)     \
 	FUNC(STR_DELETE_LINE)                \
 	FUNC(STR_INSERT_LINE)                \
-	FUNC(STR_MODIFIED)
+	FUNC(STR_MODIFIED)                   \
+	FUNC(STR_FAIL_GET_TOKEN_MSG)         \
+	FUNC(STR_GET_TOKEN_SUCCESS_MSG)      \
+	FUNC(STR_PERM_DRIVE)                 \
+	FUNC(STR_PERM_DRIVE_APPDATA)         \
+	FUNC(STR_PERM_DRIVE_FILE)            \
+	FUNC(STR_PERM_DRIVE_METADATA)        \
+	FUNC(STR_PERM_DRIVE_METADATA_RO)     \
+	FUNC(STR_GOOGLE_LOGIN_FAIL_MSG)      \
+	FUNC(STR_GOOGLE_LOGIN_TIMEOUT_MSG)   \
+	FUNC(STR_NEW_FILE)                   \
+	FUNC(STR_SETTINGS)                   \
+	FUNC(STR_CLIENT_ID)                  \
+	FUNC(STR_CLIENT_SECRET)              \
+	FUNC(STR_GLOBAL)                     \
+	FUNC(STR_GOOGLE)
 
 #define GET_VALUE(x) x,
 #define GET_STRING(x) #x,
@@ -136,7 +151,7 @@ enum
 	FOREACH_STR(GET_VALUE)
 };
 
-#define LANG_STRINGS_NUM 123
+#define LANG_STRINGS_NUM 138
 #define LANG_ID_SIZE 64
 #define LANG_STR_SIZE 384
 extern char lang_identifiers[LANG_STRINGS_NUM][LANG_ID_SIZE];

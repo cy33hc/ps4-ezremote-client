@@ -4,7 +4,14 @@
 #include <lexbor/html/parser.h>
 #include <lexbor/dom/interfaces/element.h>
 #include <minizip/unzip.h>
-#include "crypt.h"
+#include "clients/gdrive.h"
+#include "clients/ftpclient.h"
+#include "clients/smbclient.h"
+#include "clients/webdavclient.h"
+#include "clients/apache.h"
+#include "clients/nginx.h"
+#include "clients/npxserve.h"
+#include "clients/iis.h"
 #include "common.h"
 #include "fs.h"
 #include "config.h"
@@ -15,14 +22,7 @@
 #include "installer.h"
 #include "web/request.hpp"
 #include "web/urn.hpp"
-#include "sys_modules.h"
-#include "ftpclient.h"
-#include "smbclient.h"
-#include "webdavclient.h"
-#include "http/apache.h"
-#include "http/nginx.h"
-#include "http/npxserve.h"
-#include "http/iis.h"
+#include "system.h"
 #include "zip_util.h"
 
 namespace Actions
@@ -1109,7 +1109,12 @@ namespace Actions
     {
         CONFIG::SaveConfig();
 
-        if (strncmp(remote_settings->server, "https://", 8) == 0 || strncmp(remote_settings->server, "http://", 7) == 0)
+        if (strncmp(remote_settings->server, GOOGLE_DRIVE_BASE_URL, strlen(GOOGLE_DRIVE_BASE_URL)) == 0)
+        {
+            remoteclient = new GDriveClient();
+            remoteclient->Connect("", "", "");
+        }
+        else if (strncmp(remote_settings->server, "https://", 8) == 0 || strncmp(remote_settings->server, "http://", 7) == 0)
         {
             if (strcmp(remote_settings->http_server_type, HTTP_SERVER_APACHE) == 0)
                 remoteclient = new ApacheClient();
@@ -1641,4 +1646,47 @@ namespace Actions
 
         return INSTALLER::InstallLocalPkg(local_file, header, true);
     }
+
+    void CreateLocalFile(char *filename)
+    {
+        std::string new_file = FS::GetPath(local_directory, filename);
+        std::string temp_file = new_file;
+        int i = 1;
+        while (true)
+        {
+            if (!FS::FileExists(temp_file))
+                break;
+            temp_file = new_file + "." + std::to_string(i);
+            i++;
+        }
+        FILE* f = FS::Create(temp_file);
+        FS::Close(f);
+        RefreshLocalFiles(false);
+        sprintf(local_file_to_select, "%s", temp_file.c_str());
+    }
+
+    void CreateRemoteFile(char *filename)
+    {
+        std::string new_file = FS::GetPath(remote_directory, filename);
+        std::string temp_file = new_file;
+        int i = 1;
+        while (true)
+        {
+            if (!remoteclient->FileExists(temp_file))
+                break;
+            temp_file = new_file + "." + std::to_string(i);
+            i++;
+        }
+
+        OrbisTick tick;
+        sceRtcGetCurrentTick(&tick);
+        std::string local_tmp = std::string(DATA_PATH) + "/" + std::to_string(tick.mytick);
+        FILE *f = FS::Create(local_tmp);
+        FS::Close(f);
+        remoteclient->Put(local_tmp, temp_file);
+        FS::Rm(local_tmp);
+        RefreshRemoteFiles(false);
+        sprintf(remote_file_to_select, "%s", temp_file.c_str());
+    }
+
 }

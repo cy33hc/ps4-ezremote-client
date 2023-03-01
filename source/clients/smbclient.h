@@ -8,8 +8,8 @@
 #include <vector>
 #include <smb2/smb2.h>
 #include <smb2/libsmb2.h>
+#include "clients/remote_client.h"
 #include "common.h"
-#include "remote_client.h"
 
 #define SMB_CLIENT_MAX_FILENAME_LEN 256
 

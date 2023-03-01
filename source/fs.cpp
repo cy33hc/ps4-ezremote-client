@@ -11,7 +11,7 @@
 
 #include "util.h"
 #include "lang.h"
-#include "sys_modules.h"
+#include "system.h"
 #include "windows.h"
 
 namespace FS
@@ -187,9 +187,10 @@ namespace FS
         } while (bytes_read == 1024);
         if (line.size()>0)
             lines->push_back(std::string(line.data(), line.size()));
-            
+ 
         fclose(fd);
-
+        if (lines->size() == 0)
+            lines->push_back("");
         return true;
     }
 

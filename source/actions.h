@@ -48,7 +48,9 @@ enum ACTIONS
     ACTION_REMOTE_CUT,
     ACTION_REMOTE_COPY,
     ACTION_REMOTE_PASTE,
-    ACTION_REMOTE_EDIT
+    ACTION_REMOTE_EDIT,
+    ACTION_NEW_LOCAL_FILE,
+    ACTION_NEW_REMOTE_FILE
 };
 
 enum OverWriteType
@@ -106,6 +108,8 @@ namespace Actions
     void *CopyRemoteFilesThread(void *argp);
     void CopyRemoteFiles();
     int DownloadAndInstallPkg(const std::string &filename, pkg_header *header);
+    void CreateLocalFile(char *filename);
+    void CreateRemoteFile(char *filename);
 }
 
 #endif
