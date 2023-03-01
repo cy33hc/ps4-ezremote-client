@@ -79,15 +79,15 @@ namespace HttpServer
     {
         svr->Get("/google_auth", [](const Request &req, Response &res)
         {
-            sprintf(gg_account.auth_code, "%s", req.get_param_value("code").c_str());
+            std::string auth_code = req.get_param_value("code");
             Client client(GOOGLE_OAUTH_HOST);
             client.set_follow_location(true);
             client.enable_server_certificate_verification(false);
             
             std::string url = std::string("/token");
-            std::string post_data = std::string("code=") + gg_account.auth_code +
-                                                "&client_id=" + gg_account.client_id +
-                                                "&client_secret=" + gg_account.client_secret +
+            std::string post_data = std::string("code=") + auth_code +
+                                                "&client_id=" + gg_app.client_id +
+                                                "&client_secret=" + gg_app.client_secret +
                                                 "&redirect_uri=https%3A//localhost%3A" + std::to_string(http_server_port) + "/google_auth"
                                                 "&grant_type=authorization_code";
                             
@@ -100,17 +100,17 @@ namespace HttpServer
                     json_object_object_foreach(jobj, key, val)
                         {
                             if (strcmp(key, "access_token")==0)
-                                snprintf(gg_account.access_token, 255, "%s", json_object_get_string(val));
+                                snprintf(remote_settings->gg_account.access_token, 255, "%s", json_object_get_string(val));
                             else if (strcmp(key, "refresh_token")==0)
-                                snprintf(gg_account.refresh_token, 255, "%s", json_object_get_string(val));
+                                snprintf(remote_settings->gg_account.refresh_token, 255, "%s", json_object_get_string(val));
                             else if (strcmp(key, "expires_in")==0)
                             {
                                 OrbisTick tick;
                                 sceRtcGetCurrentTick(&tick);
-                                gg_account.token_expiry = tick.mytick + (json_object_get_uint64(val)*1000000);
+                                remote_settings->gg_account.token_expiry = tick.mytick + (json_object_get_uint64(val)*1000000);
                             }
                         }
-                    CONFIG::SaveGoolgeAccountInfo();
+                    CONFIG::SaveConfig();
                     login_state = 1;
                     res.set_content(lang_strings[STR_GET_TOKEN_SUCCESS_MSG], "text/plain");
                     return;

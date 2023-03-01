@@ -333,6 +333,11 @@ namespace INSTALLER
 					goto err;
 				goto retry;
 			}
+			else
+			{
+				if (auto_delete_tmp_pkg)
+					FS::Rm(filename);
+			}
 		}
 		else if (ret > 0) goto err;
 

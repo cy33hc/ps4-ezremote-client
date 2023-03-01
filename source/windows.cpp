@@ -358,79 +358,82 @@ namespace Windows
             ImGui::SameLine();
         }
 
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
-        ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_USERNAME]);
-        ImGui::SameLine();
-
-        sprintf(id, "%s##username", remote_settings->username);
-        pos = ImGui::GetCursorPos();
-        if (ImGui::Button(id, ImVec2(180, 0)))
+        if (remote_settings->type != CLIENT_TYPE_GOOGLE)
         {
-            ime_single_field = remote_settings->username;
-            ResetImeCallbacks();
-            ime_field_size = 32;
-            ime_callback = SingleValueImeCallback;
-            Dialog::initImeDialog(lang_strings[STR_USERNAME], remote_settings->username, 32, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
-            gui_mode = GUI_MODE_IME;
-        }
-        ImGui::SameLine();
-
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
-        ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_PASSWORD]);
-        ImGui::SameLine();
-
-        sprintf(id, "%s##password", hidden_password.c_str());
-        pos = ImGui::GetCursorPos();
-        if (ImGui::Button(id, ImVec2(100, 0)))
-        {
-            ime_single_field = remote_settings->password;
-            ResetImeCallbacks();
-            ime_field_size = 24;
-            ime_callback = SingleValueImeCallback;
-            Dialog::initImeDialog(lang_strings[STR_PASSWORD], remote_settings->password, 24, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
-            gui_mode = GUI_MODE_IME;
-        }
-
-        ImGui::SameLine();
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
-        ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_ENABLE_RPI]);
-        ImGui::SameLine();
-
-        if (ImGui::Checkbox("###enable_rpi", &remote_settings->enable_rpi))
-        {
-            CONFIG::SaveConfig();
-        }
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::SetNextWindowSize(ImVec2(450, 135));
-            ImGui::BeginTooltip();
-            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 440);
-            ImGui::Text("%s", (remote_settings->type == CLIENT_TYPE_SMB || remote_settings->type == CLIENT_TYPE_FTP) ? lang_strings[STR_ENABLE_RPI_FTP_SMB_MSG] : lang_strings[STR_ENABLE_RPI_WEBDAV_MSG]);
-            ImGui::PopTextWrapPos();
-            ImGui::EndTooltip();
-        }
-
-        if ((remote_settings->type == CLIENT_TYPE_SMB || remote_settings->type == CLIENT_TYPE_FTP) && remote_settings->enable_rpi)
-        {
-            ImGui::SameLine();
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
-            ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_HTTP_PORT]);
+            ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_USERNAME]);
             ImGui::SameLine();
 
-            sprintf(id, "%s##http_port", txt_http_port);
+            sprintf(id, "%s##username", remote_settings->username);
             pos = ImGui::GetCursorPos();
-            if (ImGui::Button(id, ImVec2(65, 0)))
+            if (ImGui::Button(id, ImVec2(180, 0)))
             {
-                ime_single_field = txt_http_port;
+                ime_single_field = remote_settings->username;
+                ResetImeCallbacks();
+                ime_field_size = 32;
+                ime_callback = SingleValueImeCallback;
+                Dialog::initImeDialog(lang_strings[STR_USERNAME], remote_settings->username, 32, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
+                gui_mode = GUI_MODE_IME;
+            }
+            ImGui::SameLine();
+
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
+            ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_PASSWORD]);
+            ImGui::SameLine();
+
+            sprintf(id, "%s##password", hidden_password.c_str());
+            pos = ImGui::GetCursorPos();
+            if (ImGui::Button(id, ImVec2(100, 0)))
+            {
+                ime_single_field = remote_settings->password;
                 ResetImeCallbacks();
                 ime_field_size = 24;
                 ime_callback = SingleValueImeCallback;
-                ime_after_update = AfterHttpPortChangeCallback;
-                Dialog::initImeDialog(lang_strings[STR_PASSWORD], txt_http_port, 24, ORBIS_TYPE_NUMBER, pos.x, pos.y);
+                Dialog::initImeDialog(lang_strings[STR_PASSWORD], remote_settings->password, 24, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
                 gui_mode = GUI_MODE_IME;
             }
-        }
 
+            ImGui::SameLine();
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
+            ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_ENABLE_RPI]);
+            ImGui::SameLine();
+
+            if (ImGui::Checkbox("###enable_rpi", &remote_settings->enable_rpi))
+            {
+                CONFIG::SaveConfig();
+            }
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetNextWindowSize(ImVec2(450, 135));
+                ImGui::BeginTooltip();
+                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 440);
+                ImGui::Text("%s", (remote_settings->type == CLIENT_TYPE_SMB || remote_settings->type == CLIENT_TYPE_FTP) ? lang_strings[STR_ENABLE_RPI_FTP_SMB_MSG] : lang_strings[STR_ENABLE_RPI_WEBDAV_MSG]);
+                ImGui::PopTextWrapPos();
+                ImGui::EndTooltip();
+            }
+
+            if ((remote_settings->type == CLIENT_TYPE_SMB || remote_settings->type == CLIENT_TYPE_FTP) && remote_settings->enable_rpi)
+            {
+                ImGui::SameLine();
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
+                ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_HTTP_PORT]);
+                ImGui::SameLine();
+
+                sprintf(id, "%s##http_port", txt_http_port);
+                pos = ImGui::GetCursorPos();
+                if (ImGui::Button(id, ImVec2(65, 0)))
+                {
+                    ime_single_field = txt_http_port;
+                    ResetImeCallbacks();
+                    ime_field_size = 24;
+                    ime_callback = SingleValueImeCallback;
+                    ime_after_update = AfterHttpPortChangeCallback;
+                    Dialog::initImeDialog(lang_strings[STR_PASSWORD], txt_http_port, 24, ORBIS_TYPE_NUMBER, pos.x, pos.y);
+                    gui_mode = GUI_MODE_IME;
+                }
+            }
+        }
+        
         ImGui::PopStyleVar();
         ImGui::Dummy(ImVec2(0, 10));
         EndGroupPanel();

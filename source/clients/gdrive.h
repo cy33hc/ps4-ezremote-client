@@ -20,18 +20,21 @@ public:
     int Rename(const std::string &src, const std::string &dst);
     int Get(const std::string &outputfile, const std::string &path, uint64_t offset=0);
     int Put(const std::string &inputfile, const std::string &path, uint64_t offset=0);
+    int Head(const std::string &path, void *buffer, uint64_t len);
     int Update(const std::string &inputfile, const std::string &path);
     int Size(const std::string &path, int64_t *size);
     int Mkdir(const std::string &path);
     int Rmdir(const std::string &path, bool recursive);
     int Delete(const std::string &path);
     bool FileExists(const std::string &path);
+    void SetAccessToken(const std::string &token);
     std::vector<DirEntry> ListDir(const std::string &path);
     static void *RefreshTokenThread(void *argp);
     static void StartRefreshToken();
     static void StopRefreshToken();
     ClientType clientType();
     uint32_t SupportedActions();
+    int Quit();
 
 private:
     int RequestAuthorization();

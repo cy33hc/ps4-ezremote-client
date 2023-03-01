@@ -26,7 +26,7 @@ std::string GetRedirectUrl()
 
 std::string GetScopes()
 {
-    std::vector<std::string> permissions = Util::Split(gg_account.permissions, ",");
+    std::vector<std::string> permissions = Util::Split(gg_app.permissions, ",");
     std::string scopes;
     for (int i = 0; i < permissions.size(); i++)
     {
@@ -47,9 +47,9 @@ int RefreshAccessToken()
     client.set_follow_location(true);
     std::string url = std::string("/token");
     std::string post_data = std::string("grant_type=refresh_token") +
-                            "&client_id=" + gg_account.client_id +
-                            "&client_secret=" + gg_account.client_secret +
-                            "&refresh_token=" + gg_account.refresh_token;
+                            "&client_id=" + gg_app.client_id +
+                            "&client_secret=" + gg_app.client_secret +
+                            "&refresh_token=" + remote_settings->gg_account.refresh_token;
 
     if (auto res = client.Post(url, post_data.c_str(), post_data.length(), "application/x-www-form-urlencoded"))
     {
@@ -60,15 +60,20 @@ int RefreshAccessToken()
             json_object_object_foreach(jobj, key, val)
             {
                 if (strcmp(key, "access_token") == 0)
-                    snprintf(gg_account.access_token, 255, "%s", json_object_get_string(val));
+                    snprintf(remote_settings->gg_account.access_token, 255, "%s", json_object_get_string(val));
                 else if (strcmp(key, "expires_in") == 0)
                 {
                     OrbisTick tick;
                     sceRtcGetCurrentTick(&tick);
-                    gg_account.token_expiry = tick.mytick + (json_object_get_uint64(val) * 1000000);
+                    remote_settings->gg_account.token_expiry = tick.mytick + (json_object_get_uint64(val) * 1000000);
                 }
             }
-            CONFIG::SaveGoolgeAccountInfo();
+            if (remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_GOOGLE)
+            {
+                GDriveClient *client = (GDriveClient*)remoteclient;
+                client->SetAccessToken(remote_settings->gg_account.access_token);
+            }
+            CONFIG::SaveConfig();
         }
         else
         {
@@ -103,7 +108,7 @@ int GDriveClient::RequestAuthorization()
     param.size = sizeof(SceShellUIUtilLaunchByUriParam);
     sceUserServiceGetForegroundUser((int *)&param.userId);
 
-    std::string auth_url = std::string(GOOGLE_AUTH_URL "?client_id=") + gg_account.client_id + "&redirect_uri=" + GetRedirectUrl() +
+    std::string auth_url = std::string(GOOGLE_AUTH_URL "?client_id=") + gg_app.client_id + "&redirect_uri=" + GetRedirectUrl() +
                            "&response_type=code&access_type=offline&scope=" + GetScopes() + "&include_granted_scopes=true";
     auth_url = EncodeUrl(auth_url);
     std::string launch_uri = std::string("pswebbrowser:search?url=") + auth_url;
@@ -145,7 +150,7 @@ GDriveClient::GDriveClient()
 
 int GDriveClient::Connect(const std::string &url, const std::string &user, const std::string &pass)
 {
-    if (strlen(gg_account.refresh_token) > 0)
+    if (strlen(remote_settings->gg_account.refresh_token) > 0)
     {
         int ret = RefreshAccessToken();
         if (ret == 0)
@@ -160,7 +165,7 @@ int GDriveClient::Connect(const std::string &url, const std::string &user, const
     StartRefreshToken();
 
     client = new Client(GOOGLE_API_URL);
-    client->set_bearer_token_auth(gg_account.access_token);
+    client->set_bearer_token_auth(remote_settings->gg_account.access_token);
     client->set_keep_alive(true);
     client->set_follow_location(true);
     client->set_connection_timeout(30);
@@ -219,6 +224,36 @@ bool GDriveClient::FileExists(const std::string &path)
     return false;
 }
 
+int GDriveClient::Head(const std::string &path, void *buffer, uint64_t len)
+{
+    size_t bytes_read = 0;
+    std::vector<char> body;
+    std::string id = GetValue(path_id_map, path);
+    std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id) + "?alt=media";
+    Headers headers;
+    headers.insert(std::make_pair("Range", "bytes=" + std::to_string(0) + "-" + std::to_string(len - 1)));
+    if (auto res = client->Get(url, headers,
+                               [&](const char *data, size_t data_length)
+                               {
+                                   body.insert(body.end(), data, data + data_length);
+                                   bytes_read += data_length;
+                                   if (bytes_read > len)
+                                        return false;
+                                   return true;
+                               }))
+    {
+        if (body.size() < len)
+            return 0;
+        memcpy(buffer, body.data(), len);
+        return 1;
+    }
+    else
+    {
+        sprintf(this->response, "%s", httplib::to_string(res.error()).c_str());
+    }
+    return 0;
+}
+
 int GDriveClient::Get(const std::string &outputfile, const std::string &path, uint64_t offset)
 {
     std::ofstream file_stream(outputfile, std::ios::binary);
@@ -267,26 +302,26 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
             upload_uri = std::regex_replace(upload_uri, std::regex(GOOGLE_API_URL), "");
             Headers headers;
             headers.insert(std::make_pair("Content-Length", std::to_string(bytes_to_download)));
-            std::string range_value = "bytes 0-" + std::to_string(bytes_to_download-1) + "/" + std::to_string(bytes_to_download);
+            std::string range_value = "bytes 0-" + std::to_string(bytes_to_download - 1) + "/" + std::to_string(bytes_to_download);
             headers.insert(std::make_pair("Content-Range", range_value));
 
             if (auto res = client->Put(
-                upload_uri, bytes_to_download,
-                [&file_stream, &buf](size_t offset, size_t length, DataSink &sink)
-                {
-                    uint32_t count = 0;
-                    uint32_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length-count);
-                    do
+                    upload_uri, bytes_to_download,
+                    [&file_stream, &buf](size_t offset, size_t length, DataSink &sink)
                     {
-                        file_stream.read(buf, bytes_to_transfer);
-                        sink.write(buf, bytes_to_transfer);
-                        count += bytes_to_transfer;
-                        bytes_transfered += bytes_to_transfer;
-                        bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length-count);
-                    } while (count < length);
-                    return true;
-                },
-                "application/octet-stream"))
+                        uint32_t count = 0;
+                        uint32_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
+                        do
+                        {
+                            file_stream.read(buf, bytes_to_transfer);
+                            sink.write(buf, bytes_to_transfer);
+                            count += bytes_to_transfer;
+                            bytes_transfered += bytes_to_transfer;
+                            bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
+                        } while (count < length);
+                        return true;
+                    },
+                    "application/octet-stream"))
             {
                 // success
             }
@@ -313,7 +348,7 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
 {
     if (FileExists(path))
         return Update(inputfile, path);
-        
+
     bytes_to_download = FS::GetSize(inputfile);
     bytes_transfered = 0;
 
@@ -344,28 +379,28 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
             upload_uri = std::regex_replace(upload_uri, std::regex(GOOGLE_API_URL), "");
             Headers headers;
             headers.insert(std::make_pair("Content-Length", std::to_string(bytes_to_download)));
-            std::string range_value = "bytes 0-" + std::to_string(bytes_to_download-1) + "/" + std::to_string(bytes_to_download);
+            std::string range_value = "bytes 0-" + std::to_string(bytes_to_download - 1) + "/" + std::to_string(bytes_to_download);
             headers.insert(std::make_pair("Content-Range", range_value));
 
             if (auto res = client->Put(
-                upload_uri, bytes_to_download,
-                [&file_stream, &buf](size_t offset, size_t length, DataSink &sink)
-                {
-                    uint32_t count = 0;
-                    uint32_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length-count);
-                    do
+                    upload_uri, bytes_to_download,
+                    [&file_stream, &buf](size_t offset, size_t length, DataSink &sink)
                     {
-                        file_stream.read(buf, bytes_to_transfer);
-                        sink.write(buf, bytes_to_transfer);
-                        count += bytes_to_transfer;
-                        bytes_transfered += bytes_to_transfer;
-                        bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length-count);
-                    } while (count < length);
-                    return true;
-                },
-                "application/octet-stream"))
+                        uint32_t count = 0;
+                        uint32_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
+                        do
+                        {
+                            file_stream.read(buf, bytes_to_transfer);
+                            sink.write(buf, bytes_to_transfer);
+                            count += bytes_to_transfer;
+                            bytes_transfered += bytes_to_transfer;
+                            bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
+                        } while (count < length);
+                        return true;
+                    },
+                    "application/octet-stream"))
             {
-                //success
+                // success
             }
             else
             {
@@ -615,7 +650,7 @@ ClientType GDriveClient::clientType()
 
 uint32_t GDriveClient::SupportedActions()
 {
-	return REMOTE_ACTION_ALL ^ REMOTE_ACTION_CUT ^ REMOTE_ACTION_COPY ^ REMOTE_ACTION_PASTE;
+    return REMOTE_ACTION_ALL ^ REMOTE_ACTION_CUT ^ REMOTE_ACTION_COPY ^ REMOTE_ACTION_PASTE;
 }
 
 void *GDriveClient::RefreshTokenThread(void *argp)
@@ -625,11 +660,12 @@ void *GDriveClient::RefreshTokenThread(void *argp)
         OrbisTick tick;
         memset(&tick, 0, sizeof(OrbisTick));
         sceRtcGetCurrentTick(&tick);
-        if (tick.mytick >= (gg_account.token_expiry - 300000000)) // refresh token 5mins before expiry
+        if (tick.mytick >= (remote_settings->gg_account.token_expiry - 300000000) &&
+            remote_settings->type == CLIENT_TYPE_GOOGLE) // refresh token 5mins before expiry
         {
             RefreshAccessToken();
         }
-        sceKernelUsleep(30000000); // sleep for 5s
+        sceKernelUsleep(500000); // check every 0.5s
     }
     return NULL;
 }
@@ -651,4 +687,21 @@ void GDriveClient::StartRefreshToken()
 void GDriveClient::StopRefreshToken()
 {
     refresh_token_running = false;
+}
+
+int GDriveClient::Quit()
+{
+    StopRefreshToken();
+    if (client != nullptr)
+    {
+        delete client;
+        client = nullptr;
+    }
+    return 1;
+}
+
+void GDriveClient::SetAccessToken(const std::string &token)
+{
+    if (client != nullptr)
+        client->set_bearer_token_auth(token);
 }

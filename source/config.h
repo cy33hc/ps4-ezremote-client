@@ -70,6 +70,20 @@
 
 #define MAX_EDIT_FILE_SIZE 32768
 
+struct GoogleAccountInfo
+{
+    char access_token[256];
+    char refresh_token[256];
+    uint64_t token_expiry;
+};
+
+struct GoogleAppInfo
+{
+    char client_id[128];
+    char client_secret[64];
+    char permissions[92];
+};
+
 struct RemoteSettings
 {
     char site_name[32];
@@ -81,6 +95,7 @@ struct RemoteSettings
     bool enable_rpi;
     uint32_t supported_actions;
     char http_server_type[24];
+    GoogleAccountInfo gg_account;
 };
 
 struct PackageUrlInfo
@@ -88,17 +103,6 @@ struct PackageUrlInfo
     char url[512];
     char username[33];
     char password[25];
-};
-
-struct GoogleAccountInfo
-{
-    char client_id[128];
-    char client_secret[64];
-    char auth_code[128];
-    char access_token[256];
-    char refresh_token[256];
-    uint64_t token_expiry;
-    char permissions[92];
 };
 
 extern std::vector<std::string> sites;
@@ -118,13 +122,13 @@ extern bool auto_delete_tmp_pkg;
 extern int max_edit_file_size;
 extern unsigned char cipher_key[32];
 extern unsigned char cipher_iv[16];
-extern GoogleAccountInfo gg_account;
+extern GoogleAppInfo gg_app;
 
 namespace CONFIG
 {
     void LoadConfig();
     void SaveConfig();
-    void SaveGoolgeAccountInfo();
+    void SaveGoolgeAppInfo();
     void SaveFavoriteUrl(int index, char *url);
     void SetClientType(RemoteSettings *settings);
 }
