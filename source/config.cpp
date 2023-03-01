@@ -325,7 +325,7 @@ namespace CONFIG
         CloseIniFile();
     }
 
-    void SaveGoolgeAppInfo()
+    void SaveGlobalConfig()
     {
         OpenIniFile(CONFIG_INI_FILE);
 
@@ -337,6 +337,7 @@ namespace CONFIG
         WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_CLIENT_SECRET, encrypted_secret.c_str());
         WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_CLIENT_ID, gg_app.client_id);
         WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_PERMISSIONS, gg_app.permissions);
+        WriteBool(CONFIG_GLOBAL, CONFIG_AUTO_DELETE_TMP_PKG, auto_delete_tmp_pkg);
         WriteIniFile(CONFIG_INI_FILE);
         CloseIniFile();
     }

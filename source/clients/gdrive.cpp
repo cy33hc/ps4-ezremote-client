@@ -12,7 +12,6 @@
 #include "util.h"
 #include "windows.h"
 #include "system.h"
-#include "dbglogger.h"
 
 #define GOOGLE_BUF_SIZE 262144
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))

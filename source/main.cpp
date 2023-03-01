@@ -11,7 +11,7 @@
 #include <orbis/Pad.h>
 #include <orbis/AudioOut.h>
 #include <orbis/Net.h>
-#include <dbglogger.h>
+// #include <dbglogger.h>
 
 #include "imgui.h"
 #include "SDL2/SDL.h"
@@ -113,7 +113,7 @@ void InitImgui()
 		0xE0AC, 0xE0AC, // rename
 		0xE5A1, 0xE5A1, // delete
 		0xF002, 0xF002, // search
-		0x2699, 0x2699, // settings
+		0xF013, 0xF013, // settings
 		0xF0ED, 0xF0ED, // download
 		0xF0EE, 0xF0EE, // upload
 		0xF56E, 0xF56E, // extract
@@ -263,8 +263,8 @@ static void terminate()
 
 int main()
 {
-	dbglogger_init();
-	dbglogger_log("If you see this you've set up dbglogger correctly.");
+	// dbglogger_init();
+	// dbglogger_log("If you see this you've set up dbglogger correctly.");
 	int rc;
 	// No buffering
 	setvbuf(stdout, NULL, _IONBF, 0);

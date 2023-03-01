@@ -66,6 +66,7 @@ bool select_url_inprogress = false;
 int favorite_url_idx = 0;
 char extract_zip_folder[256];
 char zip_file_path[384];
+bool show_settings = false;
 
 // Editor variables
 std::vector<std::string> edit_buffer;
@@ -324,6 +325,8 @@ namespace Windows
         int width = 550;
         if (remote_settings->type == CLIENT_TYPE_HTTP_SERVER)
             width = 500;
+        else if (remote_settings->type == CLIENT_TYPE_GOOGLE)
+            width = 600;
         pos = ImGui::GetCursorPos();
         if (ImGui::Button(id, ImVec2(width, 0)))
         {
@@ -358,25 +361,28 @@ namespace Windows
             ImGui::SameLine();
         }
 
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
+        ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_USERNAME]);
+        ImGui::SameLine();
+
+        width = 180;
+        if (remote_settings->type == CLIENT_TYPE_GOOGLE)
+            width = 480;
+        sprintf(id, "%s##username", remote_settings->username);
+        pos = ImGui::GetCursorPos();
+        if (ImGui::Button(id, ImVec2(width, 0)))
+        {
+            ime_single_field = remote_settings->username;
+            ResetImeCallbacks();
+            ime_field_size = 32;
+            ime_callback = SingleValueImeCallback;
+            Dialog::initImeDialog(lang_strings[STR_USERNAME], remote_settings->username, 32, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
+            gui_mode = GUI_MODE_IME;
+        }
+        ImGui::SameLine();
+
         if (remote_settings->type != CLIENT_TYPE_GOOGLE)
         {
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
-            ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_USERNAME]);
-            ImGui::SameLine();
-
-            sprintf(id, "%s##username", remote_settings->username);
-            pos = ImGui::GetCursorPos();
-            if (ImGui::Button(id, ImVec2(180, 0)))
-            {
-                ime_single_field = remote_settings->username;
-                ResetImeCallbacks();
-                ime_field_size = 32;
-                ime_callback = SingleValueImeCallback;
-                Dialog::initImeDialog(lang_strings[STR_USERNAME], remote_settings->username, 32, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
-                gui_mode = GUI_MODE_IME;
-            }
-            ImGui::SameLine();
-
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
             ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_PASSWORD]);
             ImGui::SameLine();
@@ -433,8 +439,21 @@ namespace Windows
                 }
             }
         }
-        
         ImGui::PopStyleVar();
+
+        ImGui::SameLine();
+        ImGui::SetCursorPosX(1870);
+        if (ImGui::Button(ICON_FA_GEAR, ImVec2(35, 0)))
+        {
+            show_settings = true;
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::Text("%s", lang_strings[STR_SETTINGS]);
+            ImGui::EndTooltip();
+        }
+
         ImGui::Dummy(ImVec2(0, 10));
         EndGroupPanel();
     }
@@ -533,60 +552,64 @@ namespace Windows
             set_focus_to_local = false;
             ImGui::SetWindowFocus();
         }
-        for (int j = 0; j < local_files.size(); j++)
-        {
-            DirEntry item = local_files[j];
-            ImGui::SetColumnWidth(-1, 740);
-            ImGui::PushID(i);
-            auto search_item = multi_selected_local_files.find(item);
-            if (search_item != multi_selected_local_files.end())
+        ImGuiListClipper local_clipper;
+        local_clipper.Begin(local_files.size());
+        while (local_clipper.Step())
+            for (int j = local_clipper.DisplayStart; j < local_clipper.DisplayEnd; j++)
             {
-                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
-            }
-            if (ImGui::Selectable(item.name, false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(919, 0)))
-            {
-                if (item.isDir)
+                DirEntry item = local_files[j];
+                ImGui::SetColumnWidth(-1, 740);
+                ImGui::PushID(i);
+                auto search_item = multi_selected_local_files.find(item);
+                if (search_item != multi_selected_local_files.end())
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
+                }
+                if (ImGui::Selectable(item.name, false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(919, 0)))
+                {
+                    if (item.isDir)
+                    {
+                        selected_local_file = item;
+                        selected_action = ACTION_CHANGE_LOCAL_DIRECTORY;
+                    }
+                }
+                ImGui::PopID();
+                if (ImGui::IsItemFocused())
                 {
                     selected_local_file = item;
-                    selected_action = ACTION_CHANGE_LOCAL_DIRECTORY;
                 }
-            }
-            ImGui::PopID();
-            if (ImGui::IsItemFocused())
-            {
-                selected_local_file = item;
-            }
-            if (ImGui::IsItemHovered())
-            {
-                if (ImGui::CalcTextSize(item.name).x > 740)
+                if (ImGui::IsItemHovered())
                 {
-                    ImGui::BeginTooltip();
-                    ImGui::Text("%s", item.name);
-                    ImGui::EndTooltip();
+                    if (ImGui::CalcTextSize(item.name).x > 740)
+                    {
+                        ImGui::BeginTooltip();
+                        ImGui::Text("%s", item.name);
+                        ImGui::EndTooltip();
+                    }
                 }
-            }
-            if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
-            {
-                if (strcmp(local_file_to_select, item.name) == 0)
+                if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
                 {
-                    SetNavFocusHere();
-                    ImGui::SetScrollHereY(0.5f);
-                    sprintf(local_file_to_select, "");
+                    if (strcmp(local_file_to_select, item.name) == 0)
+                    {
+                        SetNavFocusHere();
+                        ImGui::SetScrollHereY(0.5f);
+                        sprintf(local_file_to_select, "");
+                    }
+                    selected_browser |= LOCAL_BROWSER;
                 }
-                selected_browser |= LOCAL_BROWSER;
+                ImGui::NextColumn();
+                ImGui::SetColumnWidth(-1, 150);
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(item.display_size).x - ImGui::GetScrollX() - ImGui::GetStyle().ItemSpacing.x);
+                ImGui::Text("%s", item.display_size);
+                if (search_item != multi_selected_local_files.end())
+                {
+                    ImGui::PopStyleColor();
+                }
+                ImGui::NextColumn();
+                ImGui::Separator();
+                i++;
             }
-            ImGui::NextColumn();
-            ImGui::SetColumnWidth(-1, 150);
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(item.display_size).x - ImGui::GetScrollX() - ImGui::GetStyle().ItemSpacing.x);
-            ImGui::Text("%s", item.display_size);
-            if (search_item != multi_selected_local_files.end())
-            {
-                ImGui::PopStyleColor();
-            }
-            ImGui::NextColumn();
-            ImGui::Separator();
-            i++;
-        }
+        local_clipper.End();
         ImGui::Columns(1);
         ImGui::EndChild();
         EndGroupPanel();
@@ -677,61 +700,65 @@ namespace Windows
         ImGui::Separator();
         ImGui::Columns(2, "Remote##Columns", true);
         i = 99999;
-        for (int j = 0; j < remote_files.size(); j++)
-        {
-            DirEntry item = remote_files[j];
+        ImGuiListClipper remote_clipper;
+        remote_clipper.Begin(remote_files.size());
+        while (remote_clipper.Step())
+            for (int j = remote_clipper.DisplayStart; j < remote_clipper.DisplayEnd; j++)
+            {
+                DirEntry item = remote_files[j];
 
-            ImGui::SetColumnWidth(-1, 740);
-            auto search_item = multi_selected_remote_files.find(item);
-            if (search_item != multi_selected_remote_files.end())
-            {
-                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
-            }
-            ImGui::PushID(i);
-            if (ImGui::Selectable(item.name, false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(919, 0)))
-            {
-                if (item.isDir)
+                ImGui::SetColumnWidth(-1, 740);
+                auto search_item = multi_selected_remote_files.find(item);
+                if (search_item != multi_selected_remote_files.end())
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
+                }
+                ImGui::PushID(i);
+                if (ImGui::Selectable(item.name, false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(919, 0)))
+                {
+                    if (item.isDir)
+                    {
+                        selected_remote_file = item;
+                        selected_action = ACTION_CHANGE_REMOTE_DIRECTORY;
+                    }
+                }
+                if (ImGui::IsItemFocused())
                 {
                     selected_remote_file = item;
-                    selected_action = ACTION_CHANGE_REMOTE_DIRECTORY;
                 }
-            }
-            if (ImGui::IsItemFocused())
-            {
-                selected_remote_file = item;
-            }
-            if (ImGui::IsItemHovered())
-            {
-                if (ImGui::CalcTextSize(item.name).x > 740)
+                if (ImGui::IsItemHovered())
                 {
-                    ImGui::BeginTooltip();
-                    ImGui::Text("%s", item.name);
-                    ImGui::EndTooltip();
+                    if (ImGui::CalcTextSize(item.name).x > 740)
+                    {
+                        ImGui::BeginTooltip();
+                        ImGui::Text("%s", item.name);
+                        ImGui::EndTooltip();
+                    }
                 }
-            }
-            ImGui::PopID();
-            if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
-            {
-                if (strcmp(remote_file_to_select, item.name) == 0)
+                ImGui::PopID();
+                if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
                 {
-                    SetNavFocusHere();
-                    ImGui::SetScrollHereY(0.5f);
-                    sprintf(remote_file_to_select, "");
+                    if (strcmp(remote_file_to_select, item.name) == 0)
+                    {
+                        SetNavFocusHere();
+                        ImGui::SetScrollHereY(0.5f);
+                        sprintf(remote_file_to_select, "");
+                    }
+                    selected_browser |= REMOTE_BROWSER;
                 }
-                selected_browser |= REMOTE_BROWSER;
+                ImGui::NextColumn();
+                ImGui::SetColumnWidth(-1, 150);
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(item.display_size).x - ImGui::GetScrollX() - ImGui::GetStyle().ItemSpacing.x);
+                ImGui::Text("%s", item.display_size);
+                if (search_item != multi_selected_remote_files.end())
+                {
+                    ImGui::PopStyleColor();
+                }
+                ImGui::NextColumn();
+                ImGui::Separator();
+                i++;
             }
-            ImGui::NextColumn();
-            ImGui::SetColumnWidth(-1, 150);
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(item.display_size).x - ImGui::GetScrollX() - ImGui::GetStyle().ItemSpacing.x);
-            ImGui::Text("%s", item.display_size);
-            if (search_item != multi_selected_remote_files.end())
-            {
-                ImGui::PopStyleColor();
-            }
-            ImGui::NextColumn();
-            ImGui::Separator();
-            i++;
-        }
+        remote_clipper.End();
         ImGui::Columns(1);
         ImGui::EndChild();
         EndGroupPanel();
@@ -1345,13 +1372,6 @@ namespace Windows
                     ImGui::CloseCurrentPopup();
                 }
 
-                if (ImGui::Checkbox("##auto_delete_tmp_pkg", &auto_delete_tmp_pkg))
-                {
-                    CONFIG::SaveConfig();
-                }
-                ImGui::SameLine();
-                ImGui::Text("%s", lang_strings[STR_AUTO_DELETE_TMP_PKG]);
-
                 ImGui::Separator();
                 for (int j = 0; j < MAX_FAVORITE_URLS; j++)
                 {
@@ -1520,9 +1540,84 @@ namespace Windows
                 insert_item = -1;
                 ImGui::EndChild();
 
-                ImGui::Text("%s%s", (editor_modified? "**" : ""), edit_file);
+                ImGui::Text("%s%s", (editor_modified ? "**" : ""), edit_file);
                 ImGui::Separator();
                 ImGui::Text("L1 - %s          R1 - %s", lang_strings[STR_DELETE_LINE], lang_strings[STR_INSERT_LINE]);
+                ImGui::EndPopup();
+            }
+        }
+    }
+
+    void ShowSettingsDialog()
+    {
+        if (show_settings)
+        {
+            ImGuiIO &io = ImGui::GetIO();
+            (void)io;
+            ImGuiStyle *style = &ImGui::GetStyle();
+            ImVec4 *colors = style->Colors;
+
+            SetModalMode(true);
+            ImGui::OpenPopup(lang_strings[STR_SETTINGS]);
+
+            ImGui::SetNextWindowPos(ImVec2(1150, 80));
+            ImGui::SetNextWindowSizeConstraints(ImVec2(750, 80), ImVec2(750, 400), NULL, NULL);
+            if (ImGui::BeginPopupModal(lang_strings[STR_SETTINGS], NULL, ImGuiWindowFlags_AlwaysAutoResize))
+            {
+                ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_GLOBAL]);
+                ImGui::Separator();
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX()+15); ImGui::Text("%s", lang_strings[STR_AUTO_DELETE_TMP_PKG]);
+                ImGui::SameLine();
+                ImGui::SetCursorPosX(705); ImGui::Checkbox("##auto_delete_tmp_pkg", &auto_delete_tmp_pkg);
+                ImGui::Separator();
+                ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_GOOGLE]);
+                ImGui::Separator();
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX()+15); ImGui::Text("%s", lang_strings[STR_CLIENT_ID]);
+                ImGui::SameLine();
+                ImGui::SetCursorPosX(163);
+                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 1.0f));
+                if (ImGui::Button(gg_app.client_id, ImVec2(580, 0)))
+                {
+                    ResetImeCallbacks();
+                    ime_single_field = gg_app.client_id;
+                    ime_field_size = 139;
+                    ime_callback = SingleValueImeCallback;
+                    Dialog::initImeDialog(lang_strings[STR_CLIENT_ID], gg_app.client_id, 139, ORBIS_TYPE_BASIC_LATIN, 1150, 80);
+                    gui_mode = GUI_MODE_IME;
+                }
+                ImGui::Separator();
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX()+15); ImGui::Text("%s", lang_strings[STR_CLIENT_SECRET]);
+                ImGui::SameLine();
+                char id[128];
+                ImGui::SetCursorPosX(163);
+                if (strlen(gg_app.client_secret)>0)
+                    sprintf(id, "%s", "*********************************************##client_secret_input");
+                else
+                    sprintf(id, "%s", "##client_secret_input");
+                if (ImGui::Button(id, ImVec2(580, 0)))
+                {
+                    ResetImeCallbacks();
+                    ime_single_field = gg_app.client_secret;
+                    ime_field_size = 63;
+                    ime_callback = SingleValueImeCallback;
+                    Dialog::initImeDialog(lang_strings[STR_CLIENT_SECRET], gg_app.client_secret, 63, ORBIS_TYPE_BASIC_LATIN, 1150, 80);
+                    gui_mode = GUI_MODE_IME;
+                }
+                ImGui::PopStyleVar();
+                ImGui::Separator();
+                sprintf(id, "%s##settings", lang_strings[STR_CLOSE]);
+                if (ImGui::Button(id, ImVec2(735, 0)))
+                {
+                    show_settings = false;
+                    CONFIG::SaveGlobalConfig();
+                    SetModalMode(false);
+                    ImGui::CloseCurrentPopup();
+                }
+                if (ImGui::IsWindowAppearing())
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+                ImGui::SameLine();
                 ImGui::EndPopup();
             }
         }
@@ -1546,6 +1641,7 @@ namespace Windows
             ShowActionsDialog();
             ShowFavoriteUrlsDialog();
             ShowEditorDialog();
+            ShowSettingsDialog();
         }
         ImGui::End();
     }

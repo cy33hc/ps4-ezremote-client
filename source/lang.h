@@ -136,7 +136,12 @@
 	FUNC(STR_PERM_DRIVE_METADATA_RO)     \
 	FUNC(STR_GOOGLE_LOGIN_FAIL_MSG)      \
 	FUNC(STR_GOOGLE_LOGIN_TIMEOUT_MSG)   \
-	FUNC(STR_NEW_FILE)
+	FUNC(STR_NEW_FILE)                   \
+	FUNC(STR_SETTINGS)                   \
+	FUNC(STR_CLIENT_ID)                  \
+	FUNC(STR_CLIENT_SECRET)              \
+	FUNC(STR_GLOBAL)                     \
+	FUNC(STR_GOOGLE)
 
 #define GET_VALUE(x) x,
 #define GET_STRING(x) #x,
@@ -146,7 +151,7 @@ enum
 	FOREACH_STR(GET_VALUE)
 };
 
-#define LANG_STRINGS_NUM 133
+#define LANG_STRINGS_NUM 138
 #define LANG_ID_SIZE 64
 #define LANG_STR_SIZE 384
 extern char lang_identifiers[LANG_STRINGS_NUM][LANG_ID_SIZE];

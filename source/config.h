@@ -79,7 +79,7 @@ struct GoogleAccountInfo
 
 struct GoogleAppInfo
 {
-    char client_id[128];
+    char client_id[140];
     char client_secret[64];
     char permissions[92];
 };
@@ -128,7 +128,7 @@ namespace CONFIG
 {
     void LoadConfig();
     void SaveConfig();
-    void SaveGoolgeAppInfo();
+    void SaveGlobalConfig();
     void SaveFavoriteUrl(int index, char *url);
     void SetClientType(RemoteSettings *settings);
 }

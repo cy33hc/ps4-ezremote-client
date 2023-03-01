@@ -145,6 +145,11 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Google login failed",																		// STR_GOOGLE_LOGIN_FAIL_MSG
 	"Google login timed out",																	// STR_GOOGLE_LOGIN_TIMEOUT_MSG
 	"New File",																					// STR_NEW_FILE
+	"Settings",																					// STR_SETTINGS
+	"Client ID",																				// STR_CLIENT_ID
+	"Client Secret",																			// STR_CLIENT_SECRET
+	"Global",																					// STR_GLOBAL
+	"Google",																					// STR_GOOGLE
 };
 
 bool needs_extended_font = false;
