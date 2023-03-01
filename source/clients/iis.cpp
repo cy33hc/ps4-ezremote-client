@@ -16,21 +16,7 @@ std::vector<DirEntry> IISClient::ListDir(const std::string &path)
 {
     std::vector<DirEntry> out;
     DirEntry entry;
-    memset(&entry, 0, sizeof(DirEntry));
-    if (path[path.length() - 1] == '/' && path.length() > 1)
-    {
-        strlcpy(entry.directory, path.c_str(), path.length() - 1);
-    }
-    else
-    {
-        sprintf(entry.directory, "%s", path.c_str());
-    }
-    sprintf(entry.name, "..");
-    sprintf(entry.path, "%s", entry.directory);
-    sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
-    entry.file_size = 0;
-    entry.isDir = true;
-    entry.selectable = false;
+    Util::SetupPreviousFolder(path, &entry);
     out.push_back(entry);
 
     if (auto res = client->Get(GetFullPath(path)))

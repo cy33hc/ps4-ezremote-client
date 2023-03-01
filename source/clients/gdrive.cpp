@@ -16,6 +16,8 @@
 #define GOOGLE_BUF_SIZE 262144
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
+static std::string shared_with_me("Shared with me");
+
 using namespace httplib;
 
 std::string GetRedirectUrl()
@@ -146,6 +148,7 @@ GDriveClient::GDriveClient()
 {
     client = nullptr;
     path_id_map.insert(std::make_pair("/", "root"));
+    path_id_map.insert(std::make_pair("/"+shared_with_me, shared_with_me));
 }
 
 int GDriveClient::Connect(const std::string &url, const std::string &user, const std::string &pass)
@@ -178,6 +181,9 @@ int GDriveClient::Connect(const std::string &url, const std::string &user, const
 
 int GDriveClient::Rename(const std::string &src, const std::string &dst)
 {
+    if (src.find(shared_with_me) != std::string::npos || dst.find(shared_with_me) != std::string::npos)
+        return 0;
+        
     std::string id = GetValue(path_id_map, src);
     std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id);
     std::string filename = dst.substr(dst.find_last_of("/") + 1);
@@ -346,6 +352,9 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
 
 int GDriveClient::Put(const std::string &inputfile, const std::string &path, uint64_t offset)
 {
+    if (path.find(shared_with_me) != std::string::npos)
+        return 0;
+
     if (FileExists(path))
         return Update(inputfile, path);
 
@@ -446,6 +455,9 @@ int GDriveClient::Size(const std::string &path, int64_t *size)
 
 int GDriveClient::Mkdir(const std::string &path)
 {
+    if (path.find(shared_with_me) != std::string::npos)
+        return 0;
+        
     // if path already exists return;
     if (FileExists(path))
         return 1;
@@ -498,6 +510,9 @@ int GDriveClient::Mkdir(const std::string &path)
  */
 int GDriveClient::Rmdir(const std::string &path, bool recursive)
 {
+    if (path.find(shared_with_me) != std::string::npos)
+        return 0;
+        
     int ret = Delete(path);
     if (ret != 0)
     {
@@ -540,106 +555,125 @@ int GDriveClient::Delete(const std::string &path)
     return 1;
 }
 
+void SetupSharedWithMeFolder(DirEntry *entry)
+{
+    memset(entry, 0, sizeof(DirEntry));
+    sprintf(entry->directory, "%s", "/");
+    sprintf(entry->name, "%s", shared_with_me.c_str());
+    sprintf(entry->path, "/%s", shared_with_me.c_str());
+    sprintf(entry->display_size, "%s", lang_strings[STR_FOLDER]);
+    entry->file_size = 0;
+    entry->isDir = true;
+    entry->selectable = false;
+}
+
 std::vector<DirEntry> GDriveClient::ListDir(const std::string &path)
 {
     std::vector<DirEntry> out;
     DirEntry entry;
-    memset(&entry, 0, sizeof(DirEntry));
-    if (path[path.length() - 1] == '/' && path.length() > 1)
-    {
-        strlcpy(entry.directory, path.c_str(), path.length() - 1);
-    }
-    else
-    {
-        sprintf(entry.directory, "%s", path.c_str());
-    }
-    sprintf(entry.name, "..");
-    sprintf(entry.path, "%s", entry.directory);
-    sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
-    entry.file_size = 0;
-    entry.isDir = true;
-    entry.selectable = false;
+    Util::SetupPreviousFolder(path, &entry);
     out.push_back(entry);
 
-    std::string id = GetValue(path_id_map, path);
-    std::string url = std::string("/drive/v3/files?q=") + BaseClient::EncodeUrl("\"" + id + "\" in parents") +
-                      "&pageSize=1000&fields=" + BaseClient::EncodeUrl("files(id,mimeType,name,modifiedTime,size)");
-    if (auto res = client->Get(url))
+    if (strcmp(path.c_str(), "/") == 0)
     {
-        if (HTTP_SUCCESS(res->status))
+        SetupSharedWithMeFolder(&entry);
+        out.push_back(entry);
+    }
+
+    std::string id = GetValue(path_id_map, path);
+    std::string base_url = std::string("/drive/v3/files?q=") + BaseClient::EncodeUrl("\"" + id + "\" in parents") +
+                      "&pageSize=1000&fields=" + BaseClient::EncodeUrl("files(id,mimeType,name,modifiedTime,size),nextPageToken");
+    bool find_no_parent = false;
+    if (id.compare(shared_with_me) == 0)
+    {
+        base_url = std::string("/drive/v3/files?q=sharedWithMe&pageSize=1000&fields=") + BaseClient::EncodeUrl("files(id,mimeType,name,modifiedTime,size),nextPageToken");
+    }
+
+    std::string next_page_url = base_url;
+    while (true)
+    {
+        if (auto res = client->Get(next_page_url))
         {
-            json_object *jobj = json_tokener_parse(res->body.c_str());
-            json_object *files = json_object_object_get(jobj, "files");
-            if (json_object_get_type(files) == json_type_array)
+            if (HTTP_SUCCESS(res->status))
             {
-                struct array_list *afiles = json_object_get_array(files);
-                for (size_t idx = 0; idx < afiles->length; ++idx)
+                json_object *jobj = json_tokener_parse(res->body.c_str());
+                json_object *next_page_token = json_object_object_get(jobj, "nextPageToken");
+                json_object *files = json_object_object_get(jobj, "files");
+                if (json_object_get_type(files) == json_type_array)
                 {
-                    json_object *file = (json_object *)array_list_get_idx(afiles, idx);
-                    DirEntry entry;
-                    memset(&entry, 0, sizeof(DirEntry));
-
-                    sprintf(entry.directory, "%s", path.c_str());
-                    entry.selectable = true;
-                    entry.file_size = 0;
-
-                    const char *id = json_object_get_string(json_object_object_get(file, "id"));
-                    const char *name = json_object_get_string(json_object_object_get(file, "name"));
-                    const char *mime_type = json_object_get_string(json_object_object_get(file, "mimeType"));
-                    const char *modified_time = json_object_get_string(json_object_object_get(file, "modifiedTime"));
-
-                    snprintf(entry.name, 255, "%s", name);
-                    if (path.length() > 0 && path[path.length() - 1] == '/')
+                    struct array_list *afiles = json_object_get_array(files);
+                    for (size_t idx = 0; idx < afiles->length; ++idx)
                     {
-                        snprintf(entry.path, 767, "%s%s", path.c_str(), entry.name);
+                        json_object *file = (json_object *)array_list_get_idx(afiles, idx);
+                        DirEntry entry;
+                        memset(&entry, 0, sizeof(DirEntry));
+
+                        sprintf(entry.directory, "%s", path.c_str());
+                        entry.selectable = true;
+                        entry.file_size = 0;
+
+                        const char *id = json_object_get_string(json_object_object_get(file, "id"));
+                        const char *name = json_object_get_string(json_object_object_get(file, "name"));
+                        const char *mime_type = json_object_get_string(json_object_object_get(file, "mimeType"));
+                        const char *modified_time = json_object_get_string(json_object_object_get(file, "modifiedTime"));
+
+                        snprintf(entry.name, 255, "%s", name);
+                        if (path.length() > 0 && path[path.length() - 1] == '/')
+                        {
+                            snprintf(entry.path, 767, "%s%s", path.c_str(), entry.name);
+                        }
+                        else
+                        {
+                            sprintf(entry.path, "%s/%s", path.c_str(), entry.name);
+                        }
+                        path_id_map.insert(std::make_pair(entry.path, id));
+
+                        if (strncmp(mime_type, "application/vnd.google-apps.folder", 35) != 0)
+                        {
+                            entry.file_size = json_object_get_uint64(json_object_object_get(file, "size"));
+                            entry.isDir = false;
+                            DirEntry::SetDisplaySize(&entry);
+                        }
+                        else
+                        {
+                            entry.isDir = true;
+                            sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
+                        }
+
+                        std::vector<std::string> date_time_arr = Util::Split(modified_time, "T");
+                        std::vector<std::string> adate = Util::Split(date_time_arr[0], "-");
+                        std::vector<std::string> atime = Util::Split(Util::Split(date_time_arr[1], ".")[0], ":");
+                        OrbisDateTime utc, local;
+                        utc.year = std::atoi(adate[0].c_str());
+                        utc.month = std::atoi(adate[1].c_str());
+                        utc.day = std::atoi(adate[2].c_str());
+                        utc.hour = std::atoi(atime[0].c_str());
+                        utc.minute = std::atoi(atime[1].c_str());
+                        utc.second = std::atoi(atime[2].c_str());
+
+                        convertUtcToLocalTime(&utc, &local);
+
+                        entry.modified.year = local.year;
+                        entry.modified.month = local.month;
+                        entry.modified.day = local.day;
+                        entry.modified.hours = local.hour;
+                        entry.modified.minutes = local.minute;
+                        entry.modified.seconds = local.second;
+
+                        out.push_back(entry);
                     }
-                    else
-                    {
-                        sprintf(entry.path, "%s/%s", path.c_str(), entry.name);
-                    }
-                    path_id_map.insert(std::make_pair(entry.path, id));
-
-                    if (strncmp(mime_type, "application/vnd.google-apps.folder", 35) != 0)
-                    {
-                        entry.file_size = json_object_get_uint64(json_object_object_get(file, "size"));
-                        entry.isDir = false;
-                        DirEntry::SetDisplaySize(&entry);
-                    }
-                    else
-                    {
-                        entry.isDir = true;
-                        sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
-                    }
-
-                    std::vector<std::string> date_time_arr = Util::Split(modified_time, "T");
-                    std::vector<std::string> adate = Util::Split(date_time_arr[0], "-");
-                    std::vector<std::string> atime = Util::Split(Util::Split(date_time_arr[1], ".")[0], ":");
-                    OrbisDateTime utc, local;
-                    utc.year = std::atoi(adate[0].c_str());
-                    utc.month = std::atoi(adate[1].c_str());
-                    utc.day = std::atoi(adate[2].c_str());
-                    utc.hour = std::atoi(atime[0].c_str());
-                    utc.minute = std::atoi(atime[1].c_str());
-                    utc.second = std::atoi(atime[2].c_str());
-
-                    convertUtcToLocalTime(&utc, &local);
-
-                    entry.modified.year = local.year;
-                    entry.modified.month = local.month;
-                    entry.modified.day = local.day;
-                    entry.modified.hours = local.hour;
-                    entry.modified.minutes = local.minute;
-                    entry.modified.seconds = local.second;
-
-                    out.push_back(entry);
                 }
+                if (next_page_token != nullptr)
+                    next_page_url = base_url + "&pageToken=" + BaseClient::EncodeUrl(json_object_get_string(next_page_token));
+                else
+                    break;
             }
         }
-    }
-    else
-    {
-        sprintf(response, "%s", to_string(res.error()).c_str());
-    }
+        else
+        {
+            break;
+        }
+    };
     return out;
 }
 
