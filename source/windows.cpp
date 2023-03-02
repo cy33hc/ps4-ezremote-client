@@ -552,64 +552,60 @@ namespace Windows
             set_focus_to_local = false;
             ImGui::SetWindowFocus();
         }
-        ImGuiListClipper local_clipper;
-        local_clipper.Begin(local_files.size());
-        while (local_clipper.Step())
-            for (int j = local_clipper.DisplayStart; j < local_clipper.DisplayEnd; j++)
+        for (int j = 0; j < local_files.size(); j++)
+        {
+            DirEntry item = local_files[j];
+            ImGui::SetColumnWidth(-1, 740);
+            ImGui::PushID(i);
+            auto search_item = multi_selected_local_files.find(item);
+            if (search_item != multi_selected_local_files.end())
             {
-                DirEntry item = local_files[j];
-                ImGui::SetColumnWidth(-1, 740);
-                ImGui::PushID(i);
-                auto search_item = multi_selected_local_files.find(item);
-                if (search_item != multi_selected_local_files.end())
-                {
-                    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
-                }
-                if (ImGui::Selectable(item.name, false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(919, 0)))
-                {
-                    if (item.isDir)
-                    {
-                        selected_local_file = item;
-                        selected_action = ACTION_CHANGE_LOCAL_DIRECTORY;
-                    }
-                }
-                ImGui::PopID();
-                if (ImGui::IsItemFocused())
+                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
+            }
+            if (ImGui::Selectable(item.name, false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(919, 0)))
+            {
+                if (item.isDir)
                 {
                     selected_local_file = item;
+                    selected_action = ACTION_CHANGE_LOCAL_DIRECTORY;
                 }
-                if (ImGui::IsItemHovered())
-                {
-                    if (ImGui::CalcTextSize(item.name).x > 740)
-                    {
-                        ImGui::BeginTooltip();
-                        ImGui::Text("%s", item.name);
-                        ImGui::EndTooltip();
-                    }
-                }
-                if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
-                {
-                    if (strcmp(local_file_to_select, item.name) == 0)
-                    {
-                        SetNavFocusHere();
-                        ImGui::SetScrollHereY(0.5f);
-                        sprintf(local_file_to_select, "");
-                    }
-                    selected_browser |= LOCAL_BROWSER;
-                }
-                ImGui::NextColumn();
-                ImGui::SetColumnWidth(-1, 150);
-                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(item.display_size).x - ImGui::GetScrollX() - ImGui::GetStyle().ItemSpacing.x);
-                ImGui::Text("%s", item.display_size);
-                if (search_item != multi_selected_local_files.end())
-                {
-                    ImGui::PopStyleColor();
-                }
-                ImGui::NextColumn();
-                ImGui::Separator();
-                i++;
             }
-        local_clipper.End();
+            ImGui::PopID();
+            if (ImGui::IsItemFocused())
+            {
+                selected_local_file = item;
+            }
+            if (ImGui::IsItemHovered())
+            {
+                if (ImGui::CalcTextSize(item.name).x > 740)
+                {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("%s", item.name);
+                    ImGui::EndTooltip();
+                }
+            }
+            if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
+            {
+                if (strcmp(local_file_to_select, item.name) == 0)
+                {
+                    SetNavFocusHere();
+                    ImGui::SetScrollHereY(0.5f);
+                    sprintf(local_file_to_select, "");
+                }
+                selected_browser |= LOCAL_BROWSER;
+            }
+            ImGui::NextColumn();
+            ImGui::SetColumnWidth(-1, 150);
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(item.display_size).x - ImGui::GetScrollX() - ImGui::GetStyle().ItemSpacing.x);
+            ImGui::Text("%s", item.display_size);
+            if (search_item != multi_selected_local_files.end())
+            {
+                ImGui::PopStyleColor();
+            }
+            ImGui::NextColumn();
+            ImGui::Separator();
+            i++;
+        }
         ImGui::Columns(1);
         ImGui::EndChild();
         EndGroupPanel();
@@ -700,65 +696,61 @@ namespace Windows
         ImGui::Separator();
         ImGui::Columns(2, "Remote##Columns", true);
         i = 99999;
-        ImGuiListClipper remote_clipper;
-        remote_clipper.Begin(remote_files.size());
-        while (remote_clipper.Step())
-            for (int j = remote_clipper.DisplayStart; j < remote_clipper.DisplayEnd; j++)
-            {
-                DirEntry item = remote_files[j];
+        for (int j = 0; j < remote_files.size(); j++)
+        {
+            DirEntry item = remote_files[j];
 
-                ImGui::SetColumnWidth(-1, 740);
-                auto search_item = multi_selected_remote_files.find(item);
-                if (search_item != multi_selected_remote_files.end())
-                {
-                    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
-                }
-                ImGui::PushID(i);
-                if (ImGui::Selectable(item.name, false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(919, 0)))
-                {
-                    if (item.isDir)
-                    {
-                        selected_remote_file = item;
-                        selected_action = ACTION_CHANGE_REMOTE_DIRECTORY;
-                    }
-                }
-                if (ImGui::IsItemFocused())
+            ImGui::SetColumnWidth(-1, 740);
+            auto search_item = multi_selected_remote_files.find(item);
+            if (search_item != multi_selected_remote_files.end())
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
+            }
+            ImGui::PushID(i);
+            if (ImGui::Selectable(item.name, false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(919, 0)))
+            {
+                if (item.isDir)
                 {
                     selected_remote_file = item;
+                    selected_action = ACTION_CHANGE_REMOTE_DIRECTORY;
                 }
-                if (ImGui::IsItemHovered())
-                {
-                    if (ImGui::CalcTextSize(item.name).x > 740)
-                    {
-                        ImGui::BeginTooltip();
-                        ImGui::Text("%s", item.name);
-                        ImGui::EndTooltip();
-                    }
-                }
-                ImGui::PopID();
-                if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
-                {
-                    if (strcmp(remote_file_to_select, item.name) == 0)
-                    {
-                        SetNavFocusHere();
-                        ImGui::SetScrollHereY(0.5f);
-                        sprintf(remote_file_to_select, "");
-                    }
-                    selected_browser |= REMOTE_BROWSER;
-                }
-                ImGui::NextColumn();
-                ImGui::SetColumnWidth(-1, 150);
-                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(item.display_size).x - ImGui::GetScrollX() - ImGui::GetStyle().ItemSpacing.x);
-                ImGui::Text("%s", item.display_size);
-                if (search_item != multi_selected_remote_files.end())
-                {
-                    ImGui::PopStyleColor();
-                }
-                ImGui::NextColumn();
-                ImGui::Separator();
-                i++;
             }
-        remote_clipper.End();
+            if (ImGui::IsItemFocused())
+            {
+                selected_remote_file = item;
+            }
+            if (ImGui::IsItemHovered())
+            {
+                if (ImGui::CalcTextSize(item.name).x > 740)
+                {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("%s", item.name);
+                    ImGui::EndTooltip();
+                }
+            }
+            ImGui::PopID();
+            if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
+            {
+                if (strcmp(remote_file_to_select, item.name) == 0)
+                {
+                    SetNavFocusHere();
+                    ImGui::SetScrollHereY(0.5f);
+                    sprintf(remote_file_to_select, "");
+                }
+                selected_browser |= REMOTE_BROWSER;
+            }
+            ImGui::NextColumn();
+            ImGui::SetColumnWidth(-1, 150);
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(item.display_size).x - ImGui::GetScrollX() - ImGui::GetStyle().ItemSpacing.x);
+            ImGui::Text("%s", item.display_size);
+            if (search_item != multi_selected_remote_files.end())
+            {
+                ImGui::PopStyleColor();
+            }
+            ImGui::NextColumn();
+            ImGui::Separator();
+            i++;
+        }
         ImGui::Columns(1);
         ImGui::EndChild();
         EndGroupPanel();
