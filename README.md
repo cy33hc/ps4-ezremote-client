@@ -40,7 +40,9 @@ To distinguish between FTP, SMB, WebDAV or HTTP, the URL must be prefix with **f
      - port is optional and defaults to 80(http) and 443(https) if not provided
      - url_path is optional based on your HTTP Server hosting requiremets
    ```
-
+- For Google Drive use the following URL for the server
+   **https://drive.google.com**
+   
 Tested with following WebDAV server:
  - **(Recommeded)** [Dufs](https://github.com/sigoden/dufs) - For hosting your own WebDAV server. (Recommended since this allow anonymous access which is required for Remote Package Install)
  - [SFTPgo](https://github.com/drakkan/sftpgo) - For local hosted WebDAV server. Can also be used as a webdav frontend for Cloud Storage like AWS S3, Azure Blob or Google Storage.
