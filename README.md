@@ -40,8 +40,8 @@ To distinguish between FTP, SMB, WebDAV or HTTP, the URL must be prefix with **f
      - port is optional and defaults to 80(http) and 443(https) if not provided
      - url_path is optional based on your HTTP Server hosting requiremets
    ```
-- For Google Drive use the following URL for the server
-   **https://drive.google.com**
+- For Google Drive use the following URL for the server  **https://drive.google.com**
+   <br />[Go to the following wiki for instructions on how to setup the app to connect to Google Drive]( https://github.com/cy33hc/ps4-ezremote-client/wiki/Setup-App-for-use-with-Google-Drive)
    
 Tested with following WebDAV server:
  - **(Recommeded)** [Dufs](https://github.com/sigoden/dufs) - For hosting your own WebDAV server. (Recommended since this allow anonymous access which is required for Remote Package Install)
@@ -58,7 +58,7 @@ Remote Package Installation only works if the WebDAV server allow anonymous acce
  - Transfer files back and forth between PS4 and FTP/SMB/WebDAV server
  - Support for connecting to Http Servers like (Apache/Nginx,Microsoft IIS, Serve) with html directory listings to download or install pkg. 
  - Install Remote Packages from connected WebDAV server
- - Ability to connect to your "Google Drive" to transfer files back and fort. Can also install packages from it. The app will download the file to the PS4's harddrive and then install it. You need to keep the app opened. Here is a link to the wiki for what you need to do to make it work. Also able to access files that are shared to you.  https://github.com/cy33hc/ps4-ezremote-client/wiki/Setup-App-for-use-with-Google-Drive
+ - Ability to connect to your "Google Drive" to transfer files back and fort. Can also install packages from it. The app will download the file to the PS4's harddrive and then install it. You need to keep the app opened. Here is a link to the wiki for what you need to do to make it work. Also able to access files that are shared to you.
  - Install Remote Packages for FTP/SMB if HTTP server setup on same host sharing same folder as FTP/SMB
    - If Remote Package Install is not possible, optionally the user can choose to download package to PS4 local drive and install
  - Install packages from PS4 local drive **/data** folder or usb drive **/mnt/usbX**
