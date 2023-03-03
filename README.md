@@ -172,6 +172,10 @@ Build libunrar - https://github.com/cy33hc/libunrar-ps3
 
 Build libun7zip - https://github.com/cy33hc/libun7zip
 
+I have included the source code from the following 2 projects embedded into this repo.
+<br/>https://github.com/yhirose/cpp-httplib
+<br/>https://github.com/CloudPolis/webdav-client-cpp
+
 Finally build the app
 ```
    source /opt/pacbrew/ps4/openorbis/ps4vars.sh
