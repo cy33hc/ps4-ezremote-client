@@ -1680,8 +1680,8 @@ namespace Windows
                 ime_after_update = AfterFolderNameCallback;
                 ime_cancelled = CancelActionCallBack;
                 ime_callback = SingleValueImeCallback;
-                ImVec2 pos = selected_action == ACTION_NEW_LOCAL_FOLDER ? ImVec2(410, 350) : ImVec2(1330, 350);
-                Dialog::initImeDialog(lang_strings[STR_NEW_FOLDER], dialog_editor_text, 128, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
+                ImVec2 pos = (selected_action == ACTION_NEW_LOCAL_FOLDER || selected_action == ACTION_NEW_LOCAL_FILE) ? ImVec2(410, 350) : ImVec2(1330, 350);
+                Dialog::initImeDialog((selected_action == ACTION_NEW_LOCAL_FILE || selected_action == ACTION_NEW_REMOTE_FILE)? lang_strings[STR_NEW_FILE]: lang_strings[STR_NEW_FOLDER], dialog_editor_text, 128, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
                 gui_mode = GUI_MODE_IME;
             }
             break;
