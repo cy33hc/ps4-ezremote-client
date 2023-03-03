@@ -1571,7 +1571,9 @@ namespace Windows
                 ImGui::SameLine();
                 ImGui::SetCursorPosX(163);
                 ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 1.0f));
-                if (ImGui::Button(gg_app.client_id, ImVec2(580, 0)))
+                char id[192];
+                sprintf(id, "%s##client_id_input", gg_app.client_id);
+                if (ImGui::Button(id, ImVec2(580, 0)))
                 {
                     ResetImeCallbacks();
                     ime_single_field = gg_app.client_id;
@@ -1584,7 +1586,6 @@ namespace Windows
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
                 ImGui::Text("%s", lang_strings[STR_CLIENT_SECRET]);
                 ImGui::SameLine();
-                char id[128];
                 ImGui::SetCursorPosX(163);
                 if (strlen(gg_app.client_secret) > 0)
                     sprintf(id, "%s", "*********************************************##client_secret_input");
