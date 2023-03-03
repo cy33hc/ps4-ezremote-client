@@ -1704,6 +1704,7 @@ namespace Windows
             if (dont_prompt_overwrite || (!dont_prompt_overwrite && confirm_transfer_state == 1))
             {
                 activity_inprogess = true;
+                sprintf(activity_message, "%s", "");
                 stop_activity = false;
                 Actions::UploadFiles();
                 confirm_transfer_state = -1;
@@ -1715,6 +1716,7 @@ namespace Windows
             if (dont_prompt_overwrite || (!dont_prompt_overwrite && confirm_transfer_state == 1))
             {
                 activity_inprogess = true;
+                sprintf(activity_message, "%s", "");
                 stop_activity = false;
                 Actions::DownloadFiles();
                 confirm_transfer_state = -1;
@@ -1724,6 +1726,7 @@ namespace Windows
         case ACTION_EXTRACT_LOCAL_ZIP:
             sprintf(status_message, "%s", "");
             activity_inprogess = true;
+            sprintf(activity_message, "%s", "");
             stop_activity = false;
             file_transfering = true;
             selected_action = ACTION_NONE;
@@ -1732,6 +1735,7 @@ namespace Windows
         case ACTION_CREATE_LOCAL_ZIP:
             sprintf(status_message, "%s", "");
             activity_inprogess = true;
+            sprintf(activity_message, "%s", "");
             stop_activity = false;
             file_transfering = true;
             selected_action = ACTION_NONE;
@@ -1859,6 +1863,7 @@ namespace Windows
             if (dont_prompt_overwrite || (!dont_prompt_overwrite && confirm_transfer_state == 1))
             {
                 activity_inprogess = true;
+                sprintf(activity_message, "%s", "");
                 stop_activity = false;
                 confirm_transfer_state = -1;
                 if (paste_action == ACTION_LOCAL_CUT)
@@ -1878,6 +1883,7 @@ namespace Windows
             if (dont_prompt_overwrite || (!dont_prompt_overwrite && confirm_transfer_state == 1))
             {
                 activity_inprogess = true;
+                sprintf(activity_message, "%s", "");
                 stop_activity = false;
                 confirm_transfer_state = -1;
                 if (paste_action == ACTION_REMOTE_CUT)
