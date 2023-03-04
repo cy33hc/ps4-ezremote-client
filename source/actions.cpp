@@ -1180,6 +1180,7 @@ namespace Actions
             remote_files.clear();
             sprintf(remote_directory, "%s", "/");
             sprintf(status_message, "%s", "");
+            delete remoteclient;
             remoteclient = nullptr;
         }
     }
