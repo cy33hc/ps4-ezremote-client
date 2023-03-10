@@ -152,7 +152,7 @@ namespace FS
 
     bool LoadText(std::vector<std::string> *lines, const std::string &path)
     {
-        FILE *fd = fopen(path.c_str(), "r");
+        FILE *fd = fopen(path.c_str(), "rb");
         if (fd == nullptr)
             return false;
 
