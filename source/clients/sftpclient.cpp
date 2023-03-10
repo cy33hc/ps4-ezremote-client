@@ -2,6 +2,7 @@
 #include <sys/time.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <time.h>
 #include "common.h"
 #include "clients/remote_client.h"
 #include "clients/sftpclient.h"
@@ -9,6 +10,7 @@
 #include "lang.h"
 #include "util.h"
 #include "windows.h"
+#include "system.h"
 
 #define FTP_CLIENT_BUFSIZ 1048576
 
@@ -490,6 +492,26 @@ std::vector<DirEntry> SFTPClient::ListDir(const std::string &path)
                 entry.isDir = false;
                 entry.selectable = false;
             }
+
+            struct tm tm = *localtime((const time_t*)&attrs.mtime);
+            OrbisDateTime gmt;
+            OrbisDateTime lt;
+
+            gmt.day = tm.tm_mday;
+            gmt.month = tm.tm_mon + 1;
+            gmt.year = tm.tm_year + 1900;
+            gmt.hour = tm.tm_hour;
+            gmt.minute = tm.tm_min;
+            gmt.second = tm.tm_sec;
+
+            convertUtcToLocalTime(&gmt, &lt);
+
+            entry.modified.day = lt.day;
+            entry.modified.month = lt.month;
+            entry.modified.year = lt.year;
+            entry.modified.hours = lt.hour;
+            entry.modified.minutes = lt.minute;
+            entry.modified.seconds = lt.second;
 
             out.push_back(entry);
         }
