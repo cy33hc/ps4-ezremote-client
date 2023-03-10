@@ -1,16 +1,17 @@
 # ezRemote Client
 
-ezRemote Client is an application that allows you to connect the PS4 to remote FTP, SMB, WebDAV, HTTP servers and Google Drive to transfer files. The interface is inspired by Filezilla client which provides a commander like GUI.
+ezRemote Client is an application that allows you to connect the PS4 to remote FTP/SFTP, SMB, WebDAV, HTTP servers and Google Drive to transfer files. The interface is inspired by Filezilla client which provides a commander like GUI.
 ![Preview](/screenshot.jpg)
 ## Usage
-To distinguish between FTP, SMB, WebDAV or HTTP, the URL must be prefix with **ftp://**, **smb://**, **webdav://**, **webdavs://**, **http://** and **https://**
+To distinguish between FTP, SMB, WebDAV or HTTP, the URL must be prefix with **ftp://**, **sftp://**, **smb://**, **webdav://**, **webdavs://**, **http://** and **https://**
 
  - The url format for FTP is
    ```
    ftp://hostname[:port]
+   sftp://hostname[:port]
 
      - hostname can be the textual hostname or an IP address. hostname is required
-     - port is optional and defaults to 21 if not provided
+     - port is optional and defaults to 21(ftp) and 22(sftp) if not provided
    ```
 
  - The url format for SMB is
