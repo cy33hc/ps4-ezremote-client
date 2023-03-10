@@ -79,7 +79,7 @@ namespace CONFIG
         {
             setting->type = CLIENT_TYPE_SMB;
         }
-        else if (strncmp(setting->server, "ftp://", 6) == 0)
+        else if (strncmp(setting->server, "ftp://", 6) == 0 || strncmp(setting->server, "sftp://", 7) == 0)
         {
             setting->type = CLIENT_TYPE_FTP;
         }
@@ -214,7 +214,7 @@ namespace CONFIG
             sprintf(setting.username, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_USER, ""));
             WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_USER, setting.username);
 
-            char tmp_password[64];
+            char tmp_password[128];
             sprintf(tmp_password, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_PASSWORD, ""));
             std::string encrypted_password;
             if (strlen(tmp_password) > 0)

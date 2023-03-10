@@ -37,6 +37,7 @@ add_executable(ezremote_client
   source/clients/npxserve.cpp
   source/clients/smbclient.cpp
   source/clients/webdavclient.cpp
+  source/clients/sftpclient.cpp
   source/server/http_server.cpp
   source/actions.cpp
   source/config.cpp
@@ -77,6 +78,7 @@ target_link_libraries(ezremote_client
   un7zip
   unrar
   json-c
+  ssh2
   kernel
   SceShellCoreUtil
   SceSysmodule

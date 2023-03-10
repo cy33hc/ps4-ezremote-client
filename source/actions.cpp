@@ -12,6 +12,7 @@
 #include "clients/nginx.h"
 #include "clients/npxserve.h"
 #include "clients/iis.h"
+#include "clients/sftpclient.h"
 #include "common.h"
 #include "fs.h"
 #include "config.h"
@@ -1140,6 +1141,10 @@ namespace Actions
             client->SetCallbackBytes(1);
             client->SetCallbackXferFunction(FtpCallback);
             remoteclient = client;
+        }
+        else if (strncmp(remote_settings->server, "sftp://", 7) == 0)
+        {
+            remoteclient = new SFTPClient();
         }
         else
         {
