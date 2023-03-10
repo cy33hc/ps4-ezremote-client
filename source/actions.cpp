@@ -821,7 +821,7 @@ namespace Actions
 
     void *ExtractZipThread(void *argp)
     {
-        FS::MkDirs(extract_zip_folder, true);
+        FS::MkDirs(extract_zip_folder);
         std::vector<DirEntry> files;
         if (multi_selected_local_files.size() > 0)
             std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(files));
@@ -1290,7 +1290,7 @@ namespace Actions
                     if (strcmp(entries[i].name, "..") == 0)
                         continue;
 
-                    FS::MkDirs(new_path, true);
+                    FS::MkDirs(new_path);
                     ret = CopyOrMove(entries[i], new_path, isCopy);
                     if (ret <= 0)
                     {
@@ -1539,7 +1539,7 @@ namespace Actions
                     if (strcmp(entries[i].name, "..") == 0)
                         continue;
 
-                    FS::MkDirs(new_path, true);
+                    remoteclient->Mkdir(new_path);
                     ret = CopyRemotePath(entries[i], new_path);
                     if (ret <= 0)
                     {
