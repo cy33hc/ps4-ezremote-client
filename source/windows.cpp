@@ -801,7 +801,7 @@ namespace Windows
         ImVec4 *colors = style->Colors;
         int flags;
 
-        if (ImGui::IsKeyDown(ImGuiKey_GamepadFaceUp))
+        if (ImGui::IsKeyDown(ImGuiKey_GamepadFaceUp) && !paused)
         {
             if (!paused)
                 saved_selected_browser = selected_browser;

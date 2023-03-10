@@ -1275,7 +1275,7 @@ namespace Actions
         {
             int err;
             std::vector<DirEntry> entries = FS::ListDir(src.path, &err);
-            FS::MkDirs(dest, true);
+            FS::MkDirs(dest);
             for (int i = 0; i < entries.size(); i++)
             {
                 if (stop_activity)
