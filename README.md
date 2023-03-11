@@ -72,7 +72,7 @@ Remote Package Installation only works if the WebDAV server allow anonymous acce
  - Create Zip files on PS4 local drive or usb drive
  - Extract from zip, 7zip and rar files
  - File management function include cut/copy/paste/rename/delete/new folder/file for files on PS4 local drive or usb or WebDAV Server.
- - Simple Text Editor to make simply changes to config text files.
+ - Simple Text Editor to make simply changes to config text files. Limited to edit files over 32kb and limited to edit lines up to 1023 characters. If you try edit lines longer then 1023 characters, it will be truncated.
 
 
 ## Installation
