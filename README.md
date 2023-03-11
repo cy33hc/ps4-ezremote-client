@@ -172,6 +172,8 @@ Build and install libsmb2 - https://github.com/cy33hc/libsmb2/blob/ps4/README_PS
 
 Build and install lexbor - https://github.com/lexbor/lexbor.git
 
+Build and install libssh2 - https://www.libssh2.org/
+
 Build libjbc - https://github.com/cy33hc/ps4-libjbc/blob/master/README_PS4.md
 
 Build libunrar - https://github.com/cy33hc/libunrar-ps3
