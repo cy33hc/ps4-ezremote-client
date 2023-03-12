@@ -13,7 +13,7 @@ To distinguish between FTP, SMB, WebDAV or HTTP, the URL must be prefix with **f
      - hostname can be the textual hostname or an IP address. hostname is required
      - port is optional and defaults to 21(ftp) and 22(sftp) if not provided
    ```
-   For Secure FTP (sftp), use of identity files is possible. Put both the **id_rsa** and **id_rsa.pub** into a folder in the PS4 hard drive. Then in the password field in the UI, instead of putting a password reference the folder where id_rsa and id_rsa.pub is place. Prefix the folder with **"file://"**
+   For Secure FTP (sftp), use of identity files is possible. Put both the **id_rsa** and **id_rsa.pub** into a folder in the PS4 hard drive. Then in the password field in the UI, instead of putting a password reference the folder where id_rsa and id_rsa.pub is place. Prefix the folder with **"file://"** and do not password protect the identity file.
    ```
    Example: If you had placed the id_rsa and id_rsa.pub files into the folder /data/ezremote-client,
    then in the password field enter file:///data/ezremote-client
