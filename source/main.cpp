@@ -99,7 +99,7 @@ void InitImgui()
 		0,
 	};
 
-	static const ImWchar icons[] {
+	static const ImWchar fa_icons[] {
 		0xF07B, 0xF07B, // folder
 		0xF65E, 0xF65E, // new folder
 		0xF15B, 0xF15B, // file
@@ -124,6 +124,12 @@ void InitImgui()
 		0x0031, 0x0031, // 1
 		0x004C, 0x004C, // L
 		0x0052, 0x0052, // R
+		0,
+	};
+
+	static const ImWchar of_icons[] {
+		0xE0CB, 0xE0CB, // square
+		0xE0DE, 0xE0DE, // triangle
 		0,
 	};
 
@@ -177,7 +183,8 @@ void InitImgui()
 	ImFontConfig config;
 	config.MergeMode = true;
 	config.GlyphMinAdvanceX = 13.0f; // Use if you want to make the icon monospaced
-	io.Fonts->AddFontFromFileTTF("/app0/assets/fonts/fa-solid-900.ttf", 20.0f, &config, icons);
+	io.Fonts->AddFontFromFileTTF("/app0/assets/fonts/fa-solid-900.ttf", 20.0f, &config, fa_icons);
+	io.Fonts->AddFontFromFileTTF("/app0/assets/fonts/OpenFontIcons.ttf", 20.0f, &config, of_icons);
 	io.Fonts->Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;
 	io.Fonts->Build();
 
@@ -307,7 +314,6 @@ int main()
 	ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
 	ImGui_ImplSDLRenderer_Init(renderer);
 	ImGui_ImplSDLRenderer_CreateFontsTexture();
-	ImGui_ImplSDL2_DisableButton(SDL_CONTROLLER_BUTTON_X, true);
 
 	if (!initialize_jbc())
 	{

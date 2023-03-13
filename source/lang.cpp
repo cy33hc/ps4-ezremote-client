@@ -150,6 +150,8 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Client Secret",																			// STR_CLIENT_SECRET
 	"Global",																					// STR_GLOBAL
 	"Google",																					// STR_GOOGLE
+	"Copy selected line",																		// STR_COPY_LINE
+	"Paste into selected line",																	// STR_PASTE_LINE
 };
 
 bool needs_extended_font = false;

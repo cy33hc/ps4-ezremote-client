@@ -13,6 +13,7 @@
 #include "lang.h"
 #include "ime_dialog.h"
 #include "IconsFontAwesome6.h"
+#include "OpenFontIcons.h"
 #include "server/http_server.h"
 #include "clients/gdrive.h"
 
@@ -77,6 +78,7 @@ char label[256];
 bool editor_modified = false;
 char edit_file[256];
 int edit_line_to_select = -1;
+std::string copy_text;
 
 // Overwrite dialog variables
 bool dont_prompt_overwrite = false;
@@ -1519,6 +1521,15 @@ namespace Windows
                             editor_modified = true;
                             edit_line_to_select = j;
                         }
+                        else if (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceLeft, false))
+                        {
+                            copy_text = std::string(it->c_str());
+                        }
+                        else if (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceUp, false))
+                        {
+                            it->clear();
+                            it->append(copy_text);
+                        }
                     }
                     j++;
                 }
@@ -1534,7 +1545,8 @@ namespace Windows
 
                 ImGui::Text("%s%s", (editor_modified ? "**" : ""), edit_file);
                 ImGui::Separator();
-                ImGui::Text("L1 - %s          R1 - %s", lang_strings[STR_DELETE_LINE], lang_strings[STR_INSERT_LINE]);
+                ImGui::Text("L1 - %s        R1 - %s        %s - %s        %s - %s", lang_strings[STR_DELETE_LINE], lang_strings[STR_INSERT_LINE],
+                            ICON_OF_SQUARE, lang_strings[STR_COPY_LINE], ICON_OF_TRIANGLE, lang_strings[STR_PASTE_LINE]);
                 ImGui::EndPopup();
             }
         }
