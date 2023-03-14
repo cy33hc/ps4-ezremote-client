@@ -1059,7 +1059,7 @@ namespace Windows
                 ImGui::Separator();
 
                 flags = getSelectableFlag(REMOTE_ACTION_UPLOAD);
-                if (remote_browser_selected && remoteclient != nullptr && !(remoteclient->SupportedActions() & REMOTE_ACTION_UPLOAD))
+                if (local_browser_selected && remoteclient != nullptr && !(remoteclient->SupportedActions() & REMOTE_ACTION_UPLOAD))
                 {
                     flags = ImGuiSelectableFlags_Disabled;
                 }
