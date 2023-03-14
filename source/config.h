@@ -17,6 +17,8 @@
 
 #define CONFIG_GLOBAL "Global"
 
+#define CONFIG_SHOW_HIDDEN_FILES "show_hidden_files"
+
 #define CONFIG_GOOGLE "Google"
 #define CONFIG_GOOGLE_CLIENT_ID "google_client_id"
 #define CONFIG_GOOGLE_CLIENT_SECRET "google_client_secret"
@@ -123,6 +125,7 @@ extern int max_edit_file_size;
 extern unsigned char cipher_key[32];
 extern unsigned char cipher_iv[16];
 extern GoogleAppInfo gg_app;
+extern bool show_hidden_files;
 
 namespace CONFIG
 {

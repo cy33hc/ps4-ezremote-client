@@ -1576,6 +1576,12 @@ namespace Windows
                 ImGui::SetCursorPosX(705);
                 ImGui::Checkbox("##auto_delete_tmp_pkg", &auto_delete_tmp_pkg);
                 ImGui::Separator();
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                ImGui::Text("%s", lang_strings[STR_SHOW_HIDDEN_FILES]);
+                ImGui::SameLine();
+                ImGui::SetCursorPosX(705);
+                ImGui::Checkbox("##show_hidden_files", &show_hidden_files);
+                ImGui::Separator();
                 ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_GOOGLE]);
                 ImGui::Separator();
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);

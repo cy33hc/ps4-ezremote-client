@@ -399,10 +399,10 @@ int SFTPClient::Move(const std::string &from, const std::string &to)
 
 int SFTPClient::Head(const std::string &path, void *buffer, uint64_t len)
 {
-	if (!Size(path.c_str(), &bytes_to_download))
-	{
-		return 0;
-	}
+    if (!Size(path.c_str(), &bytes_to_download))
+    {
+        return 0;
+    }
 
     LIBSSH2_SFTP_HANDLE *sftp_handle = libssh2_sftp_open(sftp_session, path.c_str(), LIBSSH2_FXF_READ, 0);
     if (!sftp_handle)
@@ -410,12 +410,12 @@ int SFTPClient::Head(const std::string &path, void *buffer, uint64_t len)
         return 0;
     }
 
-	int count = libssh2_sftp_read(sftp_handle, (char*)buffer, len);
-	libssh2_sftp_close(sftp_handle);
-	if (count != len)
-		return 0;
+    int count = libssh2_sftp_read(sftp_handle, (char *)buffer, len);
+    libssh2_sftp_close(sftp_handle);
+    if (count != len)
+        return 0;
 
-	return 1;
+    return 1;
 }
 
 bool SFTPClient::FileExists(const std::string &path)
@@ -455,6 +455,9 @@ std::vector<DirEntry> SFTPClient::ListDir(const std::string &path)
                 continue;
             ;
 
+            if (!show_hidden_files && new_path[0] == '.')
+                continue;
+
             sprintf(entry.name, "%s", new_path.c_str());
             sprintf(entry.directory, "%s", path.c_str());
             if (path.length() > 0 && path[path.length() - 1] == '/')
@@ -493,7 +496,7 @@ std::vector<DirEntry> SFTPClient::ListDir(const std::string &path)
                 entry.selectable = false;
             }
 
-            struct tm tm = *localtime((const time_t*)&attrs.mtime);
+            struct tm tm = *localtime((const time_t *)&attrs.mtime);
             OrbisDateTime gmt;
             OrbisDateTime lt;
 

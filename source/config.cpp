@@ -34,6 +34,7 @@ char favorite_urls[MAX_FAVORITE_URLS][512];
 bool auto_delete_tmp_pkg;
 int max_edit_file_size;
 GoogleAppInfo gg_app;
+bool show_hidden_files;
 
 unsigned char cipher_key[32] = {'s', '5', 'v', '8', 'y', '/', 'B', '?', 'E', '(', 'H', '+', 'M', 'b', 'Q', 'e', 'T', 'h', 'W', 'm', 'Z', 'q', '4', 't', '7', 'w', '9', 'z', '$', 'C', '&', 'F'};
 unsigned char cipher_iv[16] = {'Y', 'p', '3', 's', '6', 'v', '9', 'y', '$', 'B', '&', 'E', ')', 'H', '@', 'M'};
@@ -167,6 +168,9 @@ namespace CONFIG
 
         max_edit_file_size = ReadInt(CONFIG_GLOBAL, CONFIG_MAX_EDIT_FILE_SIZE, MAX_EDIT_FILE_SIZE);
         WriteInt(CONFIG_GLOBAL, CONFIG_MAX_EDIT_FILE_SIZE, max_edit_file_size);
+
+        show_hidden_files = ReadBool(CONFIG_GLOBAL, CONFIG_SHOW_HIDDEN_FILES, false);
+        WriteBool(CONFIG_GLOBAL, CONFIG_SHOW_HIDDEN_FILES, show_hidden_files);
 
         // Load Google Account Info
         sprintf(gg_app.client_id, "%s", ReadString(CONFIG_GOOGLE, CONFIG_GOOGLE_CLIENT_ID, ""));
@@ -306,7 +310,7 @@ namespace CONFIG
         WriteBool(last_site, CONFIG_ENABLE_RPI, remote_settings->enable_rpi);
         WriteString(last_site, CONFIG_REMOTE_HTTP_SERVER_TYPE, remote_settings->http_server_type);
         WriteString(CONFIG_GLOBAL, CONFIG_LAST_SITE, last_site);
-        WriteBool(CONFIG_GLOBAL, CONFIG_AUTO_DELETE_TMP_PKG, auto_delete_tmp_pkg);
+        
         std::string encrypted_token;
         if (strlen(remote_settings->gg_account.access_token) > 0)
             Encrypt(remote_settings->gg_account.access_token, encrypted_token);
@@ -338,6 +342,7 @@ namespace CONFIG
         WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_CLIENT_ID, gg_app.client_id);
         WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_PERMISSIONS, gg_app.permissions);
         WriteBool(CONFIG_GLOBAL, CONFIG_AUTO_DELETE_TMP_PKG, auto_delete_tmp_pkg);
+        WriteBool(CONFIG_GLOBAL, CONFIG_SHOW_HIDDEN_FILES, show_hidden_files);
         WriteIniFile(CONFIG_INI_FILE);
         CloseIniFile();
     }

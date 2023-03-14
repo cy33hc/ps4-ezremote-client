@@ -97,7 +97,7 @@ namespace INSTALLER
 		s_bgft_initialized = false;
 	}
 
-	std::string getRemoteUrl(const std::string filename)
+	std::string getRemoteUrl(const std::string filename, bool encodeUrl)
 	{
 		if (remoteclient->clientType() == CLIENT_TYPE_WEBDAV || remoteclient->clientType() == CLIENT_TYPE_HTTP_SERVER)
 		{
@@ -109,11 +109,14 @@ namespace INSTALLER
 			std::string host = full_url.substr(0, root_pos);
 			std::string path = full_url.substr(root_pos);
 
-			Web::Urn::Path uri(path);
-			CURL *curl = curl_easy_init();
-			path = uri.quote(curl);
-			curl_easy_cleanup(curl);
-
+			if (encodeUrl)
+			{
+				Web::Urn::Path uri(path);
+				CURL *curl = curl_easy_init();
+				path = uri.quote(curl);
+				curl_easy_cleanup(curl);
+			}
+			
 			return host + path;
 		}
 		else
@@ -129,9 +132,12 @@ namespace INSTALLER
 				host = host.substr(0, port_pos);
 
 			std::string path = std::string(filename);
-			Web::Urn::Path uri(path);
-			CURL *curl = curl_easy_init();
-			path = uri.quote(curl);
+			if (encodeUrl)
+			{
+				Web::Urn::Path uri(path);
+				CURL *curl = curl_easy_init();
+				path = uri.quote(curl);
+			}
 			return "http://" + host + ":" + std::to_string(remote_settings->http_port) + path;
 		}
 
@@ -161,6 +167,7 @@ namespace INSTALLER
 			tmp_client.Connect(host.c_str(), "", "", false);
 			WebDAV::dict_t response_headers{};
 			int ret = tmp_client.GetHeaders(path.c_str(), &response_headers);
+
 			if (!ret)
 			{
 				sprintf(confirm_message, "%s %s", lang_strings[STR_CANNOT_CONNECT_REMOTE_MSG], lang_strings[STR_DOWNLOAD_INSTALL_MSG]);
@@ -173,7 +180,7 @@ namespace INSTALLER
 
 	int InstallRemotePkg(const std::string &filename, pkg_header *header)
 	{
-		std::string url = getRemoteUrl(filename);
+		std::string url = getRemoteUrl(filename, true);
 		if (url.empty())
 			return 0;
 

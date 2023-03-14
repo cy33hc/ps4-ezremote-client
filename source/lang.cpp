@@ -152,6 +152,7 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Google",																					// STR_GOOGLE
 	"Copy selected line",																		// STR_COPY_LINE
 	"Paste into selected line",																	// STR_PASTE_LINE
+	"Show hidden files",																		// STR_SHOW_HIDDEN_FILES
 };
 
 bool needs_extended_font = false;
