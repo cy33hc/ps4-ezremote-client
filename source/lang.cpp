@@ -119,7 +119,7 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Operation not supported",																// STR_UNSUPPORTED_OPERATION_MSG
 	"Http Port",																			// STR_HTTP_PORT
 	"The content has already been installed. Do you want to continue installing",			// STR_REINSTALL_CONFIRM_MSG
-	"Remote server requires at least a username.",											// STR_REMOTE_NOT_SUPPORT_MSG
+	"Remote package installation is not supported for protected servers.",					// STR_REMOTE_NOT_SUPPORT_MSG
 	"Remote HTTP Server not reachable.",													// STR_CANNOT_CONNECT_REMOTE_MSG
 	"Remote Package Install not possible. Would you like to download package and install?", // STR_DOWNLOAD_INSTALL_MSG
 	"Checking remote server for Remote Package Install.",									// STR_CHECKING_REMOTE_SERVER_MSG
