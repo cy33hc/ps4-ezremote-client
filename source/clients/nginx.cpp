@@ -81,9 +81,10 @@ std::vector<DirEntry> NginxClient::ListDir(const std::string &path)
                 tmp = std::string((const char *)value, value_len);
                 if (tmp.compare("a") == 0)
                 {
-                    value = lxb_dom_node_text_content(node, &value_len);
+                    value = lxb_dom_element_get_attribute(lxb_dom_interface_element(node), (const lxb_char_t *)"href", 4, &value_len);
                     tmp = std::string((const char *)value, value_len);
                     tmp = Util::Rtrim(tmp, "/");
+                    tmp = BaseClient::DecodeUrl(tmp);
                     if (tmp.compare("..") != 0)
                     {
                         sprintf(entry.directory, "%s", path.c_str());
