@@ -942,11 +942,7 @@ namespace Windows
             ImGui::Separator();
 
             ImGui::PushID("setdefaultfolder##settings");
-            flags = ImGuiSelectableFlags_Disabled;
-            if ((local_browser_selected && selected_local_file.isDir && strcmp(selected_local_file.name, "..") != 0) ||
-                (remote_browser_selected && selected_remote_file.isDir && strcmp(selected_remote_file.name, "..") != 0))
-                flags = ImGuiSelectableFlags_None;
-            if (ImGui::Selectable(lang_strings[STR_SET_DEFAULT_DIRECTORY], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+            if (ImGui::Selectable(lang_strings[STR_SET_DEFAULT_DIRECTORY], false, ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
             {
                 if (local_browser_selected)
                     selected_action = ACTION_SET_DEFAULT_LOCAL_FOLDER;
@@ -1941,14 +1937,14 @@ namespace Windows
             }
             break;
         case ACTION_SET_DEFAULT_LOCAL_FOLDER:
-            CONFIG::SaveLocalDirecotry(selected_local_file.path);
-            sprintf(status_message, "\"%s\" %s", selected_local_file.path, lang_strings[STR_SET_DEFAULT_DIRECTORY_MSG]);
+            CONFIG::SaveLocalDirecotry(local_directory);
+            sprintf(status_message, "\"%s\" %s", local_directory, lang_strings[STR_SET_DEFAULT_DIRECTORY_MSG]);
             selected_action = ACTION_NONE;
             break;
         case ACTION_SET_DEFAULT_REMOTE_FOLDER:
-            sprintf(remote_settings->default_directory, "%s", selected_remote_file.path);
+            sprintf(remote_settings->default_directory, "%s", remote_directory);
             CONFIG::SaveConfig();
-            sprintf(status_message, "\"%s\" %s", selected_remote_file.path, lang_strings[STR_SET_DEFAULT_DIRECTORY_MSG]);
+            sprintf(status_message, "\"%s\" %s", remote_directory, lang_strings[STR_SET_DEFAULT_DIRECTORY_MSG]);
             selected_action = ACTION_NONE;
             break;
         default:
