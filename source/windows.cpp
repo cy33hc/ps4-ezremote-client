@@ -306,6 +306,7 @@ namespace Windows
                     sprintf(last_site, "%s", sites[n].c_str());
                     sprintf(display_site, "%s", site_id);
                     remote_settings = &site_settings[sites[n]];
+                    sprintf(remote_directory, "%s", remote_settings->default_directory);
                     sprintf(txt_http_port, "%d", remote_settings->http_port);
                 }
 
@@ -819,13 +820,13 @@ namespace Windows
         bool remote_browser_selected = saved_selected_browser & REMOTE_BROWSER;
         if (local_browser_selected)
         {
-            ImGui::SetNextWindowPos(ImVec2(410, 280));
+            ImGui::SetNextWindowPos(ImVec2(410, 250));
         }
         else if (remote_browser_selected)
         {
-            ImGui::SetNextWindowPos(ImVec2(1330, 280));
+            ImGui::SetNextWindowPos(ImVec2(1330, 250));
         }
-        ImGui::SetNextWindowSizeConstraints(ImVec2(230, 150), ImVec2(230, 625), NULL, NULL);
+        ImGui::SetNextWindowSizeConstraints(ImVec2(230, 150), ImVec2(230, 660), NULL, NULL);
         if (ImGui::BeginPopupModal(lang_strings[STR_ACTIONS], NULL, ImGuiWindowFlags_AlwaysAutoResize))
         {
             ImGui::PushID("Select All##settings");
@@ -934,6 +935,23 @@ namespace Windows
                     selected_action = ACTION_RENAME_LOCAL;
                 else if (remote_browser_selected)
                     selected_action = ACTION_RENAME_REMOTE;
+                SetModalMode(false);
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::PopID();
+            ImGui::Separator();
+
+            ImGui::PushID("setdefaultfolder##settings");
+            flags = ImGuiSelectableFlags_Disabled;
+            if ((local_browser_selected && selected_local_file.isDir && strcmp(selected_local_file.name, "..") != 0) ||
+                (remote_browser_selected && selected_remote_file.isDir && strcmp(selected_remote_file.name, "..") != 0))
+                flags = ImGuiSelectableFlags_None;
+            if (ImGui::Selectable(lang_strings[STR_SET_DEFAULT_DIRECTORY], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
+            {
+                if (local_browser_selected)
+                    selected_action = ACTION_SET_DEFAULT_LOCAL_FOLDER;
+                else if (remote_browser_selected)
+                    selected_action = ACTION_SET_DEFAULT_REMOTE_FOLDER;
                 SetModalMode(false);
                 ImGui::CloseCurrentPopup();
             }
@@ -1564,8 +1582,8 @@ namespace Windows
             SetModalMode(true);
             ImGui::OpenPopup(lang_strings[STR_SETTINGS]);
 
-            ImGui::SetNextWindowPos(ImVec2(1150, 80));
-            ImGui::SetNextWindowSizeConstraints(ImVec2(750, 80), ImVec2(750, 400), NULL, NULL);
+            ImGui::SetNextWindowPos(ImVec2(1050, 80));
+            ImGui::SetNextWindowSizeConstraints(ImVec2(850, 80), ImVec2(850, 400), NULL, NULL);
             if (ImGui::BeginPopupModal(lang_strings[STR_SETTINGS], NULL, ImGuiWindowFlags_AlwaysAutoResize))
             {
                 ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_GLOBAL]);
@@ -1573,55 +1591,62 @@ namespace Windows
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
                 ImGui::Text("%s", lang_strings[STR_AUTO_DELETE_TMP_PKG]);
                 ImGui::SameLine();
-                ImGui::SetCursorPosX(705);
+                ImGui::SetCursorPosX(805);
                 ImGui::Checkbox("##auto_delete_tmp_pkg", &auto_delete_tmp_pkg);
                 ImGui::Separator();
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
                 ImGui::Text("%s", lang_strings[STR_SHOW_HIDDEN_FILES]);
                 ImGui::SameLine();
-                ImGui::SetCursorPosX(705);
+                ImGui::SetCursorPosX(805);
                 ImGui::Checkbox("##show_hidden_files", &show_hidden_files);
                 ImGui::Separator();
                 ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_GOOGLE]);
                 ImGui::Separator();
+
+                ImVec2 id_size, secret_size;
+                id_size = ImGui::CalcTextSize(lang_strings[STR_CLIENT_ID]);
+                secret_size = ImGui::CalcTextSize(lang_strings[STR_CLIENT_SECRET]);
+                float width = MAX(id_size.x, secret_size.x) + 45;
+
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
                 ImGui::Text("%s", lang_strings[STR_CLIENT_ID]);
                 ImGui::SameLine();
-                ImGui::SetCursorPosX(163);
+                ImGui::SetCursorPosX(width);
                 ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 1.0f));
+
                 char id[192];
                 sprintf(id, "%s##client_id_input", gg_app.client_id);
-                if (ImGui::Button(id, ImVec2(580, 0)))
+                if (ImGui::Button(id, ImVec2(835-width, 0)))
                 {
                     ResetImeCallbacks();
                     ime_single_field = gg_app.client_id;
                     ime_field_size = 139;
                     ime_callback = SingleValueImeCallback;
-                    Dialog::initImeDialog(lang_strings[STR_CLIENT_ID], gg_app.client_id, 139, ORBIS_TYPE_BASIC_LATIN, 1150, 80);
+                    Dialog::initImeDialog(lang_strings[STR_CLIENT_ID], gg_app.client_id, 139, ORBIS_TYPE_BASIC_LATIN, 1050, 80);
                     gui_mode = GUI_MODE_IME;
                 }
                 ImGui::Separator();
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
                 ImGui::Text("%s", lang_strings[STR_CLIENT_SECRET]);
                 ImGui::SameLine();
-                ImGui::SetCursorPosX(163);
+                ImGui::SetCursorPosX(width);
                 if (strlen(gg_app.client_secret) > 0)
                     sprintf(id, "%s", "*********************************************##client_secret_input");
                 else
                     sprintf(id, "%s", "##client_secret_input");
-                if (ImGui::Button(id, ImVec2(580, 0)))
+                if (ImGui::Button(id, ImVec2(835-width, 0)))
                 {
                     ResetImeCallbacks();
                     ime_single_field = gg_app.client_secret;
                     ime_field_size = 63;
                     ime_callback = SingleValueImeCallback;
-                    Dialog::initImeDialog(lang_strings[STR_CLIENT_SECRET], gg_app.client_secret, 63, ORBIS_TYPE_BASIC_LATIN, 1150, 80);
+                    Dialog::initImeDialog(lang_strings[STR_CLIENT_SECRET], gg_app.client_secret, 63, ORBIS_TYPE_BASIC_LATIN, 1050, 80);
                     gui_mode = GUI_MODE_IME;
                 }
                 ImGui::PopStyleVar();
                 ImGui::Separator();
                 sprintf(id, "%s##settings", lang_strings[STR_CLOSE]);
-                if (ImGui::Button(id, ImVec2(735, 0)))
+                if (ImGui::Button(id, ImVec2(835, 0)))
                 {
                     show_settings = false;
                     CONFIG::SaveGlobalConfig();
@@ -1914,6 +1939,17 @@ namespace Windows
                 }
                 selected_action = ACTION_NONE;
             }
+            break;
+        case ACTION_SET_DEFAULT_LOCAL_FOLDER:
+            CONFIG::SaveLocalDirecotry(selected_local_file.path);
+            sprintf(status_message, "\"%s\" %s", selected_local_file.path, lang_strings[STR_SET_DEFAULT_DIRECTORY_MSG]);
+            selected_action = ACTION_NONE;
+            break;
+        case ACTION_SET_DEFAULT_REMOTE_FOLDER:
+            sprintf(remote_settings->default_directory, "%s", selected_remote_file.path);
+            CONFIG::SaveConfig();
+            sprintf(status_message, "\"%s\" %s", selected_remote_file.path, lang_strings[STR_SET_DEFAULT_DIRECTORY_MSG]);
+            selected_action = ACTION_NONE;
             break;
         default:
             break;

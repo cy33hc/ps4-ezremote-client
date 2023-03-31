@@ -14,9 +14,9 @@
 #include "system.h"
 
 #define GOOGLE_BUF_SIZE 262144
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 static std::string shared_with_me("Shared with me");
+static std::string my_drive("My Drive");
 
 using namespace httplib;
 
@@ -71,7 +71,7 @@ int RefreshAccessToken()
             }
             if (remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_GOOGLE)
             {
-                GDriveClient *client = (GDriveClient*)remoteclient;
+                GDriveClient *client = (GDriveClient *)remoteclient;
                 client->SetAccessToken(remote_settings->gg_account.access_token);
             }
             CONFIG::SaveConfig();
@@ -147,8 +147,8 @@ int GDriveClient::RequestAuthorization()
 GDriveClient::GDriveClient()
 {
     client = nullptr;
-    path_id_map.insert(std::make_pair("/", "root"));
-    path_id_map.insert(std::make_pair("/"+shared_with_me, shared_with_me));
+    path_id_map.insert(std::make_pair("/" + my_drive, "root"));
+    path_id_map.insert(std::make_pair("/" + shared_with_me, shared_with_me));
 }
 
 int GDriveClient::Connect(const std::string &url, const std::string &user, const std::string &pass)
@@ -176,14 +176,36 @@ int GDriveClient::Connect(const std::string &url, const std::string &user, const
     client->enable_server_certificate_verification(false);
     this->connected = true;
 
+    std::string drives_url = std::string("/drive/v3/drives?pageSize=100");
+    if (auto res = client->Get(drives_url))
+    {
+        if (HTTP_SUCCESS(res->status))
+        {
+            json_object *jobj = json_tokener_parse(res->body.c_str());
+            json_object *drives = json_object_object_get(jobj, "drives");
+            if (json_object_get_type(drives) == json_type_array)
+            {
+                struct array_list *adrives = json_object_get_array(drives);
+                for (size_t idx = 0; idx < adrives->length; ++idx)
+                {
+                    json_object *drive = (json_object *)array_list_get_idx(adrives, idx);
+                    const char *id = json_object_get_string(json_object_object_get(drive, "id"));
+                    const char *name = json_object_get_string(json_object_object_get(drive, "name"));
+                    path_id_map.insert(std::make_pair("/" + std::string(name), id));
+                }
+            }
+        }
+    }
+
     return 1;
 }
 
 int GDriveClient::Rename(const std::string &src, const std::string &dst)
 {
-    if (src.find(shared_with_me) != std::string::npos || dst.find(shared_with_me) != std::string::npos)
+    if (src.find("/" + shared_with_me) != std::string::npos || dst.find("/" + shared_with_me) != std::string::npos ||
+        src.find("/" + my_drive) != std::string::npos || dst.find("/" + my_drive) != std::string::npos)
         return 0;
-        
+
     std::string id = GetValue(path_id_map, src);
     std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id);
     std::string filename = dst.substr(dst.find_last_of("/") + 1);
@@ -244,7 +266,7 @@ int GDriveClient::Head(const std::string &path, void *buffer, uint64_t len)
                                    body.insert(body.end(), data, data + data_length);
                                    bytes_read += data_length;
                                    if (bytes_read > len)
-                                        return false;
+                                       return false;
                                    return true;
                                }))
     {
@@ -352,7 +374,7 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
 
 int GDriveClient::Put(const std::string &inputfile, const std::string &path, uint64_t offset)
 {
-    if (path.find(shared_with_me) != std::string::npos)
+    if (path.find("/" + shared_with_me) != std::string::npos || path.find("/" + my_drive) != std::string::npos)
         return 0;
 
     if (FileExists(path))
@@ -455,9 +477,9 @@ int GDriveClient::Size(const std::string &path, int64_t *size)
 
 int GDriveClient::Mkdir(const std::string &path)
 {
-    if (path.find(shared_with_me) != std::string::npos)
+    if (path.find("/" + shared_with_me) != std::string::npos || path.find("/" + my_drive) != std::string::npos)
         return 0;
-        
+
     // if path already exists return;
     if (FileExists(path))
         return 1;
@@ -510,9 +532,9 @@ int GDriveClient::Mkdir(const std::string &path)
  */
 int GDriveClient::Rmdir(const std::string &path, bool recursive)
 {
-    if (path.find(shared_with_me) != std::string::npos)
+    if (path.find("/" + shared_with_me) != std::string::npos || path.find("/" + my_drive) != std::string::npos)
         return 0;
-        
+
     int ret = Delete(path);
     if (ret != 0)
     {
@@ -567,6 +589,18 @@ void SetupSharedWithMeFolder(DirEntry *entry)
     entry->selectable = false;
 }
 
+void SetupMyDriveFolder(DirEntry *entry)
+{
+    memset(entry, 0, sizeof(DirEntry));
+    sprintf(entry->directory, "%s", "/");
+    sprintf(entry->name, "%s", my_drive.c_str());
+    sprintf(entry->path, "/%s", my_drive.c_str());
+    sprintf(entry->display_size, "%s", lang_strings[STR_FOLDER]);
+    entry->file_size = 0;
+    entry->isDir = true;
+    entry->selectable = false;
+}
+
 std::vector<DirEntry> GDriveClient::ListDir(const std::string &path)
 {
     std::vector<DirEntry> out;
@@ -578,11 +612,59 @@ std::vector<DirEntry> GDriveClient::ListDir(const std::string &path)
     {
         SetupSharedWithMeFolder(&entry);
         out.push_back(entry);
+        SetupMyDriveFolder(&entry);
+        out.push_back(entry);
+
+        std::string drives_url = std::string("/drive/v3/drives?pageSize=100");
+        if (auto res = client->Get(drives_url))
+        {
+            if (HTTP_SUCCESS(res->status))
+            {
+                json_object *jobj = json_tokener_parse(res->body.c_str());
+                json_object *drives = json_object_object_get(jobj, "drives");
+                if (json_object_get_type(drives) == json_type_array)
+                {
+                    struct array_list *adrives = json_object_get_array(drives);
+                    for (size_t idx = 0; idx < adrives->length; ++idx)
+                    {
+                        json_object *drive = (json_object *)array_list_get_idx(adrives, idx);
+                        DirEntry entry;
+                        memset(&entry, 0, sizeof(DirEntry));
+
+                        sprintf(entry.directory, "%s", path.c_str());
+                        entry.selectable = false;
+                        entry.file_size = 0;
+                        entry.isDir = true;
+                        sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
+
+                        const char *id = json_object_get_string(json_object_object_get(drive, "id"));
+                        const char *name = json_object_get_string(json_object_object_get(drive, "name"));
+                        sprintf(entry.name, "%s", name);
+                        sprintf(entry.path, "/%s", name);
+                        path_id_map.insert(std::make_pair(entry.path, id));
+                        out.push_back(entry);
+                    }
+                }
+            }
+        }
+
+        return out;
     }
 
     std::string id = GetValue(path_id_map, path);
+    if (id.empty())
+    {
+        if (FileExists(path))
+        {
+            id = GetValue(path_id_map, path);
+        }
+        else
+        {
+            return out;
+        }
+    }
     std::string base_url = std::string("/drive/v3/files?q=") + BaseClient::EncodeUrl("\"" + id + "\" in parents") +
-                      "&pageSize=1000&fields=" + BaseClient::EncodeUrl("files(id,mimeType,name,modifiedTime,size),nextPageToken");
+                           "&pageSize=1000&fields=" + BaseClient::EncodeUrl("files(id,mimeType,name,modifiedTime,size),nextPageToken");
     bool find_no_parent = false;
     if (id.compare(shared_with_me) == 0)
     {

@@ -1183,7 +1183,6 @@ namespace Actions
                 remoteclient->Quit();
             multi_selected_remote_files.clear();
             remote_files.clear();
-            sprintf(remote_directory, "%s", "/");
             sprintf(status_message, "%s", "");
             delete remoteclient;
             remoteclient = nullptr;

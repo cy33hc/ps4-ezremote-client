@@ -14,8 +14,6 @@
 #include "util.h"
 #include "system.h"
 
-#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
-
 static const char *months[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
 namespace WebDAV

@@ -144,7 +144,9 @@
 	FUNC(STR_GOOGLE)                     \
 	FUNC(STR_COPY_LINE)                  \
 	FUNC(STR_PASTE_LINE)                 \
-	FUNC(STR_SHOW_HIDDEN_FILES)
+	FUNC(STR_SHOW_HIDDEN_FILES)          \
+	FUNC(STR_SET_DEFAULT_DIRECTORY)      \
+	FUNC(STR_SET_DEFAULT_DIRECTORY_MSG)
 
 #define GET_VALUE(x) x,
 #define GET_STRING(x) #x,
@@ -154,7 +156,7 @@ enum
 	FOREACH_STR(GET_VALUE)
 };
 
-#define LANG_STRINGS_NUM 141
+#define LANG_STRINGS_NUM 143
 #define LANG_ID_SIZE 64
 #define LANG_STR_SIZE 384
 extern char lang_identifiers[LANG_STRINGS_NUM][LANG_ID_SIZE];

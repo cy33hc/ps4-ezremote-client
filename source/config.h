@@ -49,6 +49,7 @@
 #define CONFIG_REMOTE_SERVER_HTTP_PORT "remote_server_http_port"
 #define CONFIG_ENABLE_RPI "remote_server_enable_rpi"
 #define CONFIG_REMOTE_HTTP_SERVER_TYPE "remote_server_http_server_type"
+#define CONFIG_REMOTE_DEFAULT_DIRECTORY "remote_server_default_directory"
 
 #define CONFIG_VERSION "config_version"
 #define CONFIG_VERSION_NUM 1
@@ -61,7 +62,6 @@
 #define CONFIG_AUTO_DELETE_TMP_PKG "auto_delete_tmp_pkg"
 
 #define CONFIG_LOCAL_DIRECTORY "local_directory"
-#define CONFIG_REMOTE_DIRECTORY "remote_directory"
 
 #define CONFIG_LANGUAGE "language"
 
@@ -98,6 +98,7 @@ struct RemoteSettings
     uint32_t supported_actions;
     char http_server_type[24];
     GoogleAccountInfo gg_account;
+    char default_directory[256];
 };
 
 struct PackageUrlInfo
@@ -132,6 +133,7 @@ namespace CONFIG
     void LoadConfig();
     void SaveConfig();
     void SaveGlobalConfig();
+    void SaveLocalDirecotry(const std::string &path);
     void SaveFavoriteUrl(int index, char *url);
     void SetClientType(RemoteSettings *settings);
 }

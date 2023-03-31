@@ -153,6 +153,8 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Copy selected line",																		// STR_COPY_LINE
 	"Paste into selected line",																	// STR_PASTE_LINE
 	"Show hidden files",																		// STR_SHOW_HIDDEN_FILES
+	"Set Default Folder",																		// STR_SET_DEFAULT_DIRECTORY
+	"has being set as default direcotry",														// STR_SET_DEFAULT_DIRECTORY_MSG
 };
 
 bool needs_extended_font = false;

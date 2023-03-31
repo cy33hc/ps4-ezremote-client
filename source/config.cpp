@@ -160,9 +160,6 @@ namespace CONFIG
         sprintf(local_directory, "%s", ReadString(CONFIG_GLOBAL, CONFIG_LOCAL_DIRECTORY, "/"));
         WriteString(CONFIG_GLOBAL, CONFIG_LOCAL_DIRECTORY, local_directory);
 
-        sprintf(remote_directory, "%s", ReadString(CONFIG_GLOBAL, CONFIG_REMOTE_DIRECTORY, "/"));
-        WriteString(CONFIG_GLOBAL, CONFIG_REMOTE_DIRECTORY, remote_directory);
-
         auto_delete_tmp_pkg = ReadBool(CONFIG_GLOBAL, CONFIG_AUTO_DELETE_TMP_PKG, true);
         WriteBool(CONFIG_GLOBAL, CONFIG_AUTO_DELETE_TMP_PKG, auto_delete_tmp_pkg);
 
@@ -242,6 +239,9 @@ namespace CONFIG
             sprintf(setting.http_server_type, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_HTTP_SERVER_TYPE, HTTP_SERVER_APACHE));
             WriteString(sites[i].c_str(), CONFIG_REMOTE_HTTP_SERVER_TYPE, setting.http_server_type);
 
+            sprintf(setting.default_directory, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_DEFAULT_DIRECTORY, "/"));
+            WriteString(sites[i].c_str(), CONFIG_REMOTE_DEFAULT_DIRECTORY, setting.default_directory);
+
             // Token Expiry
             setting.gg_account.token_expiry = ReadLong(sites[i].c_str(), CONFIG_GOOGLE_TOKEN_EXPIRY, 0);
             WriteLong(sites[i].c_str(), CONFIG_GOOGLE_TOKEN_EXPIRY, setting.gg_account.token_expiry);
@@ -284,6 +284,8 @@ namespace CONFIG
         WriteString(CONFIG_GLOBAL, CONFIG_LAST_SITE, last_site);
 
         remote_settings = &site_settings[std::string(last_site)];
+        sprintf(remote_directory, "%s", remote_settings->default_directory);
+
         for (int i = 0; i < MAX_FAVORITE_URLS; i++)
         {
             const char *index = std::to_string(i).c_str();
@@ -309,6 +311,7 @@ namespace CONFIG
         WriteInt(last_site, CONFIG_REMOTE_SERVER_HTTP_PORT, remote_settings->http_port);
         WriteBool(last_site, CONFIG_ENABLE_RPI, remote_settings->enable_rpi);
         WriteString(last_site, CONFIG_REMOTE_HTTP_SERVER_TYPE, remote_settings->http_server_type);
+        WriteString(last_site, CONFIG_REMOTE_DEFAULT_DIRECTORY, remote_settings->default_directory);
         WriteString(CONFIG_GLOBAL, CONFIG_LAST_SITE, last_site);
         
         std::string encrypted_token;
@@ -343,6 +346,14 @@ namespace CONFIG
         WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_PERMISSIONS, gg_app.permissions);
         WriteBool(CONFIG_GLOBAL, CONFIG_AUTO_DELETE_TMP_PKG, auto_delete_tmp_pkg);
         WriteBool(CONFIG_GLOBAL, CONFIG_SHOW_HIDDEN_FILES, show_hidden_files);
+        WriteIniFile(CONFIG_INI_FILE);
+        CloseIniFile();
+    }
+
+    void SaveLocalDirecotry(const std::string &path)
+    {
+        OpenIniFile(CONFIG_INI_FILE);
+        WriteString(CONFIG_GLOBAL, CONFIG_LOCAL_DIRECTORY, path.c_str());
         WriteIniFile(CONFIG_INI_FILE);
         CloseIniFile();
     }
