@@ -200,7 +200,7 @@ int GDriveClient::Connect(const std::string &url, const std::string &user, const
                     const char *id = json_object_get_string(json_object_object_get(drive, "id"));
                     const char *name = json_object_get_string(json_object_object_get(drive, "name"));
                     shared_drive_map.insert(std::make_pair("/" + std::string(name), id));
-                    path_id_map.insert(std::make_pair("/" + std::string(name), "root"));
+                    path_id_map.insert(std::make_pair("/" + std::string(name), id));
                 }
             }
         }
@@ -216,11 +216,15 @@ int GDriveClient::Rename(const std::string &src, const std::string &dst)
 
     std::string src_id = GetValue(path_id_map, src);
     std::string dst_id = GetValue(path_id_map, dst);
+    std::string src_drive_id = GetDriveId(src);
+    std::string dst_drive_id = GetDriveId(dst);
 
-    if (src_id.compare("root") == 0 || dst_id.compare("root") == 0)
+    if (src_id.compare("root") == 0 || dst_id.compare("root") == 0 || src_id.compare(src_drive_id) == 0 || dst_id.compare(dst_drive_id) == 0)
         return 0;
 
     std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(src_id);
+    if (!src_drive_id.empty())
+        url += "?supportsAllDrives=true";
     std::string filename = dst.substr(dst.find_last_of("/") + 1);
     std::string body = "{'name' : '" + filename + "'}";
     if (auto res = client->Patch(url, body.c_str(), body.length(), "application/json; charset=UTF-8"))
@@ -270,7 +274,11 @@ int GDriveClient::Head(const std::string &path, void *buffer, uint64_t len)
     size_t bytes_read = 0;
     std::vector<char> body;
     std::string id = GetValue(path_id_map, path);
+    std::string drive_id = GetDriveId(path);
+
     std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id) + "?alt=media";
+    if (!drive_id.empty())
+        url += "&supportsAllDrives=true";
     Headers headers;
     headers.insert(std::make_pair("Range", "bytes=" + std::to_string(0) + "-" + std::to_string(len - 1)));
     if (auto res = client->Get(url, headers,
@@ -301,7 +309,10 @@ int GDriveClient::Get(const std::string &outputfile, const std::string &path, ui
     bytes_transfered = 0;
 
     std::string id = GetValue(path_id_map, path);
+    std::string drive_id = GetDriveId(path);
     std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id) + "?alt=media";
+    if (!drive_id.empty())
+        url += "&supportsAllDrives=true";
     if (auto res = client->Get(url,
                                [&](const char *data, size_t data_length)
                                {
@@ -329,8 +340,11 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
     bytes_transfered = 0;
 
     std::string id = GetValue(path_id_map, path);
+    std::string drive_id = GetDriveId(path);
 
     std::string url = "/upload/drive/v3/files/" + BaseClient::EncodeUrl(id) + "?uploadType=resumable";
+    if (!drive_id.empty())
+        url += "&supportsAllDrives=true";
     Headers headers;
     headers.insert(std::make_pair("X-Upload-Content-Type", "application/octet-stream"));
     headers.insert(std::make_pair("X-Upload-Content-Length", std::to_string(bytes_to_download)));
@@ -408,9 +422,15 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
 
     std::string filename = path.substr(path_pos + 1);
     std::string parent_id = GetValue(path_id_map, parent_dir);
+    std::string drive_id = GetDriveId(path);
 
     std::string url = "/upload/drive/v3/files?uploadType=resumable";
-    std::string post_data = std::string("{'name': '") + filename + "', 'parents': ['" + parent_id + "']}";
+    if (!drive_id.empty())
+        url += "&supportsAllDrives=true";
+
+    std::string post_data = std::string("{'name': '") + filename + "'," +
+                                        (drive_id.empty() ? "" : "'driveId' : '" + drive_id + "',") +
+                                        "'parents': ['" + parent_id + "']}";
     Headers headers;
     headers.insert(std::make_pair("X-Upload-Content-Type", "application/octet-stream"));
     headers.insert(std::make_pair("X-Upload-Content-Length", std::to_string(bytes_to_download)));
@@ -468,7 +488,10 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
 int GDriveClient::Size(const std::string &path, int64_t *size)
 {
     std::string id = GetValue(path_id_map, path);
+    std::string drive_id = GetDriveId(path);
     std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id) + "?fields=size";
+    if (!drive_id.empty())
+        url += "&supportsAllDrives=true";
     if (auto res = client->Get(url))
     {
         sprintf(response, "%d", res->status);
@@ -553,7 +576,9 @@ int GDriveClient::Rmdir(const std::string &path, bool recursive)
         return 0;
 
     std::string id = GetValue(path_id_map, path);
-    if (id.compare("root") == 0)
+    std::string drive_id = GetDriveId(path);
+
+    if (id.compare("root") == 0 || id.compare(drive_id) == 0)
         return 0;
 
     int ret = Delete(path);
@@ -576,10 +601,13 @@ int GDriveClient::Rmdir(const std::string &path, bool recursive)
 int GDriveClient::Delete(const std::string &path)
 {
     std::string id = GetValue(path_id_map, path);
+    std::string drive_id = GetDriveId(path);
     if (strcmp(id.c_str(), "root") == 0)
         return 0;
 
     std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id);
+    if (!drive_id.empty())
+        url += "?supportsAllDrives=true";
     if (auto res = client->Delete(url))
     {
         if (HTTP_SUCCESS(res->status))
@@ -663,7 +691,7 @@ std::vector<DirEntry> GDriveClient::ListDir(const std::string &path)
                         sprintf(entry.name, "%s", name);
                         sprintf(entry.path, "/%s", name);
                         shared_drive_map.insert(std::make_pair(entry.path, id));
-                        path_id_map.insert(std::make_pair(entry.path, "root"));
+                        path_id_map.insert(std::make_pair(entry.path, id));
                         out.push_back(entry);
                     }
                 }
