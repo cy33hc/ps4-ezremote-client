@@ -144,6 +144,14 @@ int GDriveClient::RequestAuthorization()
     return 1;
 }
 
+std::string GDriveClient::GetDriveId(const std::string path)
+{
+    size_t slash_pos = path.find("/", 1);
+    std::string root_path = path.substr(0, slash_pos);
+    std::string id = GetValue(shared_drive_map, root_path);
+    return id;
+}
+
 GDriveClient::GDriveClient()
 {
     client = nullptr;
@@ -191,7 +199,8 @@ int GDriveClient::Connect(const std::string &url, const std::string &user, const
                     json_object *drive = (json_object *)array_list_get_idx(adrives, idx);
                     const char *id = json_object_get_string(json_object_object_get(drive, "id"));
                     const char *name = json_object_get_string(json_object_object_get(drive, "name"));
-                    path_id_map.insert(std::make_pair("/" + std::string(name), id));
+                    shared_drive_map.insert(std::make_pair("/" + std::string(name), id));
+                    path_id_map.insert(std::make_pair("/" + std::string(name), "root"));
                 }
             }
         }
@@ -202,12 +211,16 @@ int GDriveClient::Connect(const std::string &url, const std::string &user, const
 
 int GDriveClient::Rename(const std::string &src, const std::string &dst)
 {
-    if (src.find("/" + shared_with_me) != std::string::npos || dst.find("/" + shared_with_me) != std::string::npos ||
-        src.find("/" + my_drive) != std::string::npos || dst.find("/" + my_drive) != std::string::npos)
+    if (src.find("/" + shared_with_me) != std::string::npos || dst.find("/" + shared_with_me) != std::string::npos)
         return 0;
 
-    std::string id = GetValue(path_id_map, src);
-    std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id);
+    std::string src_id = GetValue(path_id_map, src);
+    std::string dst_id = GetValue(path_id_map, dst);
+
+    if (src_id.compare("root") == 0 || dst_id.compare("root") == 0)
+        return 0;
+
+    std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(src_id);
     std::string filename = dst.substr(dst.find_last_of("/") + 1);
     std::string body = "{'name' : '" + filename + "'}";
     if (auto res = client->Patch(url, body.c_str(), body.length(), "application/json; charset=UTF-8"))
@@ -216,7 +229,7 @@ int GDriveClient::Rename(const std::string &src, const std::string &dst)
         if (HTTP_SUCCESS(res->status))
         {
             path_id_map.erase(src);
-            path_id_map.insert(std::make_pair(dst, id));
+            path_id_map.insert(std::make_pair(dst, src_id));
         }
         else
             return 0;
@@ -374,7 +387,7 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
 
 int GDriveClient::Put(const std::string &inputfile, const std::string &path, uint64_t offset)
 {
-    if (path.find("/" + shared_with_me) != std::string::npos || path.find("/" + my_drive) != std::string::npos)
+    if (path.find("/" + shared_with_me) != std::string::npos || path.compare("/") == 0)
         return 0;
 
     if (FileExists(path))
@@ -477,7 +490,7 @@ int GDriveClient::Size(const std::string &path, int64_t *size)
 
 int GDriveClient::Mkdir(const std::string &path)
 {
-    if (path.find("/" + shared_with_me) != std::string::npos || path.find("/" + my_drive) != std::string::npos)
+    if (path.find("/" + shared_with_me) != std::string::npos || path.find_last_of("/") == 0)
         return 0;
 
     // if path already exists return;
@@ -493,6 +506,7 @@ int GDriveClient::Mkdir(const std::string &path)
 
     std::string folder_name = path.substr(path_pos + 1);
     std::string parent_id = GetValue(path_id_map, parent_dir);
+    std::string drive_id = GetDriveId(path);
 
     // if parent dir does not exists, create it first
     if (parent_id.length() == 0 || parent_id.empty())
@@ -502,8 +516,11 @@ int GDriveClient::Mkdir(const std::string &path)
     }
 
     std::string url = std::string("/drive/v3/files?fields=id");
+    if (!drive_id.empty())
+        url += "&supportsAllDrives=true";
     std::string folder_metadata = "{'name' : '" + folder_name + "'," +
                                   "'parents' : ['" + parent_id + "']," +
+                                  (drive_id.empty() ? "" : "'driveId' : '" + drive_id + "',") + 
                                   "'mimeType' : 'application/vnd.google-apps.folder'}";
 
     if (auto res = client->Post(url, folder_metadata.c_str(), folder_metadata.length(), "application/json; charset=UTF-8"))
@@ -532,7 +549,11 @@ int GDriveClient::Mkdir(const std::string &path)
  */
 int GDriveClient::Rmdir(const std::string &path, bool recursive)
 {
-    if (path.find("/" + shared_with_me) != std::string::npos || path.find("/" + my_drive) != std::string::npos)
+    if (path.find("/" + shared_with_me) != std::string::npos)
+        return 0;
+
+    std::string id = GetValue(path_id_map, path);
+    if (id.compare("root") == 0)
         return 0;
 
     int ret = Delete(path);
@@ -641,7 +662,8 @@ std::vector<DirEntry> GDriveClient::ListDir(const std::string &path)
                         const char *name = json_object_get_string(json_object_object_get(drive, "name"));
                         sprintf(entry.name, "%s", name);
                         sprintf(entry.path, "/%s", name);
-                        path_id_map.insert(std::make_pair(entry.path, id));
+                        shared_drive_map.insert(std::make_pair(entry.path, id));
+                        path_id_map.insert(std::make_pair(entry.path, "root"));
                         out.push_back(entry);
                     }
                 }
@@ -663,8 +685,15 @@ std::vector<DirEntry> GDriveClient::ListDir(const std::string &path)
             return out;
         }
     }
+
+    std::string drive_id = GetDriveId(path);
     std::string base_url = std::string("/drive/v3/files?q=") + BaseClient::EncodeUrl("\"" + id + "\" in parents") +
                            "&pageSize=1000&fields=" + BaseClient::EncodeUrl("files(id,mimeType,name,modifiedTime,size),nextPageToken");
+    if (!drive_id.empty())
+    {
+        base_url += "&driveId=" + drive_id + "&corpora=drive&includeItemsFromAllDrives=true&supportsAllDrives=true";
+    }
+
     bool find_no_parent = false;
     if (id.compare(shared_with_me) == 0)
     {

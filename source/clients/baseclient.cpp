@@ -176,6 +176,8 @@ std::string BaseClient::GetPath(std::string ppath1, std::string ppath2)
     path1 = Util::Trim(Util::Trim(path1, " "), "/");
     path2 = Util::Trim(Util::Trim(path2, " "), "/");
     path1 = this->base_path + ((this->base_path.length() > 0) ? "/" : "") + path1 + "/" + path2;
+    if (path1[0] != '/')
+        path1 = "/" + path1;
     return path1;
 }
 
