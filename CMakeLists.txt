@@ -52,6 +52,7 @@ add_executable(ezremote_client
   source/main.cpp
   source/orbis_jbc.c
   source/system.cpp
+  source/textures.cpp
   source/windows.cpp
   source/zip_util.cpp
 )
@@ -64,9 +65,12 @@ target_link_libraries(ezremote_client
   c
   c++
   png
+  webp
+  jpeg
   z
   pthread
   SDL2
+  SDL2_image
   samplerate
   jbc
   crypto

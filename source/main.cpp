@@ -11,7 +11,7 @@
 #include <orbis/Pad.h>
 #include <orbis/AudioOut.h>
 #include <orbis/Net.h>
-// #include <dbglogger.h>
+#include <dbglogger.h>
 
 #include "imgui.h"
 #include "SDL2/SDL.h"
@@ -25,6 +25,8 @@
 #include "util.h"
 #include "installer.h"
 #include "system.h"
+#include "textures.h"
+// #include "dbglogger.h"
 
 extern "C"
 {
@@ -308,6 +310,7 @@ int main()
 	if (renderer == NULL)
 		return 0;
 
+	Textures::Init(renderer);
 	InitImgui();
 
 	// Setup Platform/Renderer backends
@@ -328,6 +331,7 @@ int main()
 	GUI::RenderLoop(renderer);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
+	Textures::Exit();
 
 	ImGui::DestroyContext();
 

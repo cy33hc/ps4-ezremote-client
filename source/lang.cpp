@@ -155,6 +155,7 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Show hidden files",																		// STR_SHOW_HIDDEN_FILES
 	"Set Default Folder",																		// STR_SET_DEFAULT_DIRECTORY
 	"has being set as default direcotry",														// STR_SET_DEFAULT_DIRECTORY_MSG
+	"View Image",																				// STR_VIEW_IMAGE
 };
 
 bool needs_extended_font = false;

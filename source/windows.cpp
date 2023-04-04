@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <algorithm>
 #include <set>
+#include "clients/gdrive.h"
+#include "server/http_server.h"
 #include "imgui.h"
 #include "windows.h"
 #include "fs.h"
@@ -14,8 +16,10 @@
 #include "ime_dialog.h"
 #include "IconsFontAwesome6.h"
 #include "OpenFontIcons.h"
-#include "server/http_server.h"
-#include "clients/gdrive.h"
+#include "textures.h"
+
+#define MAX_IMAGE_HEIGHT 980
+#define MAX_IMAGE_WIDTH 1820
 
 extern "C"
 {
@@ -79,6 +83,10 @@ bool editor_modified = false;
 char edit_file[256];
 int edit_line_to_select = -1;
 std::string copy_text;
+
+// Images varaibles
+bool view_image;
+Tex texture;
 
 // Overwrite dialog variables
 bool dont_prompt_overwrite = false;
@@ -567,10 +575,24 @@ namespace Windows
             }
             if (ImGui::Selectable(item.name, false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(919, 0)))
             {
+                selected_local_file = item;
                 if (item.isDir)
                 {
-                    selected_local_file = item;
                     selected_action = ACTION_CHANGE_LOCAL_DIRECTORY;
+                }
+                else
+                {
+                    std::string filename = Util::ToLower(selected_local_file.name);
+                    size_t dot_pos = filename.find_last_of(".");
+                    if (dot_pos != std::string::npos)
+                    {
+                        std::string ext = filename.substr(dot_pos);
+                        if (ext.compare(".bmp") == 0 || ext.compare(".jpg") == 0 || ext.compare(".png") == 0 ||
+                            ext.compare(".jpeg") == 0 || ext.compare(".webp") == 0)
+                        {
+                            selected_action = ACTION_VIEW_IMAGE;
+                        }
+                    }
                 }
             }
             ImGui::PopID();
@@ -1659,6 +1681,58 @@ namespace Windows
         }
     }
 
+    void ShowImageDialog()
+    {
+        if (view_image)
+        {
+            ImGuiIO &io = ImGui::GetIO();
+            (void)io;
+            ImGuiStyle *style = &ImGui::GetStyle();
+            ImVec4 *colors = style->Colors;
+
+            ImVec2 image_size;
+            ImVec2 image_pos;
+            ImVec2 view_size;
+            image_size.x = texture.width;
+            image_size.y = texture.height;
+            if (texture.width > MAX_IMAGE_WIDTH || texture.height > MAX_IMAGE_HEIGHT)
+            {
+                if (texture.width > texture.height)
+                {
+                    image_size.x = MAX_IMAGE_WIDTH;
+                    image_size.y = (texture.height * 1.0f / texture.width * 1.0f) * MAX_IMAGE_WIDTH;
+                }
+                else
+                {
+                    image_size.y = MAX_IMAGE_HEIGHT;
+                    image_size.x = (texture.width * 1.0f / texture.height * 1.0f) * MAX_IMAGE_HEIGHT;
+                }
+            }
+            view_size.x = image_size.x + 50;
+            view_size.y = image_size.y + 50;
+            image_pos.x = (1920 - view_size.x) / 2;
+            image_pos.y = (1080 - view_size.y) / 2;
+
+            SetModalMode(true);
+            ImGui::OpenPopup(lang_strings[STR_VIEW_IMAGE]);
+
+            ImGui::SetNextWindowPos(image_pos);
+            ImGui::SetNextWindowSizeConstraints(image_size, view_size, NULL, NULL);
+            if (ImGui::BeginPopupModal(lang_strings[STR_VIEW_IMAGE], NULL, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysAutoResize))
+            {
+                ImGui::Image(texture.id, image_size);
+                if (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false))
+                {
+                    view_image = false;
+                    SetModalMode(false);
+                    Textures::Free(&texture);
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+        }
+    }
+
     void MainWindow()
     {
         Windows::SetupWindow();
@@ -1678,6 +1752,7 @@ namespace Windows
             ShowFavoriteUrlsDialog();
             ShowEditorDialog();
             ShowSettingsDialog();
+            ShowImageDialog();
         }
         ImGui::End();
     }
@@ -1945,6 +2020,13 @@ namespace Windows
             sprintf(remote_settings->default_directory, "%s", remote_directory);
             CONFIG::SaveConfig();
             sprintf(status_message, "\"%s\" %s", remote_directory, lang_strings[STR_SET_DEFAULT_DIRECTORY_MSG]);
+            selected_action = ACTION_NONE;
+            break;
+        case ACTION_VIEW_IMAGE:
+            if (Textures::LoadImageFile(selected_local_file.path, &texture))
+            {
+                view_image = true;
+            }
             selected_action = ACTION_NONE;
             break;
         default:
