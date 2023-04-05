@@ -52,6 +52,7 @@ add_executable(ezremote_client
   source/main.cpp
   source/orbis_jbc.c
   source/system.cpp
+  source/sfo.cpp
   source/textures.cpp
   source/windows.cpp
   source/zip_util.cpp

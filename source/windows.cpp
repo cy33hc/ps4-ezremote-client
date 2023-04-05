@@ -587,10 +587,13 @@ namespace Windows
                     if (dot_pos != std::string::npos)
                     {
                         std::string ext = filename.substr(dot_pos);
-                        if (ext.compare(".bmp") == 0 || ext.compare(".jpg") == 0 || ext.compare(".png") == 0 ||
-                            ext.compare(".jpeg") == 0 || ext.compare(".webp") == 0)
+                        if (image_file_extensions.find(ext) != image_file_extensions.end())
                         {
-                            selected_action = ACTION_VIEW_IMAGE;
+                            selected_action = ACTION_VIEW_LOCAL_IMAGE;
+                        }
+                        else if (ext.compare(".pkg") == 0)
+                        {
+                            INSTALLER::ExtractLocalPkg(selected_local_file.path, nullptr, TMP_SFO_PATH, TMP_ICON_PATH);
                         }
                     }
                 }
@@ -734,10 +737,23 @@ namespace Windows
             ImGui::PushID(i);
             if (ImGui::Selectable(item.name, false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(919, 0)))
             {
+                selected_remote_file = item;
                 if (item.isDir)
                 {
-                    selected_remote_file = item;
                     selected_action = ACTION_CHANGE_REMOTE_DIRECTORY;
+                }
+                else
+                {
+                    std::string filename = Util::ToLower(selected_remote_file.name);
+                    size_t dot_pos = filename.find_last_of(".");
+                    if (dot_pos != std::string::npos)
+                    {
+                        std::string ext = filename.substr(dot_pos);
+                        if (image_file_extensions.find(ext) != image_file_extensions.end())
+                        {
+                            selected_action = ACTION_VIEW_REMOTE_IMAGE;
+                        }
+                    }
                 }
             }
             if (ImGui::IsItemFocused())
@@ -2022,8 +2038,16 @@ namespace Windows
             sprintf(status_message, "\"%s\" %s", remote_directory, lang_strings[STR_SET_DEFAULT_DIRECTORY_MSG]);
             selected_action = ACTION_NONE;
             break;
-        case ACTION_VIEW_IMAGE:
+        case ACTION_VIEW_LOCAL_IMAGE:
             if (Textures::LoadImageFile(selected_local_file.path, &texture))
+            {
+                view_image = true;
+            }
+            selected_action = ACTION_NONE;
+            break;
+        case ACTION_VIEW_REMOTE_IMAGE:
+            remoteclient->Get(TMP_ICON_PATH, selected_remote_file.path);
+            if (Textures::LoadImageFile(TMP_ICON_PATH, &texture))
             {
                 view_image = true;
             }

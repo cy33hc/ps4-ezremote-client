@@ -116,7 +116,7 @@ namespace INSTALLER
 				path = uri.quote(curl);
 				curl_easy_cleanup(curl);
 			}
-			
+
 			return host + path;
 		}
 		else
@@ -265,7 +265,8 @@ namespace INSTALLER
 				goto retry;
 			}
 		}
-		else if (ret > 0) goto err;
+		else if (ret > 0)
+			goto err;
 
 		ret = sceBgftServiceDownloadStartTask(task_id);
 		if (ret)
@@ -346,7 +347,8 @@ namespace INSTALLER
 					FS::Rm(filename);
 			}
 		}
-		else if (ret > 0) goto err;
+		else if (ret > 0)
+			goto err;
 
 		ret = sceBgftServiceDownloadStartTask(task_id);
 		if (ret)
@@ -379,5 +381,81 @@ namespace INSTALLER
 
 	err:
 		return 0;
+	}
+
+	bool ExtractLocalPkg(const std::string &filename, pkg_header *pkg_hdr, const std::string sfo_path, const std::string icon_path)
+	{
+		pkg_header tmp_hdr;
+		pkg_header *p_hdr = pkg_hdr;
+		if (p_hdr == nullptr)
+		{
+			FS::Head(filename, &tmp_hdr, sizeof(pkg_header));
+			p_hdr = &tmp_hdr;
+		}
+
+		size_t entry_count = BE32(p_hdr->pkg_entry_count);
+		uint32_t entry_table_offset = BE32(p_hdr->pkg_table_offset);
+		uint64_t entry_table_size = entry_count * sizeof(pkg_table_entry);
+		void *entry_table_data = malloc(entry_table_size);
+
+		FILE *fd = FS::OpenRead(filename);
+		FS::Seek(fd, entry_table_offset);
+		FS::Read(fd, entry_table_data, entry_table_size);
+
+		pkg_table_entry *entries = (pkg_table_entry *)entry_table_data;
+		void* param_sfo_data = NULL;
+		uint32_t param_sfo_offset = 0;
+		uint32_t param_sfo_size = 0;
+		void *icon0_png_data = NULL;
+		uint32_t icon0_png_offset = 0;
+		uint32_t icon0_png_size = 0;
+		short items = 0;
+		for (size_t i = 0; i < entry_count; ++i)
+		{
+			switch (BE32(entries[i].id))
+			{
+			case PKG_ENTRY_ID__PARAM_SFO:
+				param_sfo_offset = BE32(entries[i].offset);
+				param_sfo_size = BE32(entries[i].size);
+				items++;
+				break;
+			case PKG_ENTRY_ID__ICON0_PNG:
+				icon0_png_offset = BE32(entries[i].offset);
+				icon0_png_size = BE32(entries[i].size);
+				items++;
+				break;
+			default:
+				continue;
+			}
+
+			if (items == 2)
+				break;
+		}
+		free(entry_table_data);
+
+		if (param_sfo_offset > 0 && param_sfo_size > 0)
+		{
+			param_sfo_data = malloc(param_sfo_size);
+			FILE *out = FS::Create(sfo_path);
+			FS::Seek(fd, param_sfo_offset);
+			FS::Read(fd, param_sfo_data, param_sfo_size);
+			FS::Write(out, param_sfo_data, param_sfo_size);
+			FS::Close(out);
+			free(param_sfo_data);
+		}
+
+		if (icon0_png_offset > 0 && icon0_png_size > 0)
+		{
+			icon0_png_data = malloc(icon0_png_size);
+			FILE *out = FS::Create(icon_path);
+			FS::Seek(fd, icon0_png_offset);
+			FS::Read(fd, icon0_png_data, icon0_png_size);
+			FS::Write(out, icon0_png_data, icon0_png_size);
+			FS::Close(out);
+			free(icon0_png_data);
+		}
+
+		FS::Close(fd);
+		return true;
 	}
 }

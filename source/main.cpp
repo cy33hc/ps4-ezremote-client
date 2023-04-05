@@ -11,7 +11,7 @@
 #include <orbis/Pad.h>
 #include <orbis/AudioOut.h>
 #include <orbis/Net.h>
-#include <dbglogger.h>
+// #include <dbglogger.h>
 
 #include "imgui.h"
 #include "SDL2/SDL.h"
@@ -26,7 +26,6 @@
 #include "installer.h"
 #include "system.h"
 #include "textures.h"
-// #include "dbglogger.h"
 
 extern "C"
 {

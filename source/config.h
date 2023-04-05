@@ -6,6 +6,7 @@
 #include <string>
 #include <algorithm>
 #include <map>
+#include <set>
 
 #include "clients/remote_client.h"
 
@@ -14,6 +15,8 @@
 #define CONFIG_INI_FILE DATA_PATH "/config.ini"
 #define COOKIE_FILE DATA_PATH "/cookies.txt"
 #define TMP_EDITOR_FILE DATA_PATH "/tmp_editor.txt"
+#define TMP_SFO_PATH DATA_PATH "/tmp_pkg.sfo"
+#define TMP_ICON_PATH DATA_PATH "/tmp_icon.png"
 
 #define CONFIG_GLOBAL "Global"
 
@@ -110,6 +113,8 @@ struct PackageUrlInfo
 
 extern std::vector<std::string> sites;
 extern std::vector<std::string> http_servers;
+extern std::set<std::string> text_file_extensions;
+extern std::set<std::string> image_file_extensions;
 extern std::map<std::string, RemoteSettings> site_settings;
 extern char local_directory[255];
 extern char remote_directory[255];
