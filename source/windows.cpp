@@ -1196,6 +1196,13 @@ namespace Windows
             {
                 ImGui::SetItemDefaultFocus();
             }
+
+            if (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false))
+            {
+                SetModalMode(false);
+                ImGui::CloseCurrentPopup();
+            }
+
             ImGui::EndPopup();
         }
 
@@ -1597,6 +1604,7 @@ namespace Windows
                 ImGui::Separator();
                 ImGui::Text("L1 - %s        R1 - %s        %s - %s        %s - %s", lang_strings[STR_DELETE_LINE], lang_strings[STR_INSERT_LINE],
                             ICON_OF_SQUARE, lang_strings[STR_COPY_LINE], ICON_OF_TRIANGLE, lang_strings[STR_PASTE_LINE]);
+
                 ImGui::EndPopup();
             }
         }
@@ -1690,6 +1698,15 @@ namespace Windows
                     ImGui::SetItemDefaultFocus();
                 }
                 ImGui::SameLine();
+
+                if (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false))
+                {
+                    show_settings = false;
+                    CONFIG::SaveGlobalConfig();
+                    SetModalMode(false);
+                    ImGui::CloseCurrentPopup();
+                }
+
                 ImGui::EndPopup();
             }
         }
