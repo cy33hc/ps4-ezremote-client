@@ -302,6 +302,29 @@ int SFTPClient::Get(const std::string &outputfile, const std::string &path, uint
     return 1;
 }
 
+int SFTPClient::GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset)
+{
+    int64_t filesize;
+    if (!Size(path.c_str(), &filesize))
+    {
+        return 0;
+    }
+
+    LIBSSH2_SFTP_HANDLE *sftp_handle = libssh2_sftp_open(sftp_session, path.c_str(), LIBSSH2_FXF_READ, 0);
+    if (!sftp_handle)
+    {
+        return 0;
+    }
+
+    libssh2_sftp_seek64(sftp_handle, offset);
+    int count = libssh2_sftp_read(sftp_handle, (char *)buffer, size);
+    libssh2_sftp_close(sftp_handle);
+    if (count != size)
+        return 0;
+
+    return 1;
+}
+
 int SFTPClient::Put(const std::string &inputfile, const std::string &path, uint64_t offset)
 {
     char *ptr, *buff;

@@ -131,22 +131,18 @@ namespace FS
 
     std::vector<char> Load(const std::string &path)
     {
-        FILE *fd = fopen(path.c_str(), "r");
+        FILE *fd = fopen(path.c_str(), "rb");
         if (fd == nullptr)
             return std::vector<char>(0);
-
-        const auto size = fseek(fd, 0, SEEK_END);
-        fseek(fd, 0, SEEK_SET);
-
+        const auto size = GetSize(path);
         std::vector<char> data(size);
 
-        const auto read = fread(data.data(), data.size(), 1, fd);
+        const auto read = fread(data.data(), 1, data.size(), fd);
         fclose(fd);
         if (read < 0)
             return std::vector<char>(0);
 
         data.resize(read);
-
         return data;
     }
 

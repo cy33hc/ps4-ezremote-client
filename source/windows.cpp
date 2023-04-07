@@ -17,6 +17,7 @@
 #include "IconsFontAwesome6.h"
 #include "OpenFontIcons.h"
 #include "textures.h"
+#include "sfo.h"
 
 #define MAX_IMAGE_HEIGHT 980
 #define MAX_IMAGE_WIDTH 1820
@@ -85,8 +86,11 @@ int edit_line_to_select = -1;
 std::string copy_text;
 
 // Images varaibles
-bool view_image;
+bool view_image= false;
 Tex texture;
+
+bool show_pkg_info = false;
+std::map<std::string, std::string> sfo_params;
 
 // Overwrite dialog variables
 bool dont_prompt_overwrite = false;
@@ -591,9 +595,13 @@ namespace Windows
                         {
                             selected_action = ACTION_VIEW_LOCAL_IMAGE;
                         }
+                        else if (text_file_extensions.find(ext) != text_file_extensions.end())
+                        {
+                            selected_action = ACTION_LOCAL_EDIT;
+                        }
                         else if (ext.compare(".pkg") == 0)
                         {
-                            INSTALLER::ExtractLocalPkg(selected_local_file.path, nullptr, TMP_SFO_PATH, TMP_ICON_PATH);
+                            selected_action = ACTION_VIEW_LOCAL_PKG;
                         }
                     }
                 }
@@ -752,6 +760,14 @@ namespace Windows
                         if (image_file_extensions.find(ext) != image_file_extensions.end())
                         {
                             selected_action = ACTION_VIEW_REMOTE_IMAGE;
+                        }
+                        else if (text_file_extensions.find(ext) != text_file_extensions.end())
+                        {
+                            selected_action = ACTION_REMOTE_EDIT;
+                        }
+                        else if (ext.compare(".pkg") == 0)
+                        {
+                            selected_action = ACTION_VIEW_REMOTE_PKG;
                         }
                     }
                 }
@@ -1037,32 +1053,14 @@ namespace Windows
             }
             if (ImGui::Selectable(lang_strings[STR_EDIT], false, flags | ImGuiSelectableFlags_DontClosePopups, ImVec2(220, 0)))
             {
-                bool can_edit = true;
                 if (local_browser_selected)
                 {
-                    if (selected_local_file.file_size > max_edit_file_size)
-                        can_edit = false;
-                    else
-                    {
-                        snprintf(edit_file, 255, "%s", selected_local_file.path);
-                        FS::LoadText(&edit_buffer, selected_local_file.path);
-                    }
+                    selected_action = ACTION_LOCAL_EDIT;
                 }
                 else
                 {
-                    if (selected_remote_file.file_size > max_edit_file_size)
-                        can_edit = false;
-                    else if (remoteclient != nullptr && remoteclient->Get(TMP_EDITOR_FILE, selected_remote_file.path))
-                    {
-                        snprintf(edit_file, 255, "%s", selected_remote_file.path);
-                        FS::LoadText(&edit_buffer, TMP_EDITOR_FILE);
-                    }
+                    selected_action = ACTION_REMOTE_EDIT;
                 }
-                if (can_edit)
-                    editor_inprogress = true;
-                else
-                    sprintf(status_message, "%s %d", lang_strings[STR_MAX_EDIT_FILE_SIZE_MSG], max_edit_file_size);
-                editor_modified = false;
                 SetModalMode(false);
                 ImGui::CloseCurrentPopup();
             }
@@ -1734,12 +1732,75 @@ namespace Windows
 
             ImGui::SetNextWindowPos(image_pos);
             ImGui::SetNextWindowSizeConstraints(image_size, view_size, NULL, NULL);
-            if (ImGui::BeginPopupModal(lang_strings[STR_VIEW_IMAGE], NULL, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysAutoResize))
+            if (ImGui::BeginPopupModal(lang_strings[STR_VIEW_IMAGE], NULL, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysAutoResize))
             {
                 ImGui::Image(texture.id, image_size);
                 if (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false))
                 {
                     view_image = false;
+                    SetModalMode(false);
+                    Textures::Free(&texture);
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+        }
+    }
+
+    void ShowPackageInfoDialog()
+    {
+        if (!paused)
+            saved_selected_browser = selected_browser;
+        if (show_pkg_info)
+        {
+            ImGuiIO &io = ImGui::GetIO();
+            (void)io;
+            ImGuiStyle *style = &ImGui::GetStyle();
+            ImVec4 *colors = style->Colors;
+
+            SetModalMode(true);
+            ImGui::OpenPopup(lang_strings[STR_VIEW_PKG_INFO]);
+
+            ImGui::SetNextWindowPos(ImVec2(360, 240));
+            ImGui::SetNextWindowSizeConstraints(ImVec2(1200, 300), ImVec2(1200, 600), NULL, NULL);
+            if (ImGui::BeginPopupModal(lang_strings[STR_VIEW_PKG_INFO], NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize))
+            {
+                ImGui::Image(texture.id, ImVec2(400, 400));
+                ImGui::SameLine();
+
+                BeginGroupPanel("SFO Attributes", ImVec2(780, 600));
+                ImGui::PushTextWrapPos(1180);
+                for (std::map<std::string, std::string>::iterator it = sfo_params.begin(); it != sfo_params.end(); ++it)
+                {
+                    if (!it->second.empty())
+                    {
+                        ImGui::TextColored(colors[ImGuiCol_ButtonHovered],"%s:", it->first.c_str());
+                        ImGui::SameLine();
+                        ImGui::Text("%s", it->second.c_str());
+                    }
+                }
+                ImGui::PopTextWrapPos();
+                EndGroupPanel();
+
+                if (saved_selected_browser & REMOTE_BROWSER ||
+                    (saved_selected_browser & LOCAL_BROWSER && (strncmp(selected_local_file.path, "/data/", 6) == 0 || strncmp(selected_local_file.path, "/mnt/usb", 8) == 0)))
+                {
+                    ImGui::SetCursorPos(ImVec2(7, 420));
+                    if (ImGui::Button(lang_strings[STR_INSTALL], ImVec2(400, 0)))
+                    {
+                        if (saved_selected_browser & REMOTE_BROWSER)
+                            selected_action = ACTION_INSTALL_REMOTE_PKG;
+                        else
+                            selected_action = ACTION_INSTALL_LOCAL_PKG;
+                        show_pkg_info = false;
+                        SetModalMode(false);
+                        ImGui::CloseCurrentPopup();
+                    }
+                }
+
+                if (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false))
+                {
+                    show_pkg_info = false;
                     SetModalMode(false);
                     Textures::Free(&texture);
                     ImGui::CloseCurrentPopup();
@@ -1769,12 +1830,14 @@ namespace Windows
             ShowEditorDialog();
             ShowSettingsDialog();
             ShowImageDialog();
+            ShowPackageInfoDialog();
         }
         ImGui::End();
     }
 
     void ExecuteActions()
     {
+        std::vector<char> sfo;
         switch (selected_action)
         {
         case ACTION_CHANGE_LOCAL_DIRECTORY:
@@ -2050,6 +2113,48 @@ namespace Windows
             if (Textures::LoadImageFile(TMP_ICON_PATH, &texture))
             {
                 view_image = true;
+            }
+            selected_action = ACTION_NONE;
+            break;
+        case ACTION_LOCAL_EDIT:
+            if (selected_local_file.file_size > max_edit_file_size)
+                sprintf(status_message, "%s %d", lang_strings[STR_MAX_EDIT_FILE_SIZE_MSG], max_edit_file_size);
+            else
+            {
+                snprintf(edit_file, 255, "%s", selected_local_file.path);
+                FS::LoadText(&edit_buffer, selected_local_file.path);
+                editor_inprogress = true;
+            }
+            editor_modified = false;
+            selected_action = ACTION_NONE;
+            break;
+        case ACTION_REMOTE_EDIT:
+            if (selected_remote_file.file_size > max_edit_file_size)
+                sprintf(status_message, "%s %d", lang_strings[STR_MAX_EDIT_FILE_SIZE_MSG], max_edit_file_size);
+            else if (remoteclient != nullptr && remoteclient->Get(TMP_EDITOR_FILE, selected_remote_file.path))
+            {
+                snprintf(edit_file, 255, "%s", selected_remote_file.path);
+                FS::LoadText(&edit_buffer, TMP_EDITOR_FILE);
+                editor_inprogress = true;
+            }
+            editor_modified = false;
+            selected_action = ACTION_NONE;
+            break;
+        case ACTION_VIEW_LOCAL_PKG:
+            INSTALLER::ExtractLocalPkg(selected_local_file.path, TMP_SFO_PATH, TMP_ICON_PATH);
+            Textures::LoadImageFile(TMP_ICON_PATH, &texture);
+            sfo = FS::Load(TMP_SFO_PATH);
+            sfo_params = SFO::GetParams(sfo.data(), sfo.size());
+            show_pkg_info = true;
+            selected_action = ACTION_NONE;
+            break;
+        case ACTION_VIEW_REMOTE_PKG:
+            if (INSTALLER::ExtractRemotePkg(selected_remote_file.path, TMP_SFO_PATH, TMP_ICON_PATH))
+            {
+                Textures::LoadImageFile(TMP_ICON_PATH, &texture);
+                sfo = FS::Load(TMP_SFO_PATH);
+                sfo_params = SFO::GetParams(sfo.data(), sfo.size());
+                show_pkg_info = true;
             }
             selected_action = ACTION_NONE;
             break;

@@ -16,7 +16,6 @@
 #include "util.h"
 #include "windows.h"
 
-
 #define FTP_CLIENT_BUFSIZ 1048576
 #define ACCEPT_TIMEOUT 30
 
@@ -1265,6 +1264,40 @@ int FtpClient::Get(const std::string &outputfile, const std::string &path, uint6
 		return FtpXfer(outputfile, path, mp_ftphandle, FtpClient::fileread, FtpClient::transfermode::image);
 	else
 		return FtpXfer(outputfile, path, mp_ftphandle, FtpClient::filereadappend, FtpClient::transfermode::image);
+}
+
+int FtpClient::GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset)
+{
+	ftphandle *nData;
+	mp_ftphandle->offset = offset;
+	if (!FtpAccess(path, FtpClient::fileread, FtpClient::transfermode::image, mp_ftphandle, &nData))
+	{
+		return 0;
+	}
+
+	char buf[8192];
+	int l = 0;
+	uint64_t remaining = size;
+	char *p = (char*) buffer;
+	while ((l = FtpRead(buf, 8192, nData)) > 0)
+	{
+		if (l <= remaining)
+		{
+			memcpy(p, buf, l);
+			p += l;
+		}
+		else
+		{
+			memcpy(p, buf, remaining);
+			break;
+		}
+		remaining -= l;
+	}
+	FtpClose(nData);
+	mp_ftphandle->offset = 0;
+
+	return 1;
+
 }
 
 /*

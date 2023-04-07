@@ -144,7 +144,7 @@ namespace CONFIG
                  "Site 11", "Site 12", "Site 13", "Site 14", "Site 15", "Site 16", "Site 17", "Site 18", "Site 19", "Site 20"};
 
         http_servers = {HTTP_SERVER_APACHE, HTTP_SERVER_MS_IIS, HTTP_SERVER_NGINX, HTTP_SERVER_NPX_SERVE};
-        text_file_extensions = { ".txt", ".ini", ".json", ".xml", ".html", ".xhtml", ".conf" };
+        text_file_extensions = { ".txt", ".ini", ".log", ".json", ".xml", ".html", ".xhtml", ".conf", ".config" };
         image_file_extensions = { ".bmp", ".jpg", ".jpeg", ".png", ".webp" };
 
         OpenIniFile(CONFIG_INI_FILE);

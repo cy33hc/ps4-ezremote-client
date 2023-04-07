@@ -94,6 +94,35 @@ int BaseClient::Get(const std::string &outputfile, const std::string &path, uint
     return 0;
 }
 
+int BaseClient::GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset)
+{
+    char range_header[64];
+    sprintf(range_header, "bytes=%lu-%lu", offset, offset+size-1);
+    Headers headers = {{"Range", range_header}};
+    size_t bytes_read = 0;
+    std::vector<char> body;
+    if (auto res = client->Get(GetFullPath(path), headers,
+                               [&](const char *data, size_t data_length)
+                               {
+                                   body.insert(body.end(), data, data + data_length);
+                                   bytes_read += data_length;
+                                   if (bytes_read > size)
+                                       return false;
+                                   return true;
+                               }))
+    {
+        if (body.size() != size)
+            return 0;
+        memcpy(buffer, body.data(), size);
+        return 1;
+    }
+    else
+    {
+        sprintf(this->response, "%s", httplib::to_string(res.error()).c_str());
+    }
+    return 0;
+}
+
 int BaseClient::Put(const std::string &inputfile, const std::string &path, uint64_t offset)
 {
     sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);

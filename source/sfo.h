@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <string>
+#include <map>
 
 struct SfoHeader
 {
@@ -27,6 +28,7 @@ struct SfoEntry
 
 namespace SFO {
     const char* GetString(const char* buffer, size_t size, const char *name);
+    std::map<std::string, std::string> GetParams(const char* buffer, size_t size);
 }
 
 #endif
