@@ -74,7 +74,7 @@ Remote Package Installation only works if the WebDAV server allow anonymous acce
  - File management function include cut/copy/paste/rename/delete/new folder/file for files on PS4 local drive or usb or WebDAV Server.
  - Simple Text Editor to make simply changes to config text files. Limited to edit files over 32kb and limited to edit lines up to 1023 characters. If you try edit lines longer then 1023 characters, it will be truncated. For common text files with the following extensions (txt, log, ini, json, xml, html, conf, config) selecting them in the file browser with the X button will automatically open the Text Editor.
  - Ability to view jpg, png, bmp and webp image files. (Selecting files with X button will automatically view the file)
- - Ability to preview pkg files. In the file browser, select a pkg file with the X button, a preview of the package will now display. If pkg is in the /data or /mnt/usbX folder, user has the option to install the package from the preview dialog.
+ - Ability to preview pkg files. In the file browser, select a pkg file with the X button, a preview of the package will now display the icon and SFO attributes. If pkg is in the /data or /mnt/usbX folder, user has the option to install the package from the preview dialog.
 
 
 ## Installation
