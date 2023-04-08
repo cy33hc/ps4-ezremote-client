@@ -64,7 +64,7 @@ Remote Package Installation only works if the WebDAV server allow anonymous acce
  - Transfer files back and forth between PS4 and FTP/SMB/WebDAV server
  - Support for connecting to Http Servers like (Apache/Nginx,Microsoft IIS, Serve) with html directory listings to download or install pkg. 
  - Install Remote Packages from connected WebDAV server
- - Ability to connect to your "Google Drive" to transfer files back and fort. Can also install packages from it. The app will download the file to the PS4's harddrive and then install it. You need to keep the app opened. Here is a link to the wiki for what you need to do to make it work. Also able to access files that are shared to you.
+ - Ability to connect to your "Google Drive" to transfer files back and fort. Can also install packages from it. The app will download the file to the PS4's harddrive and then install it. You need to keep the app opened. Here is a link to the wiki for what you need to do to make it work. Also able to access files that are shared to you. As of v1.06, Google Shared Drives from Google workspace is supported.
  - Install Remote Packages for FTP/SMB if HTTP server setup on same host sharing same folder as FTP/SMB
    - If Remote Package Install is not possible, optionally the user can choose to download package to PS4 local drive and install
  - Install packages from PS4 local drive **/data** folder or usb drive **/mnt/usbX**
@@ -72,7 +72,9 @@ Remote Package Installation only works if the WebDAV server allow anonymous acce
  - Create Zip files on PS4 local drive or usb drive
  - Extract from zip, 7zip and rar files
  - File management function include cut/copy/paste/rename/delete/new folder/file for files on PS4 local drive or usb or WebDAV Server.
- - Simple Text Editor to make simply changes to config text files. Limited to edit files over 32kb and limited to edit lines up to 1023 characters. If you try edit lines longer then 1023 characters, it will be truncated.
+ - Simple Text Editor to make simply changes to config text files. Limited to edit files over 32kb and limited to edit lines up to 1023 characters. If you try edit lines longer then 1023 characters, it will be truncated. For common text files with the following extensions (txt, log, ini, json, xml, html, conf, config) selecting them in the file browser with the X button will automatically open the Text Editor.
+ - Ability to view jpg, png, bmp and webp image files. (Selecting files with X button will automatically view the file)
+ - Ability to preview pkg files. In the file browser, select a pkg file with the X button, a preview of the package will now display. If pkg is in the /data or /mnt/usbX folder, user has the option to install the package from the preview dialog.
 
 
 ## Installation
@@ -82,11 +84,12 @@ Copy the **ezremote_client.pkg** in to a FAT32 format usb drive then install fro
 ```
 Triangle - Menu (after a file(s)/folder(s) is selected)
 Cross - Select Button/TextBox
-Circle - Un-Select the file list to navigate to other widgets
+Circle - Un-Select the file list to navigate to other widgets or Close Dialog window in most cases
 Square - Mark file(s)/folder(s) for Delete/Rename/Upload/Download
 R1 - Navigate to the Remote list of files
 L1 - Navigate to the Local list of files
-TouchPad Button - Exit Application
+TouchPad Button - Exit Application (versions prior to 1.06)
+Options Button - Exit Application (versions 1.06 and above)
 ```
 
 ## Multi Language Support
@@ -194,5 +197,3 @@ Finally build the app
    make
 ```
 
-## Credits
-The color theme was borrowed from NX-Shell on the switch.
