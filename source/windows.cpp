@@ -137,7 +137,7 @@ namespace Windows
         cur_down[SDL_CONTROLLER_BUTTON_X] = SDL_GameControllerGetButton(game_controller, SDL_CONTROLLER_BUTTON_X);
         cur_down[SDL_CONTROLLER_BUTTON_LEFTSHOULDER] = SDL_GameControllerGetButton(game_controller, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
         cur_down[SDL_CONTROLLER_BUTTON_RIGHTSHOULDER] = SDL_GameControllerGetButton(game_controller, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
-        cur_down[SDL_CONTROLLER_BUTTON_START] = SDL_GameControllerGetButton(game_controller, SDL_CONTROLLER_BUTTON_START);
+        cur_down[SDL_CONTROLLER_BUTTON_BACK] = SDL_GameControllerGetButton(game_controller, SDL_CONTROLLER_BUTTON_BACK);
 
         if (prev_down[SDL_CONTROLLER_BUTTON_X] && !cur_down[SDL_CONTROLLER_BUTTON_X] && !paused)
         {
@@ -177,7 +177,7 @@ namespace Windows
             set_focus_to_local = true;
         }
 
-        if (prev_down[SDL_CONTROLLER_BUTTON_START] && !cur_down[SDL_CONTROLLER_BUTTON_START] && !paused)
+        if (prev_down[SDL_CONTROLLER_BUTTON_BACK] && !cur_down[SDL_CONTROLLER_BUTTON_BACK] && !paused)
         {
             selected_action = ACTION_DISCONNECT_AND_EXIT;
         }
@@ -185,7 +185,7 @@ namespace Windows
         prev_down[SDL_CONTROLLER_BUTTON_X] = cur_down[SDL_CONTROLLER_BUTTON_X];
         prev_down[SDL_CONTROLLER_BUTTON_RIGHTSHOULDER] = cur_down[SDL_CONTROLLER_BUTTON_RIGHTSHOULDER];
         prev_down[SDL_CONTROLLER_BUTTON_LEFTSHOULDER] = cur_down[SDL_CONTROLLER_BUTTON_LEFTSHOULDER];
-        prev_down[SDL_CONTROLLER_BUTTON_START] = cur_down[SDL_CONTROLLER_BUTTON_START];
+        prev_down[SDL_CONTROLLER_BUTTON_BACK] = cur_down[SDL_CONTROLLER_BUTTON_BACK];
     }
 
     void SetModalMode(bool modal)
