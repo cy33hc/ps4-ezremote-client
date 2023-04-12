@@ -157,6 +157,9 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"has being set as default direcotry",														// STR_SET_DEFAULT_DIRECTORY_MSG
 	"View Image",																				// STR_VIEW_IMAGE
 	"Package Information",																		// STR_VIEW_PKG_INFO
+	"NFS export path missing in URL",															// STR_NFS_EXP_PATH_MISSING_MSG
+	"Failed to init NFS context",																// STR_FAIL_INIT_NFS_CONTEXT
+	"Failed to mount NFS share",																// STR_FAIL_MOUNT_NFS_MSG
 };
 
 bool needs_extended_font = false;

@@ -11,6 +11,7 @@
 #include "clients/apache.h"
 #include "clients/nginx.h"
 #include "clients/npxserve.h"
+#include "clients/nfsclient.h"
 #include "clients/iis.h"
 #include "clients/sftpclient.h"
 #include "common.h"
@@ -1145,6 +1146,10 @@ namespace Actions
         else if (strncmp(remote_settings->server, "sftp://", 7) == 0)
         {
             remoteclient = new SFTPClient();
+        }
+        else if (strncmp(remote_settings->server, "nfs://", 6) == 0)
+        {
+            remoteclient = new NfsClient();
         }
         else
         {

@@ -98,6 +98,10 @@ namespace CONFIG
         {
             setting->type = CLIENT_TYPE_HTTP_SERVER;
         }
+        else if (strncmp(setting->server, "nfs://", 6) == 0)
+        {
+            setting->type = CLIENT_TYPE_NFS;
+        }
         else
         {
             setting->type = CLINET_TYPE_UNKNOWN;

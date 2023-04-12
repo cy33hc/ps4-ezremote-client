@@ -35,6 +35,7 @@ add_executable(ezremote_client
   source/clients/iis.cpp
   source/clients/nginx.cpp
   source/clients/npxserve.cpp
+  source/clients/nfsclient.cpp
   source/clients/smbclient.cpp
   source/clients/webdavclient.cpp
   source/clients/sftpclient.cpp
@@ -60,9 +61,10 @@ add_executable(ezremote_client
 
 add_self(ezremote_client)
 
-add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.06" 32 0)
+add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.07" 32 0)
 
 target_link_libraries(ezremote_client
+  dbglogger
   c
   c++
   png
@@ -79,6 +81,7 @@ target_link_libraries(ezremote_client
   curl
   lexbor
   smb2
+  nfs
   minizip
   un7zip
   unrar

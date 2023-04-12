@@ -342,6 +342,8 @@ namespace Windows
             width = 500;
         else if (remote_settings->type == CLIENT_TYPE_GOOGLE)
             width = 600;
+        else if (remote_settings->type == CLIENT_TYPE_NFS)
+            width = 900;
         pos = ImGui::GetCursorPos();
         if (ImGui::Button(id, ImVec2(width, 0)))
         {
@@ -376,42 +378,48 @@ namespace Windows
             ImGui::SameLine();
         }
 
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
-        ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_USERNAME]);
-        ImGui::SameLine();
-
-        width = 180;
-        if (remote_settings->type == CLIENT_TYPE_GOOGLE)
-            width = 480;
-        sprintf(id, "%s##username", remote_settings->username);
-        pos = ImGui::GetCursorPos();
-        if (ImGui::Button(id, ImVec2(width, 0)))
-        {
-            ime_single_field = remote_settings->username;
-            ResetImeCallbacks();
-            ime_field_size = 32;
-            ime_callback = SingleValueImeCallback;
-            Dialog::initImeDialog(lang_strings[STR_USERNAME], remote_settings->username, 32, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
-            gui_mode = GUI_MODE_IME;
-        }
-        ImGui::SameLine();
-
-        if (remote_settings->type != CLIENT_TYPE_GOOGLE)
+        if (remote_settings->type != CLIENT_TYPE_NFS)
         {
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
-            ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_PASSWORD]);
+            ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_USERNAME]);
             ImGui::SameLine();
 
-            sprintf(id, "%s##password", hidden_password.c_str());
+            width = 180;
+            if (remote_settings->type == CLIENT_TYPE_GOOGLE)
+                width = 480;
+            sprintf(id, "%s##username", remote_settings->username);
             pos = ImGui::GetCursorPos();
-            if (ImGui::Button(id, ImVec2(100, 0)))
+            if (ImGui::Button(id, ImVec2(width, 0)))
             {
-                ime_single_field = remote_settings->password;
+                ime_single_field = remote_settings->username;
                 ResetImeCallbacks();
-                ime_field_size = 127;
+                ime_field_size = 32;
                 ime_callback = SingleValueImeCallback;
-                Dialog::initImeDialog(lang_strings[STR_PASSWORD], remote_settings->password, 127, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
+                Dialog::initImeDialog(lang_strings[STR_USERNAME], remote_settings->username, 32, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
                 gui_mode = GUI_MODE_IME;
+            }
+            ImGui::SameLine();
+        }
+        
+        if (remote_settings->type != CLIENT_TYPE_GOOGLE)
+        {
+            if (remote_settings->type != CLIENT_TYPE_NFS)
+            {
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
+                ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_PASSWORD]);
+                ImGui::SameLine();
+
+                sprintf(id, "%s##password", hidden_password.c_str());
+                pos = ImGui::GetCursorPos();
+                if (ImGui::Button(id, ImVec2(100, 0)))
+                {
+                    ime_single_field = remote_settings->password;
+                    ResetImeCallbacks();
+                    ime_field_size = 127;
+                    ime_callback = SingleValueImeCallback;
+                    Dialog::initImeDialog(lang_strings[STR_PASSWORD], remote_settings->password, 127, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
+                    gui_mode = GUI_MODE_IME;
+                }
             }
 
             ImGui::SameLine();
@@ -433,7 +441,7 @@ namespace Windows
                 ImGui::EndTooltip();
             }
 
-            if ((remote_settings->type == CLIENT_TYPE_SMB || remote_settings->type == CLIENT_TYPE_FTP) && remote_settings->enable_rpi)
+            if ((remote_settings->type == CLIENT_TYPE_NFS || remote_settings->type == CLIENT_TYPE_SMB || remote_settings->type == CLIENT_TYPE_FTP) && remote_settings->enable_rpi)
             {
                 ImGui::SameLine();
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
