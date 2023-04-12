@@ -1,9 +1,9 @@
 # ezRemote Client
 
-ezRemote Client is an application that allows you to connect the PS4 to remote FTP/SFTP, SMB, WebDAV, HTTP servers and Google Drive to transfer files. The interface is inspired by Filezilla client which provides a commander like GUI.
+ezRemote Client is an application that allows you to connect the PS4 to remote FTP/SFTP, SMB, NFS, WebDAV, HTTP servers and Google Drive to transfer files. The interface is inspired by Filezilla client which provides a commander like GUI.
 ![Preview](/screenshot.jpg)
 ## Usage
-To distinguish between FTP, SMB, WebDAV or HTTP, the URL must be prefix with **ftp://**, **sftp://**, **smb://**, **webdav://**, **webdavs://**, **http://** and **https://**
+To distinguish between FTP, SMB, NFS, WebDAV or HTTP, the URL must be prefix with **ftp://**, **sftp://**, **smb://**, **nfs://**, **webdav://**, **webdavs://**, **http://** and **https://**
 
  - The url format for FTP is
    ```
@@ -26,6 +26,29 @@ To distinguish between FTP, SMB, WebDAV or HTTP, the URL must be prefix with **f
      - hostname can be the textual hostname or an IP address. hostname is required
      - port is optional and defaults to 445 if not provided
      - sharename is required
+   ```
+
+ - The url format for NFS is
+   ```
+   nfs://hostname[:port]/export_path[?arg=val[&arg=val]*]
+
+     Special characters in 'path' are escaped using %-hex-hex syntax.
+
+     For example '?' must be escaped if it occurs in a path as '?' is also used to
+     separate the path from the optional list of url arguments.
+
+     Example:
+     nfs://192.168.0.1/my?path?uid=1000&gid=1000
+     must be escaped as
+     nfs://192.168.0.1/my%3Fpath?uid=1000&gid=1000
+
+     - hostname can be the textual hostname or an IP address. hostname is required
+     - port is optional and defaults to 2049 if not provided
+     - export_path is required
+
+    Arguments supported are :
+    uid=<int>         : UID value to use when talking to the server.
+    gid=<int>         : GID value to use when talking to the server.
    ```
 
  - The url format for WebDAV is
@@ -61,7 +84,7 @@ Tested with following WebDAV server:
 Remote Package Installation only works if the WebDAV server allow anonymous access. It's a limitation of the PS4 Installer not able to access protected links. As suggested, use the [Dufs](https://github.com/sigoden/dufs) app for WebDAV.
 
 ## Features ##
- - Transfer files back and forth between PS4 and FTP/SMB/WebDAV server
+ - Transfer files back and forth between PS4 and FTP/SMB/NFS/WebDAV server
  - Support for connecting to Http Servers like (Apache/Nginx,Microsoft IIS, Serve) with html directory listings to download or install pkg. 
  - Install Remote Packages from connected WebDAV server
  - Ability to connect to your "Google Drive" to transfer files back and fort. Can also install packages from it. The app will download the file to the PS4's harddrive and then install it. You need to keep the app opened. Here is a link to the wiki for what you need to do to make it work. Also able to access files that are shared to you. As of v1.06, Google Shared Drives from Google workspace is supported.
