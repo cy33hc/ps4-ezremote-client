@@ -12,8 +12,6 @@
 #include "clients/remote_client.h"
 #include "common.h"
 
-#define SMB_CLIENT_MAX_FILENAME_LEN 256
-
 class NfsClient : public RemoteClient
 {
 public:

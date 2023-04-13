@@ -60,7 +60,7 @@ int NfsClient::Connect(const std::string &url, const std::string &user, const st
 }
 
 /*
- * SmbLastResponse - return a pointer to the last response received
+ * LastResponse - return a pointer to the last response received
  */
 const char *NfsClient::LastResponse()
 {
@@ -84,7 +84,7 @@ bool NfsClient::Ping()
 }
 
 /*
- * SmbQuit - disconnect from remote
+ * Quit - disconnect from remote
  *
  * return 1 if successful, 0 otherwise
  */
@@ -101,7 +101,7 @@ int NfsClient::Quit()
 }
 
 /*
- * SmbMkdir - create a directory at server
+ * Mkdir - create a directory at server
  *
  * return 1 if successful, 0 otherwise
  */
@@ -117,7 +117,7 @@ int NfsClient::Mkdir(const std::string &ppath)
 }
 
 /*
- * SmbRmdir - remove directory and all files under directory at remote
+ * Rmdir - remove directory and all files under directory at remote
  *
  * return 1 if successful, 0 otherwise
  */
@@ -133,7 +133,7 @@ int NfsClient::_Rmdir(const std::string &ppath)
 }
 
 /*
- * SmbRmdir - remove directory and all files under directory at remote
+ * Rmdir - remove directory and all files under directory at remote
  *
  * return 1 if successful, 0 otherwise
  */
@@ -182,7 +182,7 @@ int NfsClient::Rmdir(const std::string &path, bool recursive)
 }
 
 /*
- * SmbGet - issue a GET command and write received data to output
+ * Get - issue a GET command and write received data to output
  *
  * return 1 if successful, 0 otherwise
  */
@@ -288,7 +288,7 @@ bool NfsClient::FileExists(const std::string &ppath)
 }
 
 /*
- * SmbPut - issue a PUT command and send data from input
+ * Put - issue a PUT command and send data from input
  *
  * return 1 if successful, 0 otherwise
  */
