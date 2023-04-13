@@ -32,6 +32,10 @@ To distinguish between FTP, SMB, NFS, WebDAV or HTTP, the URL must be prefix wit
    ```
    nfs://hostname[:port]/export_path[?arg=val[&arg=val]*]
 
+     - hostname can be the textual hostname or an IP address. hostname is required
+     - port is optional and defaults to 2049 if not provided
+     - export_path is required
+
      Special characters in 'path' are escaped using %-hex-hex syntax.
 
      For example '?' must be escaped if it occurs in a path as '?' is also used to
@@ -42,13 +46,9 @@ To distinguish between FTP, SMB, NFS, WebDAV or HTTP, the URL must be prefix wit
      must be escaped as
      nfs://192.168.0.1/my%3Fpath?uid=1000&gid=1000
 
-     - hostname can be the textual hostname or an IP address. hostname is required
-     - port is optional and defaults to 2049 if not provided
-     - export_path is required
-
-    Arguments supported are :
-    uid=<int>         : UID value to use when talking to the server.
-    gid=<int>         : GID value to use when talking to the server.
+     Arguments supported are :
+     uid=<int>         : UID value to use when talking to the server. Defaults to 65534 if not specified.
+     gid=<int>         : GID value to use when talking to the server. Defaults to 65534 if not specified.
    ```
 
  - The url format for WebDAV is
