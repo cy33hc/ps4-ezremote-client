@@ -185,12 +185,15 @@ namespace Actions
 
     void HandleRefreshRemoteFiles()
     {
-        int prev_count = remote_files.size();
-        RefreshRemoteFiles(false);
-        int new_count = remote_files.size();
-        if (prev_count != new_count)
+        if (remoteclient != nullptr)
         {
-            sprintf(remote_file_to_select, "%s", remote_files[0].name);
+            int prev_count = remote_files.size();
+            RefreshRemoteFiles(false);
+            int new_count = remote_files.size();
+            if (prev_count != new_count)
+            {
+                sprintf(remote_file_to_select, "%s", remote_files[0].name);
+            }
         }
         selected_action = ACTION_NONE;
     }

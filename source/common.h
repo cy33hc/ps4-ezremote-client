@@ -26,7 +26,7 @@ struct DirEntry
     char directory[512];
     char name[256];
     char display_size[48];
-    char display_date[32];
+    char display_date[48];
     char path[768];
     uint64_t file_size;
     bool isDir;

@@ -13,6 +13,7 @@
 #include "lang.h"
 #include "system.h"
 #include "windows.h"
+#include "dbglogger.h"
 
 namespace FS
 {
@@ -303,6 +304,10 @@ namespace FS
                 entry.modified.seconds = lt.second;
                 entry.file_size = file_stat.st_size;
 
+                dbglogger_log("%04d-%02d-%02d %02d:%02d:%02d", lt.year, lt.month, lt.day, lt.hour, lt.minute, lt.second);
+                sprintf(entry.display_date, "%04d-%02d-%02d %02d:%02d:%02d", lt.year, lt.month, lt.day, lt.hour, lt.minute, lt.second);
+                dbglogger_log("display_date=%s", entry.display_date);
+                
                 if (dirent->d_type & DT_DIR)
                 {
                     entry.isDir = true;

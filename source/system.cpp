@@ -10,6 +10,7 @@ int (*sceRtcConvertLocalTimeToUtc)(const OrbisTick *local_time, OrbisTick *utc);
 int (*sceRtcConvertUtcToLocalTime)(const OrbisTick *utc, OrbisTick *local_time);
 int (*sceRtcGetCurrentClockLocalTime)(OrbisDateTime *time);
 int (*sceRtcGetCurrentTick)(OrbisTick *outTick);
+int (*sceRtcFormatRFC3339LocalTime)(char *pszDateTime, const OrbisTick *tick);
 unsigned int (*sceRtcGetTickResolution)();
 int (*sceShellUIUtilLaunchByUri)(const char *uri, SceShellUIUtilLaunchByUriParam *param);
 int (*sceShellUIUtilInitialize)();
@@ -72,6 +73,12 @@ int load_sys_modules()
 
     sceKernelDlsym(handle, "sceRtcGetCurrentTick", (void **)&sceRtcGetCurrentTick);
     if (sceRtcGetCurrentTick == NULL)
+    {
+        return -1;
+    }
+
+    sceKernelDlsym(handle, "sceRtcFormatRFC3339LocalTime", (void **)&sceRtcFormatRFC3339LocalTime);
+    if (sceRtcFormatRFC3339LocalTime == NULL)
     {
         return -1;
     }

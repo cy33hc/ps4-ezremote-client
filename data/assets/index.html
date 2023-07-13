@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en" data-ng-app="FileManagerApp">
+<head>
+  <!--
+    * Angular FileManager v1.5.1 (https://github.com/joni2back/angular-filemanager)
+    * Jonas Sciangula Street <joni2back@gmail.com>
+    * Licensed under MIT (https://github.com/joni2back/angular-filemanager/blob/master/LICENSE)
+  -->
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+  <meta charset="utf-8">
+  <title>ezRemote Client</title>
+
+  <!-- third party -->
+    <script src="/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/res/angular.min.js"></script>
+    <script src="/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/res/angular-translate.min.js"></script>
+    <script src="/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/res/ng-file-upload.min.js"></script>
+    <script src="/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/res/jquery.min.js"></script>
+    <script src="/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/res/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/res/bootstrap.min.css" />
+  <!-- /third party -->
+
+  <!-- Comment if you need to use raw source code -->
+    <link href="/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/res/angular-filemanager.min.css" rel="stylesheet">
+    <script src="/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/res/angular-filemanager.min.js"></script>
+  <!-- /Comment if you need to use raw source code -->
+  
+  <script type="text/javascript">
+    //example to override angular-filemanager default config
+    angular.module('FileManagerApp').config(['fileManagerConfigProvider', function (config) {
+      var defaults = config.$get();
+      config.set({
+        appName: 'ezRemote Client',
+        listUrl: '/__local__/list',
+        pickCallback: function(item) {
+          var msg = 'Picked %s "%s" for external use'
+            .replace('%s', item.type)
+            .replace('%s', item.fullPath());
+          window.alert(msg);
+        },
+
+        allowedActions: angular.extend(defaults.allowedActions, {
+          pickFiles: false,
+          pickFolders: false,
+        }),
+      });
+    }]);
+  </script>
+</head>
+
+<body class="ng-cloak">
+  <angular-filemanager></angular-filemanager>
+</body>
+</html>

@@ -4,6 +4,7 @@
 #include "server/http_server.h"
 #include "clients/gdrive.h"
 #include "config.h"
+#include "fs.h"
 #include "windows.h"
 #include "lang.h"
 #include "system.h"
@@ -77,6 +78,54 @@ namespace HttpServer
 
     void *ServerThread(void *argp)
     {
+        svr->Get("/", [&](const Request & req, Response & res)
+        {
+            res.set_redirect("/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/index.html");
+        });
+
+        svr->Post("/__local__/list", [&](const Request & req, Response & res)
+        {
+            const char *path;
+            bool onlyFolders = false;
+            json_object *jobj = json_tokener_parse(req.body.c_str());
+            if (jobj != nullptr)
+            {
+                path = json_object_get_string(json_object_object_get(jobj, "path"));
+                const char *onlyFolders_text = json_object_get_string(json_object_object_get(jobj, "onlyFolders"));
+                if (onlyFolders_text != nullptr && strcasecmp(onlyFolders_text, "true")==0)
+                    onlyFolders = true;
+                if (path == nullptr)
+                {
+                    res.status = 400;
+                    res.set_content("path parameter is missing", 25, "text/plain");
+                    return;
+                }
+            }
+
+            int err;
+            std::vector<DirEntry> files = FS::ListDir(path, &err);
+            json_object *json_files = json_object_new_array();
+            for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end();)
+            {
+                if (((onlyFolders && it->isDir) || !onlyFolders) && strcmp(it->name, "..") != 0)
+                {
+                    json_object *new_file = json_object_new_object();
+                    json_object_object_add(new_file, "name", json_object_new_string(it->name));
+                    json_object_object_add(new_file, "rights", json_object_new_string(it->isDir ? "drwxrwxrwx" : "rw-rw-rw-"));
+                    json_object_object_add(new_file, "date", json_object_new_string(it->display_date));
+                    json_object_object_add(new_file, "size", json_object_new_string(it->isDir ? "" : it->display_size));
+                    json_object_object_add(new_file, "type", json_object_new_string(it->isDir ? "dir" : "file"));
+                    json_object_array_add(json_files, new_file);
+                }
+                it++;
+            }
+            json_object *results = json_object_new_object();
+            json_object_object_add(results, "result", json_files);
+            const char *results_str = json_object_to_json_string(results);
+            res.status = 200;
+            res.set_content(results_str, strlen(results_str), "application/json");
+        });
+
         svr->Get("/google_auth", [](const Request &req, Response &res)
         {
             std::string auth_code = req.get_param_value("code");
@@ -147,7 +196,8 @@ namespace HttpServer
         });
         */
 
-        svr->listen("127.0.0.1", http_server_port);
+        svr->set_mount_point("/", "/");
+        svr->listen("0.0.0.0", http_server_port);
 
         return NULL;
     }
