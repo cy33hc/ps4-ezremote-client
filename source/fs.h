@@ -25,6 +25,7 @@ namespace FS
 
     bool FileExists(const std::string &path);
     bool FolderExists(const std::string &path);
+    int IsFolder(const std::string &path);
 
     void Rename(const std::string &from, const std::string &to);
 
@@ -54,7 +55,7 @@ namespace FS
     bool LoadText(std::vector<std::string> *lines, const std::string &path);
     bool SaveText(std::vector<std::string> *lines, const std::string &path);
 
-    void Save(const std::string &path, const void *data, uint32_t size);
+    bool Save(const std::string &path, const void *data, uint32_t size);
 
     std::vector<std::string> ListFiles(const std::string &path);
     std::vector<DirEntry> ListDir(const std::string &path, int *err);

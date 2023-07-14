@@ -31,6 +31,19 @@
       config.set({
         appName: 'ezRemote Client',
         listUrl: '/__local__/list',
+        uploadUrl: '/__local__/upload',
+        renameUrl: '/__local__/rename',
+        copyUrl: '/__local__/copy',
+        moveUrl: '/__local__/move',
+        removeUrl: '/__local__/remove',
+        editUrl: '/__local__/edit',
+        getContentUrl: '/__local__/getContent',
+        createFolderUrl: '/__local__/createFolder',
+        downloadFileUrl: '/__local__/downloadFile',
+        downloadMultipleUrl: '/__local__/downloadMultiple',
+        compressUrl: '/__local__/compress',
+        extractUrl: '/__local__/extract',
+        permissionsUrl: '/__local__/permission',
         pickCallback: function(item) {
           var msg = 'Picked %s "%s" for external use'
             .replace('%s', item.type)

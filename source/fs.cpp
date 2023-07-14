@@ -77,6 +77,15 @@ namespace FS
         return (stat(path.c_str(), &dir_stat) == 0);
     }
 
+    int IsFolder(const std::string &path)
+    {
+        struct stat dir_stat = {0};
+        if (stat(path.c_str(), &dir_stat) != 0)
+            return -1;
+        if (S_ISDIR(dir_stat.st_mode))
+            return 1;
+        return 0;
+    }
     void Rename(const std::string &from, const std::string &to)
     {
         int res = rename(from.c_str(), to.c_str());
@@ -121,7 +130,7 @@ namespace FS
 
     int Write(FILE *f, const void *buffer, uint32_t size)
     {
-        int write = fwrite(buffer, size, 1, f);
+        int write = fwrite(buffer, 1, size, f);
         return write;
     }
 
@@ -136,14 +145,17 @@ namespace FS
         if (fd == nullptr)
             return std::vector<char>(0);
         const auto size = GetSize(path);
+        dbglogger_log("size=%lld", size);
         std::vector<char> data(size);
 
         const auto read = fread(data.data(), 1, data.size(), fd);
+        dbglogger_log("read=%lld", size);
         fclose(fd);
         if (read < 0)
             return std::vector<char>(0);
 
-        data.resize(read);
+        data.resize(read+1);
+        data[data.size()-1]=0;
         return data;
     }
 
@@ -209,22 +221,23 @@ namespace FS
         return true;
     }
 
-    void Save(const std::string &path, const void *data, uint32_t size)
+    bool Save(const std::string &path, const void *data, uint32_t size)
     {
         FILE *fd = fopen(path.c_str(), "w+");
         if (fd == nullptr)
-            return;
+            return false;
 
         const char *data8 = static_cast<const char *>(data);
         while (size != 0)
         {
-            int written = fwrite(data8, size, 1, fd);
+            int written = fwrite(data8, 1, size, fd);
             fclose(fd);
             if (written <= 0)
-                return;
+                return false;
             data8 += written;
             size -= written;
         }
+        return true;
     }
 
     std::vector<DirEntry> ListDir(const std::string &ppath, int *err)
@@ -304,9 +317,7 @@ namespace FS
                 entry.modified.seconds = lt.second;
                 entry.file_size = file_stat.st_size;
 
-                dbglogger_log("%04d-%02d-%02d %02d:%02d:%02d", lt.year, lt.month, lt.day, lt.hour, lt.minute, lt.second);
                 sprintf(entry.display_date, "%04d-%02d-%02d %02d:%02d:%02d", lt.year, lt.month, lt.day, lt.hour, lt.minute, lt.second);
-                dbglogger_log("display_date=%s", entry.display_date);
                 
                 if (dirent->d_type & DT_DIR)
                 {
@@ -478,6 +489,9 @@ namespace FS
     bool Copy(const std::string &from, const std::string &to)
     {
         MkDirs(to, true);
+        if (from.compare(to) == 0)
+            return true;
+
         FILE *src = fopen(from.c_str(), "rb");
         if (!src)
         {
@@ -535,6 +549,9 @@ namespace FS
 
     bool Move(const std::string &from, const std::string &to)
     {
+        if (from.compare(to) == 0)
+            return true;
+
         bool res = Copy(from, to);
         if (res)
             Rm(from);
