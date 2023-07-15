@@ -4,7 +4,7 @@
 #include "http/httplib.h"
 
 using namespace httplib;
-extern SSLServer *svr;
+extern Server *svr;
 
 static pthread_t http_server_thid;
 extern int http_server_port;

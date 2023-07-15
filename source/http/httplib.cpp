@@ -1,5 +1,4 @@
 #include "httplib.h"
-#include "dbglogger.h"
 namespace httplib {
 
 /*
@@ -563,7 +562,7 @@ private:
   size_t read_buff_off_ = 0;
   size_t read_buff_content_size_ = 0;
 
-  static const size_t read_buff_size_ = 1024 * 4;
+  static const size_t read_buff_size_ = 1024 * 16;
 };
 
 #ifdef CPPHTTPLIB_OPENSSL_SUPPORT
@@ -949,9 +948,9 @@ socket_t create_client_socket(
                      reinterpret_cast<const void *>(&tv), sizeof(tv));
 #endif
 
-          //int const size = 1048576;
-          //setsockopt(sock2, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
-          //setsockopt(sock2, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size));
+          int const size = 1048576;
+          setsockopt(sock2, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
+          setsockopt(sock2, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size));
         }
 
         error = Error::Success;
@@ -1696,20 +1695,16 @@ bool read_content(Stream &strm, T &x, size_t payload_max_length, int &status,
         auto exceed_payload_max_length = false;
 
         if (is_chunked_transfer_encoding(x.headers)) {
-          dbglogger_log("read_content_chunked");
           ret = read_content_chunked(strm, x, out);
         } else if (!has_header(x.headers, "Content-Length")) {
-          dbglogger_log("read_content_without_length");
           ret = read_content_without_length(strm, out);
         } else {
-          dbglogger_log("skip_content_with_length");
           auto len = get_header_value<uint64_t>(x.headers, "Content-Length");
           if (len > payload_max_length) {
             exceed_payload_max_length = true;
             skip_content_with_length(strm, len);
             ret = false;
           } else if (len > 0) {
-            dbglogger_log("read_content_with_length %llu", len);
             ret = read_content_with_length(strm, len, std::move(progress), out);
           }
         }

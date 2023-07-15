@@ -8,7 +8,7 @@
 #include "windows.h"
 #include "lang.h"
 #include "system.h"
-#include "dbglogger.h"
+#include "zip_util.h"
 
 #define SERVER_CERT_FILE "/app0/assets/certs/domain.crt"
 #define SERVER_PRIVATE_KEY_FILE "/app0/assets/certs/domain.key"
@@ -18,7 +18,7 @@
 #define SUCCESS_MSG_LEN 48
 
 using namespace httplib;
-SSLServer *svr;
+Server *svr;
 int http_server_port = 8080;
 
 namespace HttpServer
@@ -147,8 +147,6 @@ namespace HttpServer
                 }
                 free(new_path);
             }
-            if (!isCopy)
-                FS::RmRecursive(src.path);
         }
         else
         {
@@ -177,7 +175,27 @@ namespace HttpServer
     {
         svr->Get("/", [&](const Request & req, Response & res)
         {
-            res.set_redirect("/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/index.html");
+            res.set_redirect("/index.html");
+        });
+
+        svr->Get("/index.html", [&](const Request & req, Response & res)
+        {
+            FILE *in = FS::OpenRead("/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/index.html");
+            size_t size = FS::GetSize("/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/index.html");
+            res.set_content_provider(
+                size, "text/html",
+                [in](size_t offset, size_t length, DataSink &sink) {
+                    size_t size_to_read = std::min(static_cast<size_t>(length), (size_t)1048576);
+                    char buff[size_to_read];
+                    size_t read_len;
+                    FS::Seek(in, offset);
+                    read_len = FS::Read(in, buff, size_to_read);
+                    sink.write(buff, read_len);
+                    return read_len == size_to_read;
+                },
+                [in](bool success) {
+                    FS::Close(in);
+                });
         });
 
         svr->Post("/__local__/list", [&](const Request & req, Response & res)
@@ -211,9 +229,11 @@ namespace HttpServer
                 if (((onlyFolders && it->isDir) || !onlyFolders) && strcmp(it->name, "..") != 0)
                 {
                     json_object *new_file = json_object_new_object();
+                    char display_date[32];
+                    sprintf(display_date, "%04d-%02d-%02d %02d:%02d:%02d", it->modified.year, it->modified.month, it->modified.day, it->modified.hours, it->modified.minutes, it->modified.seconds);
                     json_object_object_add(new_file, "name", json_object_new_string(it->name));
                     json_object_object_add(new_file, "rights", json_object_new_string(it->isDir ? "drwxrwxrwx" : "rw-rw-rw-"));
-                    json_object_object_add(new_file, "date", json_object_new_string(it->display_date));
+                    json_object_object_add(new_file, "date", json_object_new_string(display_date));
                     json_object_object_add(new_file, "size", json_object_new_string(it->isDir ? "" : std::to_string(it->file_size).c_str()));
                     json_object_object_add(new_file, "type", json_object_new_string(it->isDir ? "dir" : "file"));
                     json_object_array_add(json_files, new_file);
@@ -285,10 +305,17 @@ namespace HttpServer
                 sprintf(entry.name, "%s", temp.substr(slash_pos+1).c_str());
                 sprintf(entry.path, "%s", item);
                 entry.isDir = FS::IsFolder(item);
-                bool ret = CopyOrMove(entry, newPath, false);
+                std::string new_path = std::string(newPath);
+                if (entry.isDir)
+                    new_path =  new_path + "/" + entry.name;
+                bool ret = CopyOrMove(entry, new_path.c_str(), false);
                 if (!ret)
                 {
                     failed_items += std::string(item) + ",";
+                }
+                if (entry.isDir && ret)
+                {
+                    FS::RmRecursive(item);
                 }
             }
 
@@ -348,7 +375,10 @@ namespace HttpServer
                     sprintf(entry.name, "%s", temp.substr(slash_pos+1).c_str());
                     sprintf(entry.path, "%s", item);
                     entry.isDir = FS::IsFolder(item);
-                    bool ret = CopyOrMove(entry, newPath, true);
+                    std::string new_path = std::string(newPath);
+                    if (entry.isDir)
+                        new_path =  new_path + "/" + entry.name;
+                    bool ret = CopyOrMove(entry, new_path.c_str(), true);
                     if (!ret)
                     {
                         failed_items += std::string(item) + ",";
@@ -432,7 +462,7 @@ namespace HttpServer
             bool ret = FS::Save(item, content, content_len);
             if (!ret)
             {
-                failed(res, 200, "Failed to content to file.");
+                failed(res, 200, "Failed to save content to file.");
                 return;
             }
 
@@ -496,12 +526,88 @@ namespace HttpServer
 
         svr->Post("/__local__/compress", [&](const Request & req, Response & res)
         {
-            failed(res, 200, "Operation not supported");
+            json_object *items;
+            const char* destination;
+            const char* compressedFilename;
+            
+            json_object *jobj = json_tokener_parse(req.body.c_str());
+            if (jobj != nullptr)
+            {
+                items = json_object_object_get(jobj, "items");
+                destination = json_object_get_string(json_object_object_get(jobj, "destination"));
+                compressedFilename = json_object_get_string(json_object_object_get(jobj, "compressedFilename"));
+
+                if (items == nullptr || destination == nullptr || compressedFilename == nullptr)
+                {
+                    bad_request(res, "Required items,destination,compressedFilename parameter missing");
+                    return;
+                }
+            }
+            else
+            {
+                bad_request(res, "Invalid payload");
+                return;
+            }
+
+            std::string zip_file = std::string(DATA_PATH) + "/" + compressedFilename;
+            zipFile zf = zipOpen64(zip_file.c_str(), APPEND_STATUS_CREATE);
+            if (zf != NULL)
+            {
+                size_t len = json_object_array_length(items);
+                for (size_t i=0; i < len; i++)
+                {
+                    const char *item = json_object_get_string(json_object_array_get_idx(items, i));
+                    std::string src = std::string(item);
+                    size_t slash_pos = src.find_last_of("/");
+                    int res = ZipUtil::ZipAddPath(zf, src, (slash_pos != std::string::npos ? slash_pos + 1 : 1), Z_DEFAULT_COMPRESSION);
+                }
+                zipClose(zf, NULL);
+                success(res);
+            }
+            else
+            {
+                failed(res, 200, "Failed to create zip");
+            }
         });
 
         svr->Post("/__local__/extract", [&](const Request & req, Response & res)
         {
-            failed(res, 200, "Operation not supported");
+            const char* item;
+            const char* destination;
+            const char* folderName;
+            
+            json_object *jobj = json_tokener_parse(req.body.c_str());
+            if (jobj != nullptr)
+            {
+                item = json_object_get_string(json_object_object_get(jobj, "item"));
+                destination = json_object_get_string(json_object_object_get(jobj, "destination"));
+                folderName = json_object_get_string(json_object_object_get(jobj, "folderName"));
+
+                if (item == nullptr || destination == nullptr || folderName == nullptr)
+                {
+                    bad_request(res, "Required item,destination,folderName parameter missing");
+                    return;
+                }
+            }
+            else
+            {
+                bad_request(res, "Invalid payload");
+                return;
+            }
+
+            std::string extract_zip_folder = std::string(destination) + "/" + folderName;
+            DirEntry entry;
+            sprintf(entry.name, "%s", "");
+            sprintf(entry.path, "%s", item);
+            entry.isDir = false;
+            FS::MkDirs(extract_zip_folder);
+            int ret = ZipUtil::Extract(entry, extract_zip_folder);
+            if (ret == 0)
+                failed(res, 200, "Failed to extract file");
+            else if (ret == -1)
+                failed(res, 200, "Unsupported compressed file format");
+            else
+                success(res);
         });
 
         svr->Post("/__local__/upload", [&](const Request &req, Response &res, const ContentReader &content_reader)
@@ -534,7 +640,6 @@ namespace HttpServer
                     }
                     else
                     {
-                        dbglogger_log("data_length=%lld", data_length);
                         FS::Write(out, data, data_length);
                     }
                     return true;
@@ -549,21 +654,49 @@ namespace HttpServer
         // Download multiple files as ZIP
         svr->Get("/__local__/downloadMultiple", [&](const Request & req, Response & res)
         {
-            const char *path;
-            json_object *jobj = json_tokener_parse(req.body.c_str());
-            if (jobj != nullptr)
+            if (req.get_param_value_count("items[]") == 0 || req.get_param_value_count("toFilename") == 0)
             {
-                path = json_object_get_string(json_object_object_get(jobj, "path"));
-                if (path == nullptr)
+                failed(res, 200, "Required items and toFilename parameter missing");
+                return;
+            }
+
+            std::string toFilename = req.get_param_value("toFilename");
+            std::string zip_file = std::string(DATA_PATH) + "/" + toFilename;
+            zipFile zf = zipOpen64(zip_file.c_str(), APPEND_STATUS_CREATE);
+            if (zf != NULL)
+            {
+                int items_count = req.get_param_value_count("items[]");
+                for (size_t i=0; i < items_count; i++)
                 {
-                    failed(res, 200, "One or more file(s) failed to download");
-                    return;
+                    std::string src = req.get_param_value("items[]", i);
+                    size_t slash_pos = src.find_last_of("/");
+                    int res = ZipUtil::ZipAddPath(zf, src, (slash_pos != std::string::npos ? slash_pos + 1 : 1), Z_DEFAULT_COMPRESSION);
                 }
+                zipClose(zf, NULL);
+
+                // start stream the zip
+                FILE *in = FS::OpenRead(zip_file);
+                uint64_t size = FS::GetSize(zip_file);
+                res.set_header("Content-Disposition", "attachment; filename=\"" + std::string(toFilename) + "\"");
+                res.set_content_provider(
+                    size, "application/octet-stream",
+                    [in](size_t offset, size_t length, DataSink &sink) {
+                        size_t size_to_read = std::min(static_cast<size_t>(length), (size_t)1048576);
+                        char buff[size_to_read];
+                        size_t read_len;
+                        FS::Seek(in, offset);
+                        read_len = FS::Read(in, buff, size_to_read);
+                        sink.write(buff, read_len);
+                        return read_len == size_to_read;
+                    },
+                    [in, zip_file](bool success) {
+                        FS::Close(in);
+                        FS::Rm(zip_file);
+                    });
             }
             else
             {
-                bad_request(res, "Invalid payload");
-                return;
+                failed(res, 200, "Failed to create zip");
             }
         });
 
@@ -577,8 +710,29 @@ namespace HttpServer
                 return;
             }
 
-            dbglogger_log("path=%s", path.c_str());
-            res.status = 200;
+            int64_t size = FS::GetSize(path);
+            FILE *in = FS::OpenRead(path);
+
+            size_t slash_pos = path.find_last_of("/");
+            std::string name = path;
+            if (slash_pos != std::string::npos)
+                name = path.substr(slash_pos+1);
+
+            res.set_header("Content-Disposition", "attachment; filename=\"" + name + "\"");
+            res.set_content_provider(
+                size, "application/octet-stream",
+                [in](size_t offset, size_t length, DataSink &sink) {
+                    size_t size_to_read = std::min(static_cast<size_t>(length), (size_t)1048576);
+                    char buff[size_to_read];
+                    size_t read_len;
+                    FS::Seek(in, offset);
+                    read_len = FS::Read(in, buff, size_to_read);
+                    sink.write(buff, read_len);
+                    return read_len == size_to_read;
+                },
+                [in](bool success) {
+                    FS::Close(in);
+                });
         });
 
         svr->Get("/google_auth", [](const Request &req, Response &res)
@@ -592,7 +746,7 @@ namespace HttpServer
             std::string post_data = std::string("code=") + auth_code +
                                                 "&client_id=" + gg_app.client_id +
                                                 "&client_secret=" + gg_app.client_secret +
-                                                "&redirect_uri=https%3A//localhost%3A" + std::to_string(http_server_port) + "/google_auth"
+                                                "&redirect_uri=http%3A//localhost%3A" + std::to_string(http_server_port) + "/google_auth"
                                                 "&grant_type=authorization_code";
                             
             if (auto result = client.Post(url, post_data.c_str(), post_data.length(),  "application/x-www-form-urlencoded"))
@@ -651,6 +805,7 @@ namespace HttpServer
         });
         */
 
+        svr->set_tcp_nodelay(true);
         svr->set_mount_point("/", "/");
         svr->listen("0.0.0.0", http_server_port);
 
@@ -660,7 +815,7 @@ namespace HttpServer
     void Start()
     {
         if (svr == nullptr)
-            svr = new SSLServer(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE, nullptr, nullptr, SERVER_PRIVATE_KEY_PASSWORD);
+            svr = new Server();
         if (!svr->is_valid())
         {
             return;

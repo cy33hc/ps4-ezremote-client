@@ -1774,9 +1774,9 @@ inline void default_socket_options(socket_t sock) {
              reinterpret_cast<const void *>(&yes), sizeof(yes));
 #endif
 #endif
-  //int const size = 1048576;
-  //setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
-  //setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size));
+  int const size = 1048576;
+  setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
+  setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size));
 }
 
 template <class Rep, class Period>

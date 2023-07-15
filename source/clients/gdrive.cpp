@@ -22,7 +22,7 @@ using namespace httplib;
 
 std::string GetRedirectUrl()
 {
-    return std::string("https://localhost:" + std::to_string(http_server_port) + "/google_auth");
+    return std::string("http://localhost:" + std::to_string(http_server_port) + "/google_auth");
 }
 
 std::string GetScopes()

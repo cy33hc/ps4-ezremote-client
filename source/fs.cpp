@@ -13,7 +13,6 @@
 #include "lang.h"
 #include "system.h"
 #include "windows.h"
-#include "dbglogger.h"
 
 namespace FS
 {
@@ -145,11 +144,9 @@ namespace FS
         if (fd == nullptr)
             return std::vector<char>(0);
         const auto size = GetSize(path);
-        dbglogger_log("size=%lld", size);
         std::vector<char> data(size);
 
         const auto read = fread(data.data(), 1, data.size(), fd);
-        dbglogger_log("read=%lld", size);
         fclose(fd);
         if (read < 0)
             return std::vector<char>(0);
@@ -317,8 +314,6 @@ namespace FS
                 entry.modified.seconds = lt.second;
                 entry.file_size = file_stat.st_size;
 
-                sprintf(entry.display_date, "%04d-%02d-%02d %02d:%02d:%02d", lt.year, lt.month, lt.day, lt.hour, lt.minute, lt.second);
-                
                 if (dirent->d_type & DT_DIR)
                 {
                     entry.isDir = true;

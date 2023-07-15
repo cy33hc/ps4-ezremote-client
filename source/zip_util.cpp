@@ -360,7 +360,10 @@ namespace ZipUtil
         else if (fileType == COMPRESS_FILE_TYPE_RAR)
             return ExtractRar(file, dir);
         else
+        {
             sprintf(status_message, "%s - %s", file.name, lang_strings[STR_UNSUPPORTED_FILE_FORMAT]);
+            return -1;
+        }
         return 1;
     }
 }
