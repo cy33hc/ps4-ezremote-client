@@ -281,6 +281,85 @@ namespace INSTALLER
 		return 0;
 	}
 
+	int InstallLocalPkg(const std::string &filename)
+	{
+		int ret;
+		pkg_header header;
+		memset(&header, 0, sizeof(header));
+		if (FS::Head(filename.c_str(), (void *)&header, sizeof(header)) == 0)
+			return 0;
+
+		if (BE32(header.pkg_magic) != PKG_MAGIC)
+			return 0;
+
+		char filepath[1024];
+		snprintf(filepath, 1023, "%s", filename.c_str());
+		if (strncmp(filename.c_str(), "/data/", 6) == 0)
+			snprintf(filepath, 1023, "/user%s", filename.c_str());
+
+		char titleId[18];
+		memset(titleId, 0, sizeof(titleId));
+		int is_app = -1;
+		ret = sceAppInstUtilGetTitleIdFromPkg(filename.c_str(), titleId, &is_app);
+		if (ret)
+		{
+			return 0;
+		}
+
+		OrbisBgftTaskProgress progress_info;
+		int prog = 0;
+		OrbisBgftDownloadParamEx download_params;
+		memset(&download_params, 0, sizeof(download_params));
+		{
+			download_params.params.entitlementType = 5;
+			download_params.params.id = (char *)header.pkg_content_id;
+			download_params.params.contentUrl = filepath;
+			download_params.params.contentName = (char *)header.pkg_content_id;
+			;
+			download_params.params.iconPath = "";
+			download_params.params.playgoScenarioId = "0";
+			download_params.params.option = ORBIS_BGFT_TASK_OPT_FORCE_UPDATE;
+			download_params.slot = 0;
+		}
+
+	retry:
+		int task_id = -1;
+		ret = sceBgftServiceIntDownloadRegisterTaskByStorageEx(&download_params, &task_id);
+		if (ret == 0x80990088 || ret == 0x80990015)
+		{
+			ret = sceAppInstUtilAppUnInstall(titleId);
+			if (ret != 0)
+				return 0;
+			goto retry;
+		}
+		else if (ret > 0)
+			return 0;
+
+		ret = sceBgftServiceDownloadStartTask(task_id);
+		if (ret)
+			return 0;
+
+		Util::Notify("%s queued", titleId);
+
+		sprintf(activity_message, "%s", lang_strings[STR_WAIT_FOR_INSTALL_MSG]);
+		bytes_to_download = 1;
+		bytes_transfered = 0;
+		while (prog < 99)
+		{
+			memset(&progress_info, 0, sizeof(progress_info));
+			ret = sceBgftServiceDownloadGetProgress(task_id, &progress_info);
+			if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
+				return -3;
+			prog = (uint32_t)(((float)progress_info.transferred / progress_info.length) * 100.f);
+			bytes_to_download = progress_info.length;
+			bytes_transfered = progress_info.transferred;
+		}
+		return 1;
+
+	err:
+		return 0;
+	}
+
 	int InstallLocalPkg(const std::string &filename, pkg_header *header, bool remove_after_install)
 	{
 		int ret;

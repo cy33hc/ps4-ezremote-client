@@ -9,6 +9,7 @@
 #include "lang.h"
 #include "system.h"
 #include "zip_util.h"
+#include "installer.h"
 #include "dbglogger.h"
 
 #define SERVER_CERT_FILE "/app0/assets/certs/domain.crt"
@@ -430,6 +431,43 @@ namespace HttpServer
             if (failed_items.length() > 0)
             {
                 std::string error_msg = std::string("One or more file(s) failed to delete. ") + failed_items;
+                failed(res, 200, error_msg);
+            }
+            else
+                success(res);
+        });
+
+        svr->Post("/__local__/install", [&](const Request & req, Response & res)
+        {
+            json_object *items;
+            json_object *jobj = json_tokener_parse(req.body.c_str());
+            if (jobj != nullptr)
+            {
+                items = json_object_object_get(jobj, "items");
+                if (items == nullptr)
+                {
+                    bad_request(res, "Required items parameter missing");
+                    return;
+                }
+            }
+            else
+            {
+                bad_request(res, "Invalid payload");
+                return;
+            }
+
+            std::string failed_items;
+            size_t len = json_object_array_length(items);
+            for (size_t i=0; i < len; i++)
+            {
+                const char *item = json_object_get_string(json_object_array_get_idx(items, i));
+                if (!INSTALLER::InstallLocalPkg(item))
+                    failed_items += (std::string(item) + ",");
+            }
+
+            if (failed_items.length() > 0)
+            {
+                std::string error_msg = std::string("One or more file(s) failed to install. ") + failed_items;
                 failed(res, 200, error_msg);
             }
             else
