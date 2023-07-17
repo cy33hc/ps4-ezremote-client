@@ -9,6 +9,7 @@
 #include "lang.h"
 #include "system.h"
 #include "zip_util.h"
+#include "dbglogger.h"
 
 #define SERVER_CERT_FILE "/app0/assets/certs/domain.crt"
 #define SERVER_PRIVATE_KEY_FILE "/app0/assets/certs/domain.key"
@@ -559,7 +560,13 @@ namespace HttpServer
                     const char *item = json_object_get_string(json_object_array_get_idx(items, i));
                     std::string src = std::string(item);
                     size_t slash_pos = src.find_last_of("/");
-                    int res = ZipUtil::ZipAddPath(zf, src, (slash_pos != std::string::npos ? slash_pos + 1 : 1), Z_DEFAULT_COMPRESSION);
+                    int ret = ZipUtil::ZipAddPath(zf, src, (slash_pos != std::string::npos ? slash_pos + 1 : 1), Z_DEFAULT_COMPRESSION);
+                    if (ret != 1)
+                    {
+                        zipClose(zf, NULL);
+                        FS::Rm(zip_file);
+                        failed(res, 200, "Failed to create zip");
+                    }
                 }
                 zipClose(zf, NULL);
                 success(res);
@@ -610,24 +617,44 @@ namespace HttpServer
                 success(res);
         });
 
+        svr->Get("/__local__/uploadResumeSize", [&](const Request &req, Response &res)
+        {
+            std::string destination = req.get_param_value("destination");
+            std::string filename = req.get_param_value("filename");
+            std::string file_path = destination + "/" + filename;
+            int64_t size = 0;
+            if (FS::FileExists(file_path))
+                size = FS::GetSize(file_path);
+            std::string result_str = "{\"size\":" + std::to_string(size) + "}";
+            res.status = 200;
+            res.set_content(result_str.c_str(), result_str.length(), "application/json");
+        });
+
         svr->Post("/__local__/upload", [&](const Request &req, Response &res, const ContentReader &content_reader)
         {
             MultipartFormDataItems items;
             std::string destination;
+            size_t chunk_size = 0;
+            size_t chunk_number = -1;
+            size_t total_size = 0;
             FILE *out = nullptr;
             std::string new_file;
             content_reader(
                 [&](const MultipartFormData &item)
                 {
                     items.push_back(item);
-                    if (item.name != "destination")
+                    if (item.name == "file")
                     {
                         new_file = destination + "/" + item.filename;
                         if (out != nullptr)
                         {
                             FS::Close(out);
                         }
-                        out = FS::Create(new_file);
+
+                        if (chunk_number == 0)
+                            out = FS::Create(new_file);
+                        else if (chunk_number > 0)
+                            out = FS::Append(new_file);
                     }
                     return true;
                 },
@@ -636,11 +663,31 @@ namespace HttpServer
                     items.back().content.append(data, data_length);
                     if (items.back().name == "destination")
                     {
+                        dbglogger_log("destination=%s", destination.c_str());
                         destination = items.back().content;
+                    }
+                    else if (items.back().name == "_chunkSize")
+                    {
+                        std::stringstream ss(items.back().content);
+                        ss >> chunk_size;
+                        dbglogger_log("chunk_size=%llu", chunk_size);
+                    }
+                    else if (items.back().name == "_chunkNumber")
+                    {
+                        std::stringstream ss(items.back().content);
+                        ss >> chunk_number;
+                        dbglogger_log("chunk_number=%llu", chunk_number);
+                    }
+                    else if (items.back().name == "_totalSize")
+                    {
+                        std::stringstream ss(items.back().content);
+                        ss >> total_size;
+                        dbglogger_log("_totalSize=%llu", total_size);
                     }
                     else
                     {
-                        FS::Write(out, data, data_length);
+                        if (out != nullptr)
+                            FS::Write(out, data, data_length);
                     }
                     return true;
                 });
@@ -654,7 +701,7 @@ namespace HttpServer
         // Download multiple files as ZIP
         svr->Get("/__local__/downloadMultiple", [&](const Request & req, Response & res)
         {
-            if (req.get_param_value_count("items[]") == 0 || req.get_param_value_count("toFilename") == 0)
+            if (req.get_param_value_count("items") == 0 || req.get_param_value_count("toFilename") == 0)
             {
                 failed(res, 200, "Required items and toFilename parameter missing");
                 return;
@@ -665,12 +712,19 @@ namespace HttpServer
             zipFile zf = zipOpen64(zip_file.c_str(), APPEND_STATUS_CREATE);
             if (zf != NULL)
             {
-                int items_count = req.get_param_value_count("items[]");
+                int items_count = req.get_param_value_count("items");
                 for (size_t i=0; i < items_count; i++)
                 {
-                    std::string src = req.get_param_value("items[]", i);
+                    std::string src = req.get_param_value("items", i);
                     size_t slash_pos = src.find_last_of("/");
-                    int res = ZipUtil::ZipAddPath(zf, src, (slash_pos != std::string::npos ? slash_pos + 1 : 1), Z_DEFAULT_COMPRESSION);
+                    int ret = ZipUtil::ZipAddPath(zf, src, (slash_pos != std::string::npos ? slash_pos + 1 : 1), Z_DEFAULT_COMPRESSION);
+                    if (ret != 1)
+                    {
+                        zipClose(zf, NULL);
+                        FS::Rm(zip_file);
+                        failed(res, 200, "Failed to create zip file");
+                        return;
+                    }
                 }
                 zipClose(zf, NULL);
 
@@ -805,6 +859,7 @@ namespace HttpServer
         });
         */
 
+        svr->set_payload_max_length(1024 * 1024 * 12);
         svr->set_tcp_nodelay(true);
         svr->set_mount_point("/", "/");
         svr->listen("0.0.0.0", http_server_port);
