@@ -341,18 +341,13 @@ namespace INSTALLER
 
 		Util::Notify("%s queued", titleId);
 
-		sprintf(activity_message, "%s", lang_strings[STR_WAIT_FOR_INSTALL_MSG]);
-		bytes_to_download = 1;
-		bytes_transfered = 0;
 		while (prog < 99)
 		{
 			memset(&progress_info, 0, sizeof(progress_info));
 			ret = sceBgftServiceDownloadGetProgress(task_id, &progress_info);
 			if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
-				return -3;
+				return 0;
 			prog = (uint32_t)(((float)progress_info.transferred / progress_info.length) * 100.f);
-			bytes_to_download = progress_info.length;
-			bytes_transfered = progress_info.transferred;
 		}
 		return 1;
 
