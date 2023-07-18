@@ -2,6 +2,10 @@
 
 ezRemote Client is an application that allows you to connect the PS4 to remote FTP/SFTP, SMB, NFS, WebDAV, HTTP servers and Google Drive to transfer files. The interface is inspired by Filezilla client which provides a commander like GUI.
 ![Preview](/screenshot.jpg)
+
+New: As of version 1.0.8, ezRemote Client has a Web Interface that can be access from any modern browser to manage the PS4 files.
+![Preview](/ezremote_client_web.png)
+
 ## Usage
 To distinguish between FTP, SMB, NFS, WebDAV or HTTP, the URL must be prefix with **ftp://**, **sftp://**, **smb://**, **nfs://**, **webdav://**, **webdavs://**, **http://** and **https://**
 
@@ -81,7 +85,7 @@ Tested with following WebDAV server:
 ## Remote Package Installer Feature
 Remote Package Installation only works if the WebDAV server allow anonymous access. It's a limitation of the PS4 Installer not able to access protected links. As suggested, use the [Dufs](https://github.com/sigoden/dufs) app for WebDAV.
 
-## Features ##
+## Features Native Application##
  - Transfer files back and forth between PS4 and FTP/SMB/NFS/WebDAV server
  - Support for connecting to Http Servers like (Apache/Nginx,Microsoft IIS, Serve) with html directory listings to download or install pkg. 
  - Install Remote Packages from connected WebDAV server
@@ -97,6 +101,20 @@ Remote Package Installation only works if the WebDAV server allow anonymous acce
  - Ability to view jpg, png, bmp and webp image files. (Selecting files with X button will automatically view the file)
  - Ability to preview pkg files. In the file browser, select a pkg file with the X button, a preview of the package will now display the icon and SFO attributes. If pkg is in the /data or /mnt/usbX folder, user has the option to install the package from the preview dialog.
 
+## Features in Web Interface ##
+ - Copy/Move/Delete/Rename/Create files/folders
+ - Extract 7zip, rar and zip files directly on the PS4
+ - Compress files into zip directly on the PS4
+ - Edit text files directly on the PS4
+ - View all common image formats
+ - Upload files to the PS4
+ - Download files from the PS4
+ - Install packages on the PS4
+
+## How to access the Web Interface ##
+You need to launch the "ezRemote Client" app on the PS4. Then on any device(laptop, tablet, phone etc..) with web browser goto tp http://<ip_address_of_ps4>:8080 . That's all.
+
+The port# can be changed from the "Global Settings" dialog in the PS4 app.
 
 ## Installation
 Copy the **ezremote_client.pkg** in to a FAT32 format usb drive then install from package installer
