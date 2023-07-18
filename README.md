@@ -3,7 +3,7 @@
 ezRemote Client is an application that allows you to connect the PS4 to remote FTP/SFTP, SMB, NFS, WebDAV, HTTP servers and Google Drive to transfer files. The interface is inspired by Filezilla client which provides a commander like GUI.
 ![Preview](/screenshot.jpg)
 
-New: As of version 1.0.8, ezRemote Client has a Web Interface that can be access from any modern browser to manage the PS4 files.
+**New:** As of version 1.0.8, ezRemote Client has a Web Interface that can be access from any modern browser to manage the PS4 files.
 ![Preview](/ezremote_client_web.png)
 
 ## Usage
@@ -112,9 +112,9 @@ Remote Package Installation only works if the WebDAV server allow anonymous acce
  - Install packages on the PS4
 
 ## How to access the Web Interface ##
-You need to launch the "ezRemote Client" app on the PS4. Then on any device(laptop, tablet, phone etc..) with web browser goto tp http://<ip_address_of_ps4>:8080 . That's all.
+You need to launch the "ezRemote Client" app on the PS4. Then on any device(laptop, tablet, phone etc..) with web browser goto to http://<ip_address_of_ps4>:8080 . That's all.
 
-The port# can be changed from the "Global Settings" dialog in the PS4 app.
+The port# can be changed from the "Global Settings" dialog in the PS4 app. Any changes to the web server settings needs a restart of the application to take effect.
 
 ## Installation
 Copy the **ezremote_client.pkg** in to a FAT32 format usb drive then install from package installer
@@ -225,6 +225,8 @@ Build libunrar - https://github.com/cy33hc/libunrar-ps3
 Build libun7zip - https://github.com/cy33hc/libun7zip
 
 Build libjson-c - https://github.com/json-c/json-c
+
+Web Interface library - https://github.com/cy33hc/angular-filemanager
 
 I have included the source code from the following 2 projects embedded into this repo.
 <br/>https://github.com/yhirose/cpp-httplib
