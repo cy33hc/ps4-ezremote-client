@@ -38,7 +38,7 @@ static std::vector<std::string> *ime_multi_field;
 static char *ime_single_field;
 static int ime_field_size;
 
-static char txt_server_port[6];
+static char txt_http_server_port[6];
 static char txt_http_port[6];
 
 bool handle_updates = false;
@@ -119,6 +119,7 @@ namespace Windows
         sprintf(local_filter, "");
         sprintf(remote_filter, "");
         sprintf(txt_http_port, "%d", remote_settings->http_port);
+        sprintf(txt_http_server_port, "%d", http_server_port);
         dont_prompt_overwrite = false;
         confirm_transfer_state = -1;
         dont_prompt_overwrite_cb = false;
@@ -1631,7 +1632,7 @@ namespace Windows
             ImGui::OpenPopup(lang_strings[STR_SETTINGS]);
 
             ImGui::SetNextWindowPos(ImVec2(1050, 80));
-            ImGui::SetNextWindowSizeConstraints(ImVec2(850, 80), ImVec2(850, 400), NULL, NULL);
+            ImGui::SetNextWindowSizeConstraints(ImVec2(850, 80), ImVec2(850, 500), NULL, NULL);
             if (ImGui::BeginPopupModal(lang_strings[STR_SETTINGS], NULL, ImGuiWindowFlags_AlwaysAutoResize))
             {
                 ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_GLOBAL]);
@@ -1648,13 +1649,66 @@ namespace Windows
                 ImGui::SetCursorPosX(805);
                 ImGui::Checkbox("##show_hidden_files", &show_hidden_files);
                 ImGui::Separator();
+
+                // Web Server settings
+                ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_WEB_SERVER]);
+                ImGui::Separator();
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                ImGui::Text("%s", lang_strings[STR_ENABLE]);
+                ImGui::SameLine();
+                ImGui::SetCursorPosX(805);
+                ImGui::Checkbox("##web_server_enabled", &web_server_enabled);
+                ImGui::Separator();
+
+                ImVec2 field_size;
+                field_size = ImGui::CalcTextSize(lang_strings[STR_PORT]);
+                float width = field_size.x + 45;
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                ImGui::Text("%s", lang_strings[STR_PORT]);
+                ImGui::SameLine();
+                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 1.0f));
+
+                char id[192];
+                sprintf(id, "%s##http_server_port", txt_http_server_port);
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                if (ImGui::Button(id, ImVec2(835-width, 0)))
+                {
+                    ResetImeCallbacks();
+                    ime_single_field = txt_http_server_port;
+                    ime_field_size = 5;
+                    ime_callback = SingleValueImeCallback;
+                    ime_after_update = AfterHttpPortChangeCallback;
+                    Dialog::initImeDialog(lang_strings[STR_PORT], txt_http_server_port, 5, ORBIS_TYPE_NUMBER, 1050, 80);
+                    gui_mode = GUI_MODE_IME;
+                }
+                ImGui::Separator();
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                ImGui::Text("%s", lang_strings[STR_COMPRESSED_FILE_PATH]);
+                ImGui::SameLine();
+                field_size = ImGui::CalcTextSize(lang_strings[STR_COMPRESSED_FILE_PATH]);
+                width = field_size.x + 45;
+                sprintf(id, "%s##compressed_file_path", compressed_file_path);
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                if (ImGui::Button(id, ImVec2(835-width, 0)))
+                {
+                    ResetImeCallbacks();
+                    ime_single_field = compressed_file_path;
+                    ime_field_size = 512;
+                    ime_callback = SingleValueImeCallback;
+                    Dialog::initImeDialog(lang_strings[STR_COMPRESSED_FILE_PATH], compressed_file_path, 512, ORBIS_TYPE_BASIC_LATIN, 1050, 80);
+                    gui_mode = GUI_MODE_IME;
+                }
+                ImGui::PopStyleVar();
+                ImGui::Separator();
+
+                // Google settings
                 ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_GOOGLE]);
                 ImGui::Separator();
 
                 ImVec2 id_size, secret_size;
                 id_size = ImGui::CalcTextSize(lang_strings[STR_CLIENT_ID]);
                 secret_size = ImGui::CalcTextSize(lang_strings[STR_CLIENT_SECRET]);
-                float width = MAX(id_size.x, secret_size.x) + 45;
+                width = MAX(id_size.x, secret_size.x) + 45;
 
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
                 ImGui::Text("%s", lang_strings[STR_CLIENT_ID]);
@@ -1662,7 +1716,6 @@ namespace Windows
                 ImGui::SetCursorPosX(width);
                 ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 1.0f));
 
-                char id[192];
                 sprintf(id, "%s##client_id_input", gg_app.client_id);
                 if (ImGui::Button(id, ImVec2(835-width, 0)))
                 {
@@ -2347,6 +2400,7 @@ namespace Windows
         if (ime_result == IME_DIALOG_RESULT_FINISHED)
         {
             remote_settings->http_port = atoi(txt_http_port);
+            http_server_port = atoi(txt_http_server_port);
         }
     }
 

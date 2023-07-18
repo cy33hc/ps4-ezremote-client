@@ -42,17 +42,16 @@
         installUrl: '/__local__/install',
         uploadResumeSizeUrl: '__local__/uploadResumeSize',
         multipleDownloadFileName: 'ezremote-client.zip',
+        isExtractableFilePattern: /\.(7z|rar|zip)$/i,
         pickCallback: function (item) {
           var msg = 'Picked %s "%s" for external use'
             .replace('%s', item.type)
             .replace('%s', item.fullPath());
-          window.alert(msg);
         },
         allowedActions: angular.extend(defaults.allowedActions, {
           pickFiles: false,
           pickFolders: false,
-          changePermissions: false,
-          isExtractableFilePattern: /\.(7z|rar|g?zip)$/i
+          changePermissions: false
         }),
       });
     }]);

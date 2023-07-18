@@ -10,7 +10,6 @@
 #include "system.h"
 #include "zip_util.h"
 #include "installer.h"
-#include "dbglogger.h"
 
 #define SERVER_CERT_FILE "/app0/assets/certs/domain.crt"
 #define SERVER_PRIVATE_KEY_FILE "/app0/assets/certs/domain.key"
@@ -22,6 +21,8 @@
 using namespace httplib;
 Server *svr;
 int http_server_port = 8080;
+char compressed_file_path[1024];
+bool web_server_enabled = false;
 
 namespace HttpServer
 {
@@ -200,6 +201,26 @@ namespace HttpServer
                 });
         });
 
+        svr->Get("/favicon.ico", [&](const Request & req, Response & res)
+        {
+            FILE *in = FS::OpenRead("/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/favicon.ico");
+            size_t size = FS::GetSize("/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/favicon.ico");
+            res.set_content_provider(
+                size, "image/vnd.microsoft.icon",
+                [in](size_t offset, size_t length, DataSink &sink) {
+                    size_t size_to_read = std::min(static_cast<size_t>(length), (size_t)1048576);
+                    char buff[size_to_read];
+                    size_t read_len;
+                    FS::Seek(in, offset);
+                    read_len = FS::Read(in, buff, size_to_read);
+                    sink.write(buff, read_len);
+                    return read_len == size_to_read;
+                },
+                [in](bool success) {
+                    FS::Close(in);
+                });
+        });
+
         svr->Post("/__local__/list", [&](const Request & req, Response & res)
         {
             const char *path;
@@ -225,6 +246,7 @@ namespace HttpServer
 
             int err;
             std::vector<DirEntry> files = FS::ListDir(path, &err);
+            DirEntry::Sort(files);
             json_object *json_files = json_object_new_array();
             for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end();)
             {
@@ -588,7 +610,9 @@ namespace HttpServer
                 return;
             }
 
-            std::string zip_file = std::string(DATA_PATH) + "/" + compressedFilename;
+            if (!FS::FolderExists(compressed_file_path))
+                FS::MkDirs(compressed_file_path);
+            std::string zip_file = std::string(compressed_file_path) + "/" + compressedFilename;
             zipFile zf = zipOpen64(zip_file.c_str(), APPEND_STATUS_CREATE);
             if (zf != NULL)
             {
@@ -701,26 +725,22 @@ namespace HttpServer
                     items.back().content.append(data, data_length);
                     if (items.back().name == "destination")
                     {
-                        dbglogger_log("destination=%s", destination.c_str());
                         destination = items.back().content;
                     }
                     else if (items.back().name == "_chunkSize")
                     {
                         std::stringstream ss(items.back().content);
                         ss >> chunk_size;
-                        dbglogger_log("chunk_size=%llu", chunk_size);
                     }
                     else if (items.back().name == "_chunkNumber")
                     {
                         std::stringstream ss(items.back().content);
                         ss >> chunk_number;
-                        dbglogger_log("chunk_number=%llu", chunk_number);
                     }
                     else if (items.back().name == "_totalSize")
                     {
                         std::stringstream ss(items.back().content);
                         ss >> total_size;
-                        dbglogger_log("_totalSize=%llu", total_size);
                     }
                     else
                     {
@@ -745,8 +765,11 @@ namespace HttpServer
                 return;
             }
 
+            if (!FS::FolderExists(compressed_file_path))
+                FS::MkDirs(compressed_file_path);
+
             std::string toFilename = req.get_param_value("toFilename");
-            std::string zip_file = std::string(DATA_PATH) + "/" + toFilename;
+            std::string zip_file = std::string(compressed_file_path) + "/" + toFilename;
             zipFile zf = zipOpen64(zip_file.c_str(), APPEND_STATUS_CREATE);
             if (zf != NULL)
             {
@@ -900,7 +923,11 @@ namespace HttpServer
         svr->set_payload_max_length(1024 * 1024 * 12);
         svr->set_tcp_nodelay(true);
         svr->set_mount_point("/", "/");
-        svr->listen("0.0.0.0", http_server_port);
+        
+        if (web_server_enabled)
+            svr->listen("0.0.0.0", http_server_port);
+        else
+            svr->listen("127.0.0.1", http_server_port);
 
         return NULL;
     }

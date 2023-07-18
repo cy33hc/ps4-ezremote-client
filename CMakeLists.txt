@@ -6,6 +6,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DDONT_HAVE_STRUPR")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
 
 add_definitions(-DCPPHTTPLIB_OPENSSL_SUPPORT)
+add_definitions(-DCPPHTTPLIB_THREAD_POOL_COUNT=16)
 
 include_directories(
   source
@@ -64,7 +65,6 @@ add_self(ezremote_client)
 add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.08" 32 0)
 
 target_link_libraries(ezremote_client
-  dbglogger
   c
   c++
   png

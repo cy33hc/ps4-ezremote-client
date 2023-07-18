@@ -160,6 +160,10 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"NFS export path missing in URL",															// STR_NFS_EXP_PATH_MISSING_MSG
 	"Failed to init NFS context",																// STR_FAIL_INIT_NFS_CONTEXT
 	"Failed to mount NFS share",																// STR_FAIL_MOUNT_NFS_MSG
+	"Web Server",																				// STR_WEB_SERVER
+	"Enable",																					// STR_ENABLE
+	"Compressed Files Location",																// STR_COMPRESSED_FILE_PATH
+	"Location of where compressed files are stored on the web server",							// STR_COMPRESSED_FILE_PATH_MSG
 };
 
 bool needs_extended_font = false;

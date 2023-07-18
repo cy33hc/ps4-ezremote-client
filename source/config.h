@@ -44,6 +44,9 @@
 
 #define CONFIG_HTTP_SERVER "HttpServer"
 #define CONFIG_HTTP_SERVER_PORT "http_server_port"
+#define CONFIG_HTTP_SERVER_ENABLED "http_server_enabled"
+#define CONFIG_HTTP_SERVER_COMPRESSED_FILE_PATH "compressed_files_path"
+#define CONFIG_DEFAULT_COMPRESSED_FILE_PATH DATA_PATH "/compressed_files"
 
 #define CONFIG_REMOTE_SERVER_NAME "remote_server_name"
 #define CONFIG_REMOTE_SERVER_URL "remote_server_url"
