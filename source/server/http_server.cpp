@@ -699,6 +699,7 @@ namespace HttpServer
             size_t chunk_size = 0;
             size_t chunk_number = -1;
             size_t total_size = 0;
+            size_t currentChunkSize = 0;
             FILE *out = nullptr;
             std::string new_file;
             content_reader(
@@ -741,6 +742,11 @@ namespace HttpServer
                     {
                         std::stringstream ss(items.back().content);
                         ss >> total_size;
+                    }
+                    else if (items.back().name == "_currentChunkSize")
+                    {
+                        std::stringstream ss(items.back().content);
+                        ss >> currentChunkSize;
                     }
                     else
                     {
