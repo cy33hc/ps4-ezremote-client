@@ -251,7 +251,7 @@ int SmbClient::GetRange(const std::string &ppath, DataSink &sink, uint64_t size,
             bool ok = sink.write((char*)buff, count);
 			if (!ok)
 			{
-				free((char *)buff);
+				free((uint8_t *)buff);
 				return 0;
 			}
         }
