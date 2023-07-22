@@ -325,7 +325,12 @@ int SFTPClient::GetRange(const std::string &path, DataSink &sink, uint64_t size,
         if (rc > 0)
         {
             bytes_remaining -= rc;
-            sink.write(buff, rc);
+            bool ok = sink.write(buff, rc);
+            if (!ok)
+            {
+                free((char *)buff);
+                return 0;
+            }
         }
         else
         {
