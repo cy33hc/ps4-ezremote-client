@@ -4,6 +4,7 @@
 #include <lexbor/html/parser.h>
 #include <lexbor/dom/interfaces/element.h>
 #include <minizip/unzip.h>
+#include <orbis/SystemService.h>
 #include "clients/gdrive.h"
 #include "clients/ftpclient.h"
 #include "clients/smbclient.h"
@@ -365,6 +366,7 @@ namespace Actions
             return remoteclient->Put(src, dest);
         }
 
+        sceSystemServicePowerTick();
         return 1;
     }
 
@@ -516,6 +518,7 @@ namespace Actions
             return remoteclient->Get(dest, src);
         }
 
+        sceSystemServicePowerTick();
         return 1;
     }
 
@@ -672,6 +675,7 @@ namespace Actions
         {
             download_and_install = true;
         }
+        
         for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
         {
             if (stop_activity)

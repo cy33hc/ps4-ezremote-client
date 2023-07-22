@@ -5,9 +5,12 @@
 #include <string>
 #include <vector>
 #include <regex>
+#include "http/httplib.h"
 #include "webdav/client.hpp"
 #include "clients/remote_client.h"
 #include "common.h"
+
+using namespace httplib;
 
 namespace WebDAV
 {
@@ -29,6 +32,7 @@ namespace WebDAV
 		int Size(const std::string &path, int64_t *size);
 		int Get(const std::string &outputfile, const std::string &path, uint64_t offset=0);
 		int GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset);
+		int GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset);
 		int Put(const std::string &inputfile, const std::string &path, uint64_t offset=0);
 		int Rename(const std::string &src, const std::string &dst);
 		int Delete(const std::string &path);

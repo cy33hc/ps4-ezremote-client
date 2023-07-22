@@ -215,6 +215,11 @@ namespace WebDAV
 		return 1;
 	}
 
+	int WebDavClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset)
+	{
+		return client->download_range_to(path, sink, offset, offset+size-1);
+	}
+
 	/*
 	 * Put - issue a PUT command and send data from input
 	 *

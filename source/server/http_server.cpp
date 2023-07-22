@@ -1,8 +1,13 @@
 #include <string>
 #include <json-c/json.h>
+#include <range_parser/range_parser.hpp>
 #include "http/httplib.h"
 #include "server/http_server.h"
 #include "clients/gdrive.h"
+#include "clients/sftpclient.h"
+#include "clients/smbclient.h"
+#include "clients/ftpclient.h"
+#include "clients/nfsclient.h"
 #include "config.h"
 #include "fs.h"
 #include "windows.h"
@@ -19,6 +24,7 @@
 #define SUCCESS_MSG_LEN 48
 
 using namespace httplib;
+
 Server *svr;
 int http_server_port = 8080;
 char compressed_file_path[1024];
@@ -382,7 +388,15 @@ namespace HttpServer
             {
                 const char *src = json_object_get_string(json_object_array_get_idx(items, 0));
                 std::string dest = std::string(newPath) + "/" + singleFilename;
-                if (dest.compare(src) != 0 && !FS::Copy(src, dest))
+
+                std::string temp = std::string(src);
+                size_t slash_pos = temp.find_last_of("/");
+                DirEntry entry;
+                sprintf(entry.name, "%s", temp.substr(slash_pos+1).c_str());
+                sprintf(entry.path, "%s", src);
+                entry.isDir = FS::IsFolder(src);
+                if (entry.isDir)
+                if (dest.compare(src) != 0 && !CopyOrMove(entry, dest.c_str(), true))
                 {
                     failed_items += src;
                 }
@@ -904,6 +918,110 @@ namespace HttpServer
             login_state = -1;
             std::string str = std::string(lang_strings[STR_FAIL_GET_TOKEN_MSG]) + " Google";
             res.set_content(str.c_str(), "text/plain");
+        });
+
+        svr->Get("/rmt_inst/(.*)", [&](const Request & req, Response & res)
+        {
+            RemoteClient *tmp_client;
+            auto path = std::string("/") + std::string(req.matches[1]);
+
+            if (remote_settings->type == CLIENT_TYPE_SFTP)
+            {
+                tmp_client = new SFTPClient();
+                tmp_client->Connect(remote_settings->server, remote_settings->username, remote_settings->password);
+            }
+            else if (remote_settings->type == CLIENT_TYPE_SMB)
+            {
+                tmp_client = new SmbClient();
+                tmp_client->Connect(remote_settings->server, remote_settings->username, remote_settings->password);
+            }
+            else if (remote_settings->type == CLIENT_TYPE_FTP)
+            {
+                tmp_client = new FtpClient();
+                tmp_client->Connect(remote_settings->server, remote_settings->username, remote_settings->password);
+            }
+            else if (remote_settings->type == CLIENT_TYPE_NFS)
+            {
+                tmp_client = new NfsClient();
+                tmp_client->Connect(remote_settings->server, remote_settings->username, remote_settings->password);
+            }
+            else
+            {
+                tmp_client = remoteclient;
+            }
+
+            if (tmp_client == nullptr || !tmp_client->IsConnected())
+            {
+                res.status = 404;
+                return;
+            }
+
+
+            if (req.method == "HEAD")
+            {
+                int64_t file_size;
+                int ret;
+                ret = tmp_client->Size(path, &file_size);
+                if (!ret)
+                {
+                    res.status = 500;
+                    return;
+                }
+
+                res.status = 204;
+                res.set_header("Content-Length", std::to_string(file_size));
+                res.set_header("Accept-Ranges", "bytes");
+                return;
+            }
+
+            if (req.ranges.empty())
+            {
+                res.status = 200;
+                res.set_content_provider(
+                    (1024*128), "application/octet-stream",
+                    [tmp_client, path](size_t offset, size_t length, DataSink &sink) {
+                        int ret = tmp_client->GetRange(path, sink, length, offset);
+                        return (ret == 1);
+                    },
+                    [tmp_client, path](bool success) {
+                        if (tmp_client != nullptr && (tmp_client->clientType() == CLIENT_TYPE_SFTP
+                            || tmp_client->clientType() == CLIENT_TYPE_SMB
+                            || tmp_client->clientType() == CLIENT_TYPE_FTP
+                            || tmp_client->clientType() == CLIENT_TYPE_NFS))
+                        {
+                            tmp_client->Quit();
+                            delete tmp_client;
+                        }
+                    });
+            }
+            else
+            {
+                res.status = 206;
+                size_t range_len = (req.ranges[0].second - req.ranges[0].first) + 1;
+                if (req.ranges[0].second >= 18000000000000000000ul)
+                {
+                    range_len = 65536ul - req.ranges[0].first;
+                    res.set_header("Content-Length", std::to_string(range_len));
+                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-65535/"+std::to_string(range_len));
+                }
+                std::pair<ssize_t, ssize_t> range = req.ranges[0];
+                res.set_content_provider(
+                    range_len, "application/octet-stream",
+                    [tmp_client, path, range, range_len](size_t offset, size_t length, DataSink &sink) {
+                        int ret = tmp_client->GetRange(path, sink, range_len, range.first);
+                        return (ret == 1);
+                    },
+                    [tmp_client, path, range, range_len](bool success) {
+                        if (tmp_client != nullptr && (tmp_client->clientType() == CLIENT_TYPE_SFTP 
+                            || tmp_client->clientType() == CLIENT_TYPE_SMB
+                            || tmp_client->clientType() == CLIENT_TYPE_FTP
+                            || tmp_client->clientType() == CLIENT_TYPE_NFS))
+                        {
+                            tmp_client->Quit();
+                            delete tmp_client;
+                        }
+                    });
+            }
         });
 
         svr->Get("/stop", [&](const Request & /*req*/, Response & /*res*/)

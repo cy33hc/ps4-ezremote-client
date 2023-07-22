@@ -29,6 +29,7 @@
 #include "web/request.hpp"
 #include "web/urn.hpp"
 #include "util.h"
+#include "http/httplib.h"
 #include <algorithm>
 #include <thread>
 
@@ -231,6 +232,57 @@ bool
     buffer_ptr = data.buffer;
     buffer_size = data.size;
     data.reset();
+    return true;
+  }
+
+bool
+  Client::sync_download_range_to(
+      const std::string &remote_file,
+      DataSink &sink,
+      uint64_t range_from,
+      uint64_t range_to,
+      callback_t callback,
+      progress_data_t progress_data,
+      progress_t progress)
+  {
+    bool is_existed = this->check(remote_file);
+    if (!is_existed)
+      return false;
+
+    auto root_urn = Path(this->webdav_root, true);
+    auto file_urn = root_urn + remote_file;
+
+    Request request(this->options());
+
+    auto url = this->webdav_hostname + file_urn.quote(request.handle);
+    struct curl_slist *list = NULL;
+    char range_header[64];
+    sprintf(range_header, "Range: bytes=%lu-%lu", range_from, range_to);
+    list = curl_slist_append(list, range_header);
+    request.set(CURLOPT_CUSTOMREQUEST, "GET");
+    request.set(CURLOPT_URL, url.c_str());
+    request.set(CURLOPT_HEADER, 0L);
+    request.set(CURLOPT_HTTPHEADER, list);
+    request.set(CURLOPT_WRITEDATA, reinterpret_cast<void*>(&sink));
+    request.set(CURLOPT_WRITEFUNCTION, reinterpret_cast<size_t>(Web::Callback::Append::stream2sink));
+#ifdef WDC_VERBOSE
+    request.set(CURLOPT_VERBOSE, 1);
+#endif
+    if (progress != nullptr)
+    {
+      request.set(CURLOPT_XFERINFODATA, progress_data);
+      request.set(CURLOPT_XFERINFOFUNCTION, progress);
+      request.set(CURLOPT_NOPROGRESS, 0L);
+    }
+
+    bool is_performed = request.perform();
+    this->http_code = request.status_code();
+    this->result = request.result();
+    if (callback != nullptr)
+      callback(is_performed);
+    if (!is_performed)
+      return false;
+
     return true;
   }
 
@@ -775,6 +827,18 @@ bool
       progress_t progress)
   {
     return this->sync_download_range_to(remote_file, buffer_ptr, buffer_size, range_from, range_to, nullptr, progress_data, std::move(progress));
+  }
+
+  bool
+  Client::download_range_to(
+      const std::string &remote_file,
+      DataSink &sink,
+      uint64_t range_from,
+      uint64_t range_to,
+      progress_data_t progress_data,
+      progress_t progress)
+  {
+    return this->sync_download_range_to(remote_file, sink, range_from, range_to, nullptr, progress_data, std::move(progress));
   }
 
   bool

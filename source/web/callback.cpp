@@ -23,8 +23,11 @@
 #include <algorithm>
 #include <fstream>
 #include <cstring>
+#include "http/httplib.h"
 
 #include "callback.hpp"
+
+using namespace httplib;
 
 namespace Web
 {
@@ -102,6 +105,14 @@ namespace Web
         size_t write_bytes = item_size * item_count;
         out_stream->seekp(0, std::ios::end);
         out_stream->write(ptr, write_bytes);
+        return write_bytes;
+      }
+
+      size_t stream2sink(char* ptr, size_t item_size, size_t item_count, void* sink)
+      {
+        auto ostream = reinterpret_cast<DataSink*>(sink);
+        size_t write_bytes = item_size * item_count;
+        ostream->write(ptr, write_bytes);
         return write_bytes;
       }
     } // namespace Append

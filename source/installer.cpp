@@ -9,9 +9,11 @@
 #include <orbis/Bgft.h>
 #include <orbis/AppInstUtil.h>
 #include <orbis/UserService.h>
+#include <orbis/SystemService.h>
 #include <curl/curl.h>
 #include <web/request.hpp>
 #include <web/urn.hpp>
+#include "server/http_server.h"
 #include "installer.h"
 #include "util.h"
 #include "config.h"
@@ -97,11 +99,12 @@ namespace INSTALLER
 		s_bgft_initialized = false;
 	}
 
-	std::string getRemoteUrl(const std::string filename, bool encodeUrl)
+	std::string getRemoteUrl(const std::string path, bool encodeUrl)
 	{
-		if (remoteclient->clientType() == CLIENT_TYPE_WEBDAV || remoteclient->clientType() == CLIENT_TYPE_HTTP_SERVER)
+		if (strlen(remote_settings->username) == 0 && strlen(remote_settings->password) == 0 &&
+			(remoteclient->clientType() == CLIENT_TYPE_WEBDAV || remoteclient->clientType() == CLIENT_TYPE_HTTP_SERVER))
 		{
-			std::string full_url = WebDAV::GetHttpUrl(remote_settings->server + filename);
+			std::string full_url = WebDAV::GetHttpUrl(remote_settings->server + path);
 			size_t scheme_pos = full_url.find("://");
 			if (scheme_pos == std::string::npos)
 				return "";
@@ -121,24 +124,14 @@ namespace INSTALLER
 		}
 		else
 		{
-			std::string full_url = std::string(remote_settings->server);
-			size_t scheme_pos = full_url.find("://");
-			if (scheme_pos == std::string::npos)
-				return "";
-			size_t root_pos = full_url.find("/", scheme_pos + 3);
-			std::string host = full_url.substr(scheme_pos + 3, (root_pos - (scheme_pos + 3)));
-			size_t port_pos = host.find(":");
-			if (port_pos != std::string::npos)
-				host = host.substr(0, port_pos);
+			std::string encoded_path = path;
+			Web::Urn::Path uri(encoded_path);
+			CURL *curl = curl_easy_init();
+			encoded_path = uri.quote(curl);
+			curl_easy_cleanup(curl);
+			std::string full_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst" + encoded_path;
 
-			std::string path = std::string(filename);
-			if (encodeUrl)
-			{
-				Web::Urn::Path uri(path);
-				CURL *curl = curl_easy_init();
-				path = uri.quote(curl);
-			}
-			return "http://" + host + ":" + std::to_string(remote_settings->http_port) + path;
+			return full_url;
 		}
 
 		return "";
@@ -146,45 +139,18 @@ namespace INSTALLER
 
 	bool canInstallRemotePkg(const std::string &url)
 	{
-		if (remoteclient->clientType() == CLIENT_TYPE_WEBDAV)
-		{
-			if (strlen(remote_settings->username) > 0)
-			{
-				sprintf(confirm_message, "%s %s", lang_strings[STR_REMOTE_NOT_SUPPORT_MSG], lang_strings[STR_DOWNLOAD_INSTALL_MSG]);
-				return false;
-			}
-			else
-				return true;
-		}
-		else
-		{
-			size_t scheme_pos = url.find_first_of("://");
-			size_t path_pos = url.find_first_of("/", scheme_pos + 3);
-			std::string host = url.substr(0, path_pos);
-			std::string path = url.substr(path_pos);
-
-			WebDAV::WebDavClient tmp_client;
-			tmp_client.Connect(host.c_str(), "", "", false);
-			WebDAV::dict_t response_headers{};
-			int ret = tmp_client.GetHeaders(path.c_str(), &response_headers);
-
-			if (!ret)
-			{
-				sprintf(confirm_message, "%s %s", lang_strings[STR_CANNOT_CONNECT_REMOTE_MSG], lang_strings[STR_DOWNLOAD_INSTALL_MSG]);
-				return false;
-			}
-			return true;
-		}
-		return false;
+		return true;
 	}
 
-	int InstallRemotePkg(const std::string &filename, pkg_header *header)
+	int InstallRemotePkg(const std::string &path, pkg_header *header)
 	{
-		std::string url = getRemoteUrl(filename, true);
+		std::string url = getRemoteUrl(path, true);
+
 		if (url.empty())
 			return 0;
 
 		int ret;
+		std::string filename = path.substr(path.find_last_of("/")+1);
 		std::string cid = std::string((char *)header->pkg_content_id);
 		cid = cid.substr(cid.find_first_of("-") + 1, 9);
 		int user_id;
@@ -222,6 +188,7 @@ namespace INSTALLER
 			is_patch = true;
 		}
 
+		OrbisBgftTaskProgress progress_info;
 		OrbisBgftDownloadParam params;
 		memset(&params, 0, sizeof(params));
 		{
@@ -229,7 +196,7 @@ namespace INSTALLER
 			params.entitlementType = 5;
 			params.id = (char *)header->pkg_content_id;
 			params.contentUrl = url.c_str();
-			params.contentName = cid.c_str();
+			params.contentName = filename.c_str();
 			params.iconPath = "";
 			params.playgoScenarioId = "0";
 			params.option = ORBIS_BGFT_TASK_OPT_DISABLE_CDN_QUERY_PARAM;
@@ -246,7 +213,7 @@ namespace INSTALLER
 			ret = sceBgftServiceIntDebugDownloadRegisterPkg(&params, &task_id);
 		if (ret == 0x80990088 || ret == 0x80990015)
 		{
-			sprintf(confirm_message, "%s - %s?", filename.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
+			sprintf(confirm_message, "%s - %s?", path.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
 			confirm_state = CONFIRM_WAIT;
 			action_to_take = selected_action;
 			activity_inprogess = false;
@@ -274,47 +241,59 @@ namespace INSTALLER
 			goto err;
 		}
 
-		Util::Notify("%s queued", cid.c_str());
-		return 1;
+		Util::Notify("%s queued", filename.c_str());
 
+		file_transfering = true;
+		bytes_to_download = 100;
+		bytes_transfered = 0;
+		while (bytes_transfered < 99)
+		{
+			memset(&progress_info, 0, sizeof(progress_info));
+			ret = sceBgftServiceDownloadGetProgress(task_id, &progress_info);
+			if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
+				return 0;
+			bytes_transfered = (uint32_t)(((float)progress_info.transferred / progress_info.length) * 100.f);
+			sceSystemServicePowerTick();
+		}
+
+		return 1;
 	err:
 		return 0;
 	}
 
-	int InstallLocalPkg(const std::string &filename)
+	int InstallLocalPkg(const std::string &path)
 	{
 		int ret;
 		pkg_header header;
 		memset(&header, 0, sizeof(header));
-		if (FS::Head(filename.c_str(), (void *)&header, sizeof(header)) == 0)
+		if (FS::Head(path.c_str(), (void *)&header, sizeof(header)) == 0)
 			return 0;
 
 		if (BE32(header.pkg_magic) != PKG_MAGIC)
 			return 0;
 
 		char filepath[1024];
-		snprintf(filepath, 1023, "%s", filename.c_str());
-		if (strncmp(filename.c_str(), "/data/", 6) == 0)
-			snprintf(filepath, 1023, "/user%s", filename.c_str());
+		snprintf(filepath, 1023, "%s", path.c_str());
+		if (strncmp(path.c_str(), "/data/", 6) == 0)
+			snprintf(filepath, 1023, "/user%s", path.c_str());
 
 		char titleId[18];
 		memset(titleId, 0, sizeof(titleId));
 		int is_app = -1;
-		ret = sceAppInstUtilGetTitleIdFromPkg(filename.c_str(), titleId, &is_app);
+		ret = sceAppInstUtilGetTitleIdFromPkg(path.c_str(), titleId, &is_app);
 		if (ret)
 		{
 			return 0;
 		}
 
 		OrbisBgftTaskProgress progress_info;
-		int prog = 0;
 		OrbisBgftDownloadParamEx download_params;
 		memset(&download_params, 0, sizeof(download_params));
 		{
 			download_params.params.entitlementType = 5;
 			download_params.params.id = (char *)header.pkg_content_id;
 			download_params.params.contentUrl = filepath;
-			download_params.params.contentName = (char *)header.pkg_content_id;
+			download_params.params.contentName = path.c_str();
 			;
 			download_params.params.iconPath = "";
 			download_params.params.playgoScenarioId = "0";
@@ -339,15 +318,19 @@ namespace INSTALLER
 		if (ret)
 			return 0;
 
-		Util::Notify("%s queued", titleId);
+		Util::Notify("%s queued", path.c_str());
 
-		while (prog < 99)
+		file_transfering = true;
+		bytes_to_download = 100;
+		bytes_transfered = 0;
+		while (bytes_transfered < 99)
 		{
 			memset(&progress_info, 0, sizeof(progress_info));
 			ret = sceBgftServiceDownloadGetProgress(task_id, &progress_info);
 			if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
 				return 0;
-			prog = (uint32_t)(((float)progress_info.transferred / progress_info.length) * 100.f);
+			bytes_transfered = (uint32_t)(((float)progress_info.transferred / progress_info.length) * 100.f);
+			sceSystemServicePowerTick();
 		}
 		return 1;
 
@@ -355,22 +338,23 @@ namespace INSTALLER
 		return 0;
 	}
 
-	int InstallLocalPkg(const std::string &filename, pkg_header *header, bool remove_after_install)
+	int InstallLocalPkg(const std::string &path, pkg_header *header, bool remove_after_install)
 	{
 		int ret;
-		if (strncmp(filename.c_str(), "/data/", 6) != 0 &&
-			strncmp(filename.c_str(), "/user/data/", 11) != 0 &&
-			strncmp(filename.c_str(), "/mnt/usb", 8) != 0)
+		if (strncmp(path.c_str(), "/data/", 6) != 0 &&
+			strncmp(path.c_str(), "/user/data/", 11) != 0 &&
+			strncmp(path.c_str(), "/mnt/usb", 8) != 0)
 			return -1;
 
+		std::string filename = path.substr(path.find_last_of("/")+1);
 		char filepath[1024];
-		snprintf(filepath, 1023, "%s", filename.c_str());
-		if (strncmp(filename.c_str(), "/data/", 6) == 0)
-			snprintf(filepath, 1023, "/user%s", filename.c_str());
+		snprintf(filepath, 1023, "%s", path.c_str());
+		if (strncmp(path.c_str(), "/data/", 6) == 0)
+			snprintf(filepath, 1023, "/user%s", path.c_str());
 		char titleId[18];
 		memset(titleId, 0, sizeof(titleId));
 		int is_app = -1;
-		ret = sceAppInstUtilGetTitleIdFromPkg(filename.c_str(), titleId, &is_app);
+		ret = sceAppInstUtilGetTitleIdFromPkg(path.c_str(), titleId, &is_app);
 		if (ret)
 		{
 			return 0;
@@ -384,7 +368,7 @@ namespace INSTALLER
 			download_params.params.entitlementType = 5;
 			download_params.params.id = (char *)header->pkg_content_id;
 			download_params.params.contentUrl = filepath;
-			download_params.params.contentName = (char *)header->pkg_content_id;
+			download_params.params.contentName = filename.c_str();
 			;
 			download_params.params.iconPath = "";
 			download_params.params.playgoScenarioId = "0";
@@ -397,7 +381,7 @@ namespace INSTALLER
 		ret = sceBgftServiceIntDownloadRegisterTaskByStorageEx(&download_params, &task_id);
 		if (ret == 0x80990088 || ret == 0x80990015)
 		{
-			sprintf(confirm_message, "%s - %s?", filename.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
+			sprintf(confirm_message, "%s - %s?", path.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
 			confirm_state = CONFIRM_WAIT;
 			action_to_take = selected_action;
 			activity_inprogess = false;
@@ -418,7 +402,7 @@ namespace INSTALLER
 			else
 			{
 				if (auto_delete_tmp_pkg)
-					FS::Rm(filename);
+					FS::Rm(path);
 			}
 		}
 		else if (ret > 0)
@@ -432,7 +416,7 @@ namespace INSTALLER
 
 		if (!remove_after_install)
 		{
-			Util::Notify("%s queued", titleId);
+			Util::Notify("%s queued", filename.c_str());
 			return 1;
 		}
 
@@ -450,24 +434,24 @@ namespace INSTALLER
 			bytes_transfered = progress_info.transferred;
 		}
 		if (auto_delete_tmp_pkg)
-			FS::Rm(filename);
+			FS::Rm(path);
 		return 1;
 
 	err:
 		return 0;
 	}
 
-	bool ExtractLocalPkg(const std::string &filename, const std::string sfo_path, const std::string icon_path)
+	bool ExtractLocalPkg(const std::string &path, const std::string sfo_path, const std::string icon_path)
 	{
 		pkg_header tmp_hdr;
-		FS::Head(filename, &tmp_hdr, sizeof(pkg_header));
+		FS::Head(path, &tmp_hdr, sizeof(pkg_header));
 
 		size_t entry_count = BE32(tmp_hdr.pkg_entry_count);
 		uint32_t entry_table_offset = BE32(tmp_hdr.pkg_table_offset);
 		uint64_t entry_table_size = entry_count * sizeof(pkg_table_entry);
 		void *entry_table_data = malloc(entry_table_size);
 
-		FILE *fd = FS::OpenRead(filename);
+		FILE *fd = FS::OpenRead(path);
 		FS::Seek(fd, entry_table_offset);
 		FS::Read(fd, entry_table_data, entry_table_size);
 
@@ -528,10 +512,10 @@ namespace INSTALLER
 		return true;
 	}
 
-	bool ExtractRemotePkg(const std::string &filename, const std::string sfo_path, const std::string icon_path)
+	bool ExtractRemotePkg(const std::string &path, const std::string sfo_path, const std::string icon_path)
 	{
 		pkg_header tmp_hdr;
-		if (!remoteclient->Head(filename, &tmp_hdr, sizeof(pkg_header)))
+		if (!remoteclient->Head(path, &tmp_hdr, sizeof(pkg_header)))
 			return false;
 
 		size_t entry_count = BE32(tmp_hdr.pkg_entry_count);
@@ -539,7 +523,7 @@ namespace INSTALLER
 		uint64_t entry_table_size = entry_count * sizeof(pkg_table_entry);
 		void *entry_table_data = malloc(entry_table_size);
 
-		if (!remoteclient->GetRange(filename, entry_table_data, entry_table_size, entry_table_offset))
+		if (!remoteclient->GetRange(path, entry_table_data, entry_table_size, entry_table_offset))
 			return false;
 
 		pkg_table_entry *entries = (pkg_table_entry *)entry_table_data;
@@ -577,7 +561,7 @@ namespace INSTALLER
 		{
 			param_sfo_data = malloc(param_sfo_size);
 			FILE *out = FS::Create(sfo_path);
-			if (!remoteclient->GetRange(filename, param_sfo_data, param_sfo_size, param_sfo_offset))
+			if (!remoteclient->GetRange(path, param_sfo_data, param_sfo_size, param_sfo_offset))
 			{
 				FS::Close(out);
 				return false;
@@ -591,7 +575,7 @@ namespace INSTALLER
 		{
 			icon0_png_data = malloc(icon0_png_size);
 			FILE *out = FS::Create(icon_path);
-			if (!remoteclient->GetRange(filename, icon0_png_data, icon0_png_size, icon0_png_offset))
+			if (!remoteclient->GetRange(path, icon0_png_data, icon0_png_size, icon0_png_offset))
 			{
 				FS::Close(out);
 				return false;

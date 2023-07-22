@@ -1266,6 +1266,43 @@ int FtpClient::Get(const std::string &outputfile, const std::string &path, uint6
 		return FtpXfer(outputfile, path, mp_ftphandle, FtpClient::filereadappend, FtpClient::transfermode::image);
 }
 
+int FtpClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset)
+{
+	ftphandle *nData;
+	mp_ftphandle->offset = offset;
+	if (!FtpAccess(path, FtpClient::fileread, FtpClient::transfermode::image, mp_ftphandle, &nData))
+	{
+		return 0;
+	}
+
+	char buf[FTP_CLIENT_BUFSIZ];
+    int count = 0;
+    size_t bytes_remaining = size;
+
+    do
+    {
+        size_t bytes_to_read = std::min<size_t>(FTP_CLIENT_BUFSIZ, bytes_remaining);
+        count = FtpRead(buf, bytes_to_read, nData);
+        if (count > 0)
+        {
+            bytes_remaining -= count;
+            bool ok = sink.write((char*)buf, count);
+			if (!ok)
+			{
+				return 0;
+			}
+        }
+        else
+        {
+            break;
+        }
+    } while (1);
+	FtpClose(nData);
+	mp_ftphandle->offset = 0;
+
+	return 1;
+}
+
 int FtpClient::GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset)
 {
 	ftphandle *nData;

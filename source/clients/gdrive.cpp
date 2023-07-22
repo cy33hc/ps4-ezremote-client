@@ -331,6 +331,35 @@ int GDriveClient::Get(const std::string &outputfile, const std::string &path, ui
     return 0;
 }
 
+int GDriveClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset)
+{
+    size_t bytes_read = 0;
+    std::string id = GetValue(path_id_map, path);
+    std::string drive_id = GetDriveId(path);
+
+    std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id) + "?alt=media";
+    if (!drive_id.empty())
+        url += "&supportsAllDrives=true";
+    Headers headers;
+    headers.insert(std::make_pair("Range", "bytes=" + std::to_string(offset) + "-" + std::to_string(offset + size - 1)));
+    if (auto res = client->Get(url, headers,
+                               [&](const char *data, size_t data_length)
+                               {
+                                   bytes_read += data_length;
+                                   bool ok = sink.write(data, data_length);
+                                   return ok;
+                               }))
+    {
+        return bytes_read == size;
+    }
+    else
+    {
+        sprintf(this->response, "%s", httplib::to_string(res.error()).c_str());
+    }
+    return 0;
+
+}
+
 int GDriveClient::GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset)
 {
     size_t bytes_read = 0;

@@ -60,6 +60,7 @@ namespace Web
     {
       size_t stream(char* data, size_t size, size_t count, void* stream);
       size_t buffer(char* data, size_t size, size_t count, void* buffer);
+      size_t stream2sink(char* ptr, size_t item_size, size_t item_count, void* sink);
     }
   }
 } // namespace Web

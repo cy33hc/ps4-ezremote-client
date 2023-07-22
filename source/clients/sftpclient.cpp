@@ -255,6 +255,7 @@ int SFTPClient::Size(const std::string &path, int64_t *size)
     {
         return 0;
     }
+
     *size = attrs.filesize;
     return 1;
 }
@@ -296,10 +297,46 @@ int SFTPClient::Get(const std::string &outputfile, const std::string &path, uint
             break;
         }
     } while (1);
+    free((char *)buff);
     FS::Close(out);
     libssh2_sftp_close(sftp_handle);
 
     return 1;
+}
+
+int SFTPClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset)
+{
+    LIBSSH2_SFTP_HANDLE *sftp_handle = libssh2_sftp_open(sftp_session, path.c_str(), LIBSSH2_FXF_READ, 0);
+    if (!sftp_handle)
+    {
+        sprintf(response, "Unable to open file with SFTP: %ld", libssh2_sftp_last_error(sftp_session));
+        return 0;
+    }
+
+    libssh2_sftp_seek64(sftp_handle, offset);
+
+    char *buff = (char *)malloc(FTP_CLIENT_BUFSIZ);
+    int rc, count = 0;
+    size_t bytes_remaining = size;
+    do
+    {
+        size_t bytes_to_read = std::min<size_t>(FTP_CLIENT_BUFSIZ, bytes_remaining);
+        rc = libssh2_sftp_read(sftp_handle, buff, bytes_to_read);
+        if (rc > 0)
+        {
+            bytes_remaining -= rc;
+            sink.write(buff, rc);
+        }
+        else
+        {
+            break;
+        }
+    } while (1);
+
+    free((char *)buff);
+    libssh2_sftp_close(sftp_handle);
+
+	return 1;
 }
 
 int SFTPClient::GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset)
@@ -601,7 +638,7 @@ int SFTPClient::Quit()
 
 ClientType SFTPClient::clientType()
 {
-    return CLIENT_TYPE_FTP;
+    return CLIENT_TYPE_SFTP;
 }
 
 uint32_t SFTPClient::SupportedActions()

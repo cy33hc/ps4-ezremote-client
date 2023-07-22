@@ -17,7 +17,7 @@
 #include "util.h"
 #include "system.h"
 
-#define BUF_SIZE 64*1024
+#define BUF_SIZE 256*1024
 
 NfsClient::NfsClient()
 {
@@ -229,6 +229,49 @@ int NfsClient::Get(const std::string &outputfile, const std::string &ppath, uint
 	FS::Close(out);
 	nfs_close(nfs, nfsfh);
 	free((void*)buff);
+
+	return 1;
+}
+
+int NfsClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset)
+{
+	struct nfsfh *nfsfh = nullptr;
+	int ret = nfs_open(nfs, path.c_str(), 0400, &nfsfh);
+	if (ret != 0)
+	{
+		return 0;
+	}
+
+	ret = nfs_lseek(nfs, nfsfh, offset, SEEK_SET, NULL);
+	if (ret != 0)
+	{
+		return 0;
+	}
+
+	void *buff = malloc(BUF_SIZE);
+    int count = 0;
+    size_t bytes_remaining = size;
+    do
+    {
+        size_t bytes_to_read = std::min<size_t>(BUF_SIZE, bytes_remaining);
+        count = nfs_read(nfs, nfsfh, bytes_to_read, buff);
+        if (count > 0)
+        {
+            bytes_remaining -= count;
+            bool ok = sink.write((char*)buff, count);
+			if (!ok)
+			{
+				return 0;
+			}
+        }
+        else
+        {
+            break;
+        }
+    } while (1);
+
+    free((void *)buff);
+    nfs_close(nfs, nfsfh);
 
 	return 1;
 }

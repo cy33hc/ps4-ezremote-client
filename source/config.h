@@ -98,7 +98,6 @@ struct RemoteSettings
     char server[256];
     char username[33];
     char password[128];
-    int http_port;
     ClientType type;
     bool enable_rpi;
     uint32_t supported_actions;

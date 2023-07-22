@@ -29,6 +29,9 @@
 #include <string>
 #include <vector>
 #include <curl/curl.h>
+#include "http/httplib.h"
+
+using namespace httplib;
 
 namespace WebDAV
 {
@@ -209,6 +212,24 @@ namespace WebDAV
     ) -> bool;
 
     ///
+    /// Download a remote file to a buffer for specified range
+    /// \param[in] remote_file
+    /// \param[out] sink,
+    /// \param[in] range_from,
+    /// \param[in] range_to
+    /// \param[in] progress
+    /// \snippet client/download.cpp download_to_buffer
+    ///
+    auto download_range_to(
+      const std::string &remote_file,
+      DataSink &sink,
+      uint64_t range_from,
+      uint64_t range_to,
+      progress_data_t progress_data = nullptr,
+      progress_t progress = nullptr
+    ) -> bool;  
+
+    ///
     /// Download a remote file to a stream
     /// \param[in] remote_file
     /// \param[out] stream
@@ -329,6 +350,16 @@ namespace WebDAV
       progress_data_t progress_data = nullptr,
       progress_t progress = nullptr
     ) -> bool;
+
+    auto sync_download_range_to(
+      const std::string &remote_file,
+      DataSink &sink,
+      uint64_t range_from,
+      uint64_t range_to,
+      callback_t callback,
+      progress_data_t progress_data,
+      progress_t progress
+     ) -> bool;
 
     bool sync_download_to(
       const std::string& remote_file,

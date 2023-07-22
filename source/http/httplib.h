@@ -353,7 +353,7 @@ private:
 
 } // namespace detail
 
-using Headers = std::multimap<std::string, std::string, detail::ci>;
+using Headers = std::map<std::string, std::string, detail::ci>;
 
 using Params = std::multimap<std::string, std::string>;
 using Match = std::smatch;

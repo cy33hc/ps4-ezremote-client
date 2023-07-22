@@ -39,7 +39,6 @@ static char *ime_single_field;
 static int ime_field_size;
 
 static char txt_http_server_port[6];
-static char txt_http_port[6];
 
 bool handle_updates = false;
 int64_t bytes_transfered;
@@ -118,7 +117,6 @@ namespace Windows
         sprintf(status_message, "");
         sprintf(local_filter, "");
         sprintf(remote_filter, "");
-        sprintf(txt_http_port, "%d", remote_settings->http_port);
         sprintf(txt_http_server_port, "%d", http_server_port);
         dont_prompt_overwrite = false;
         confirm_transfer_state = -1;
@@ -320,7 +318,6 @@ namespace Windows
                     sprintf(display_site, "%s", site_id);
                     remote_settings = &site_settings[sites[n]];
                     sprintf(remote_directory, "%s", remote_settings->default_directory);
-                    sprintf(txt_http_port, "%d", remote_settings->http_port);
                 }
 
                 // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
@@ -402,66 +399,42 @@ namespace Windows
             ImGui::SameLine();
         }
         
-        if (remote_settings->type != CLIENT_TYPE_GOOGLE)
+        if (remote_settings->type != CLIENT_TYPE_NFS && remote_settings->type != CLIENT_TYPE_GOOGLE)
         {
-            if (remote_settings->type != CLIENT_TYPE_NFS)
-            {
-                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
-                ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_PASSWORD]);
-                ImGui::SameLine();
-
-                sprintf(id, "%s##password", hidden_password.c_str());
-                pos = ImGui::GetCursorPos();
-                if (ImGui::Button(id, ImVec2(100, 0)))
-                {
-                    ime_single_field = remote_settings->password;
-                    ResetImeCallbacks();
-                    ime_field_size = 127;
-                    ime_callback = SingleValueImeCallback;
-                    Dialog::initImeDialog(lang_strings[STR_PASSWORD], remote_settings->password, 127, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
-                    gui_mode = GUI_MODE_IME;
-                }
-            }
-
-            ImGui::SameLine();
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
-            ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_ENABLE_RPI]);
+            ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_PASSWORD]);
             ImGui::SameLine();
 
-            if (ImGui::Checkbox("###enable_rpi", &remote_settings->enable_rpi))
+            sprintf(id, "%s##password", hidden_password.c_str());
+            pos = ImGui::GetCursorPos();
+            if (ImGui::Button(id, ImVec2(100, 0)))
             {
-                CONFIG::SaveConfig();
+                ime_single_field = remote_settings->password;
+                ResetImeCallbacks();
+                ime_field_size = 127;
+                ime_callback = SingleValueImeCallback;
+                Dialog::initImeDialog(lang_strings[STR_PASSWORD], remote_settings->password, 127, ORBIS_TYPE_BASIC_LATIN, pos.x, pos.y);
+                gui_mode = GUI_MODE_IME;
             }
-            if (ImGui::IsItemHovered())
-            {
-                ImGui::SetNextWindowSize(ImVec2(450, 135));
-                ImGui::BeginTooltip();
-                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 440);
-                ImGui::Text("%s", (remote_settings->type == CLIENT_TYPE_SMB || remote_settings->type == CLIENT_TYPE_FTP) ? lang_strings[STR_ENABLE_RPI_FTP_SMB_MSG] : lang_strings[STR_ENABLE_RPI_WEBDAV_MSG]);
-                ImGui::PopTextWrapPos();
-                ImGui::EndTooltip();
-            }
+        }
 
-            if ((remote_settings->type == CLIENT_TYPE_NFS || remote_settings->type == CLIENT_TYPE_SMB || remote_settings->type == CLIENT_TYPE_FTP) && remote_settings->enable_rpi)
-            {
-                ImGui::SameLine();
-                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
-                ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_HTTP_PORT]);
-                ImGui::SameLine();
+        ImGui::SameLine();
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
+        ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_ENABLE_RPI]);
+        ImGui::SameLine();
 
-                sprintf(id, "%s##http_port", txt_http_port);
-                pos = ImGui::GetCursorPos();
-                if (ImGui::Button(id, ImVec2(65, 0)))
-                {
-                    ime_single_field = txt_http_port;
-                    ResetImeCallbacks();
-                    ime_field_size = 24;
-                    ime_callback = SingleValueImeCallback;
-                    ime_after_update = AfterHttpPortChangeCallback;
-                    Dialog::initImeDialog(lang_strings[STR_PASSWORD], txt_http_port, 24, ORBIS_TYPE_NUMBER, pos.x, pos.y);
-                    gui_mode = GUI_MODE_IME;
-                }
-            }
+        if (ImGui::Checkbox("###enable_rpi", &remote_settings->enable_rpi))
+        {
+            CONFIG::SaveConfig();
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetNextWindowSize(ImVec2(450, 70));
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 440);
+            ImGui::Text("%s", lang_strings[STR_ENABLE_RPI_FTP_SMB_MSG]);
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
         }
         ImGui::PopStyleVar();
 
@@ -2399,7 +2372,6 @@ namespace Windows
     {
         if (ime_result == IME_DIALOG_RESULT_FINISHED)
         {
-            remote_settings->http_port = atoi(txt_http_port);
             http_server_port = atoi(txt_http_server_port);
         }
     }
