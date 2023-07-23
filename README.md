@@ -87,7 +87,7 @@ Tested with following WebDAV server:
  - drivehq.com
 
 ## Remote Package Installer Feature
-Remote Package Installation only works if the WebDAV server allow anonymous access. It's a limitation of the PS4 Installer not able to access protected links. As suggested, use the [Dufs](https://github.com/sigoden/dufs) app for WebDAV.
+Remote Package Installation with all Remote Server, even if they are password protected.
 
 ## Features Native Application##
  - Transfer files back and forth between PS4 and FTP/SMB/NFS/WebDAV server
