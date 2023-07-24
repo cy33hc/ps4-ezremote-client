@@ -1289,6 +1289,8 @@ int FtpClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, 
             bool ok = sink.write((char*)buf, count);
 			if (!ok)
 			{
+				FtpClose(nData);
+				mp_ftphandle->offset = 0;
 				return 0;
 			}
         }

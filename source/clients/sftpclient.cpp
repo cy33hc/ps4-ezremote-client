@@ -329,6 +329,7 @@ int SFTPClient::GetRange(const std::string &path, DataSink &sink, uint64_t size,
             if (!ok)
             {
                 free((char *)buff);
+                libssh2_sftp_close(sftp_handle);
                 return 0;
             }
         }

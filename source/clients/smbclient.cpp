@@ -252,6 +252,7 @@ int SmbClient::GetRange(const std::string &ppath, DataSink &sink, uint64_t size,
 			if (!ok)
 			{
 				free((uint8_t *)buff);
+				smb2_close(smb2, in);
 				return 0;
 			}
         }
