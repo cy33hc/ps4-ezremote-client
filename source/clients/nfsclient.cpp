@@ -262,6 +262,7 @@ int NfsClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, 
 			if (!ok)
 			{
 				free((void *)buff);
+				nfs_close(nfs, nfsfh);
 				return 0;
 			}
         }
