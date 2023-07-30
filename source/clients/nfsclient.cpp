@@ -13,14 +13,25 @@
 #include "fs.h"
 #include "lang.h"
 #include "clients/nfsclient.h"
-#include "windows.h"
 #include "util.h"
 #include "system.h"
+#ifndef DAEMON
+#include "windows.h"
+#endif
+#define BUF_SIZE 256 * 1024
 
-#define BUF_SIZE 256*1024
+static pthread_mutexattr_t mutexattr;
+static pthread_mutex_t nfs_mutex = PTHREAD_MUTEX_INITIALIZER;
+static bool mutex_initialized = false;
 
 NfsClient::NfsClient()
 {
+	if (!mutex_initialized)
+	{
+		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&nfs_mutex, &mutexattr);
+		mutex_initialized = true;
+	}
 }
 
 NfsClient::~NfsClient()
@@ -37,7 +48,8 @@ int NfsClient::Connect(const std::string &url, const std::string &user, const st
 	}
 
 	struct nfs_url *nfsurl = nfs_parse_url_full(nfs, url.c_str());
-	if (nfsurl == nullptr) {
+	if (nfsurl == nullptr)
+	{
 		sprintf(response, "%s", nfs_get_error(nfs));
 		nfs_destroy_context(nfs);
 		return 0;
@@ -139,6 +151,9 @@ int NfsClient::_Rmdir(const std::string &ppath)
  */
 int NfsClient::Rmdir(const std::string &path, bool recursive)
 {
+#ifdef DAEMON
+	bool stop_activity = false;
+#endif
 	if (stop_activity)
 		return 1;
 
@@ -156,17 +171,23 @@ int NfsClient::Rmdir(const std::string &path, bool recursive)
 			ret = Rmdir(list[i].path, recursive);
 			if (ret == 0)
 			{
+#ifndef DAEMON
 				sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_DIR_MSG], list[i].path);
+#endif
 				return 0;
 			}
 		}
 		else
 		{
+#ifndef DAEMON
 			sprintf(activity_message, "%s %s\n", lang_strings[STR_DELETING], list[i].path);
+#endif
 			ret = Delete(list[i].path);
 			if (ret == 0)
 			{
+#ifndef DAEMON
 				sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_FILE_MSG], list[i].path);
+#endif
 				return 0;
 			}
 		}
@@ -174,7 +195,9 @@ int NfsClient::Rmdir(const std::string &path, bool recursive)
 	ret = _Rmdir(path);
 	if (ret == 0)
 	{
+#ifndef DAEMON
 		sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_DIR_MSG], path.c_str());
+#endif
 		return 0;
 	}
 
@@ -189,6 +212,9 @@ int NfsClient::Rmdir(const std::string &path, bool recursive)
 
 int NfsClient::Get(const std::string &outputfile, const std::string &ppath, uint64_t offset)
 {
+#ifdef DAEMON
+	int64_t bytes_to_download;
+#endif
 	if (!Size(ppath.c_str(), &bytes_to_download))
 	{
 		sprintf(response, "%s", nfs_get_error(nfs));
@@ -203,7 +229,7 @@ int NfsClient::Get(const std::string &outputfile, const std::string &ppath, uint
 		return 0;
 	}
 
-	FILE* out = FS::Create(outputfile);
+	FILE *out = FS::Create(outputfile);
 	if (out == NULL)
 	{
 		sprintf(response, "%s", lang_strings[STR_FAILED]);
@@ -212,7 +238,10 @@ int NfsClient::Get(const std::string &outputfile, const std::string &ppath, uint
 
 	void *buff = malloc(BUF_SIZE);
 	int count = 0;
+#ifndef DAEMON
 	bytes_transfered = 0;
+#endif
+
 	while ((count = nfs_read(nfs, nfsfh, BUF_SIZE, buff)) > 0)
 	{
 		if (count < 0)
@@ -220,15 +249,17 @@ int NfsClient::Get(const std::string &outputfile, const std::string &ppath, uint
 			sprintf(response, "%s", nfs_get_error(nfs));
 			FS::Close(out);
 			nfs_close(nfs, nfsfh);
-			free((void*)buff);
+			free((void *)buff);
 			return 0;
 		}
 		FS::Write(out, buff, count);
+#ifndef DAEMON
 		bytes_transfered += count;
+#endif
 	}
 	FS::Close(out);
 	nfs_close(nfs, nfsfh);
-	free((void*)buff);
+	free((void *)buff);
 
 	return 1;
 }
@@ -236,44 +267,54 @@ int NfsClient::Get(const std::string &outputfile, const std::string &ppath, uint
 int NfsClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset)
 {
 	struct nfsfh *nfsfh = nullptr;
+	pthread_mutex_lock(&nfs_mutex);
 	int ret = nfs_open(nfs, path.c_str(), 0400, &nfsfh);
+	pthread_mutex_unlock(&nfs_mutex);
 	if (ret != 0)
 	{
 		return 0;
 	}
 
+	pthread_mutex_lock(&nfs_mutex);
 	ret = nfs_lseek(nfs, nfsfh, offset, SEEK_SET, NULL);
+	pthread_mutex_unlock(&nfs_mutex);
 	if (ret != 0)
 	{
 		return 0;
 	}
 
 	void *buff = malloc(BUF_SIZE);
-    int count = 0;
-    size_t bytes_remaining = size;
-    do
-    {
-        size_t bytes_to_read = std::min<size_t>(BUF_SIZE, bytes_remaining);
-        count = nfs_read(nfs, nfsfh, bytes_to_read, buff);
-        if (count > 0)
-        {
-            bytes_remaining -= count;
-            bool ok = sink.write((char*)buff, count);
+	int count = 0;
+	size_t bytes_remaining = size;
+	do
+	{
+		size_t bytes_to_read = std::min<size_t>(BUF_SIZE, bytes_remaining);
+		pthread_mutex_lock(&nfs_mutex);
+		count = nfs_read(nfs, nfsfh, bytes_to_read, buff);
+		pthread_mutex_unlock(&nfs_mutex);
+		if (count > 0)
+		{
+			bytes_remaining -= count;
+			bool ok = sink.write((char *)buff, count);
 			if (!ok)
 			{
 				free((void *)buff);
+				pthread_mutex_lock(&nfs_mutex);
 				nfs_close(nfs, nfsfh);
+				pthread_mutex_unlock(&nfs_mutex);
 				return 0;
 			}
-        }
-        else
-        {
-            break;
-        }
-    } while (1);
+		}
+		else
+		{
+			break;
+		}
+	} while (1);
 
-    free((void *)buff);
-    nfs_close(nfs, nfsfh);
+	free((void *)buff);
+	pthread_mutex_lock(&nfs_mutex);
+	nfs_close(nfs, nfsfh);
+	pthread_mutex_unlock(&nfs_mutex);
 
 	return 1;
 }
@@ -339,20 +380,25 @@ bool NfsClient::FileExists(const std::string &ppath)
  */
 int NfsClient::Put(const std::string &inputfile, const std::string &ppath, uint64_t offset)
 {
+#ifndef DAEMON
 	bytes_to_download = FS::GetSize(inputfile);
+#else
+	int64_t bytes_to_download = FS::GetSize(inputfile);
+#endif
+
 	if (bytes_to_download < 0)
 	{
 		sprintf(response, "%s", lang_strings[STR_FAILED]);
 		return 0;
 	}
 
-	FILE* in = FS::OpenRead(inputfile);
+	FILE *in = FS::OpenRead(inputfile);
 	if (in == NULL)
 	{
 		sprintf(response, "%s", lang_strings[STR_FAILED]);
 		return 0;
 	}
-	
+
 	struct nfsfh *nfsfh = nullptr;
 	int ret;
 	if (!FileExists(ppath))
@@ -368,9 +414,11 @@ int NfsClient::Put(const std::string &inputfile, const std::string &ppath, uint6
 		return 0;
 	}
 
-	void* buff = malloc(BUF_SIZE);
+	void *buff = malloc(BUF_SIZE);
 	uint64_t count = 0;
+#ifndef DAEMON
 	bytes_transfered = 0;
+#endif
 	while ((count = FS::Read(in, buff, BUF_SIZE)) > 0)
 	{
 		if (count < 0)
@@ -391,7 +439,9 @@ int NfsClient::Put(const std::string &inputfile, const std::string &ppath, uint6
 			free(buff);
 			return 0;
 		}
+#ifndef DAEMON
 		bytes_transfered += count;
+#endif
 	}
 	FS::Close(in);
 	nfs_close(nfs, nfsfh);
@@ -425,7 +475,9 @@ int NfsClient::Delete(const std::string &ppath)
 int NfsClient::Size(const std::string &ppath, int64_t *size)
 {
 	nfs_stat_64 st;
+	pthread_mutex_lock(&nfs_mutex);
 	int ret = nfs_stat64(nfs, ppath.c_str(), &st);
+	pthread_mutex_unlock(&nfs_mutex);
 	if (ret != 0)
 	{
 		sprintf(response, "%s", nfs_get_error(nfs));
@@ -446,7 +498,8 @@ std::vector<DirEntry> NfsClient::ListDir(const std::string &path)
 	struct nfsdirent *nfsdirent;
 
 	int ret = nfs_opendir(nfs, path.c_str(), &nfsdir);
-	if (ret != 0) {
+	if (ret != 0)
+	{
 		sprintf(response, "%s", nfs_get_error(nfs));
 		return out;
 	}
@@ -513,7 +566,6 @@ std::vector<DirEntry> NfsClient::ListDir(const std::string &path)
 		}
 		if (strcmp(entry.name, "..") != 0 && strcmp(entry.name, ".") != 0)
 			out.push_back(entry);
-
 	}
 	nfs_closedir(nfs, nfsdir);
 

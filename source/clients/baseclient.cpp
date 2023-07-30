@@ -7,7 +7,10 @@
 #include "clients/baseclient.h"
 #include "lang.h"
 #include "util.h"
+
+#ifndef DAEMON
 #include "windows.h"
+#endif
 
 using httplib::Client;
 using httplib::Headers;
@@ -75,12 +78,16 @@ int BaseClient::Size(const std::string &path, int64_t *size)
 int BaseClient::Get(const std::string &outputfile, const std::string &path, uint64_t offset)
 {
     std::ofstream file_stream(outputfile, std::ios::binary);
+#ifndef DAEMON
     bytes_transfered = 0;
+#endif
     if (auto res = client->Get(GetFullPath(path),
                                [&](const char *data, size_t data_length)
                                {
                                    file_stream.write(data, data_length);
+#ifndef DAEMON
                                    bytes_transfered += data_length;
+#endif
                                    return true;
                                }))
     {

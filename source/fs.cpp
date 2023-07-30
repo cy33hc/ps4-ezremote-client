@@ -12,7 +12,9 @@
 #include "util.h"
 #include "lang.h"
 #include "system.h"
+#ifndef DAEMON
 #include "windows.h"
+#endif
 
 namespace FS
 {
@@ -390,6 +392,9 @@ namespace FS
 
     int RmRecursive(const std::string &path)
     {
+#ifdef DAEMON
+        bool stop_activity = false;
+#endif
         if (stop_activity)
             return 1;
 
@@ -413,18 +418,24 @@ namespace FS
                     int ret = RmRecursive(new_path);
                     if (ret <= 0)
                     {
+#ifndef DAEMON
                         sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_DIR_MSG], new_path);
+#endif
                         closedir(dfd);
                         return ret;
                     }
                 }
                 else
                 {
+#ifndef DAEMON
                     snprintf(activity_message, 1024, "%s %s", lang_strings[STR_DELETING], new_path);
+#endif
                     int ret = remove(new_path);
                     if (ret < 0)
                     {
+#ifndef DAEMON
                         sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_FILE_MSG], new_path);
+#endif
                         closedir(dfd);
                         return ret;
                     }
@@ -439,20 +450,28 @@ namespace FS
             int ret = rmdir(path.c_str());
             if (ret < 0)
             {
+#ifndef DAEMON
                 sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_DIR_MSG], path.c_str());
+#endif
                 return ret;
             }
+#ifndef DAEMON
             snprintf(activity_message, 1024, "%s %s", lang_strings[STR_DELETED], path.c_str());
+#endif
         }
         else
         {
             int ret = remove(path.c_str());
             if (ret < 0)
             {
+#ifndef DAEMON
                 sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_FILE_MSG], path.c_str());
+#endif
                 return ret;
             }
+#ifndef DAEMON
             snprintf(activity_message, 1024, "%s %s", lang_strings[STR_DELETED], path.c_str());
+#endif
         }
 
         return 1;
@@ -499,8 +518,11 @@ namespace FS
             return false;
         }
 
+#ifndef DAEMON
         bytes_to_download = file_stat.st_size;
-
+#else
+        int64_t bytes_to_download = file_stat.st_size;
+#endif
         FILE *dest = fopen(to.c_str(), "wb");
         if (!dest)
         {
@@ -509,7 +531,11 @@ namespace FS
         }
 
         size_t bytes_read = 0;
+#ifndef DAEMON
         bytes_transfered = 0;
+#else
+        int64_t bytes_transfered = 0;
+#endif
         const size_t buf_size = 0x10000;
         unsigned char *buf = new unsigned char[buf_size];
 

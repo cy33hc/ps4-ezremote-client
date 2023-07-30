@@ -11,7 +11,7 @@
 #include <orbis/Pad.h>
 #include <orbis/AudioOut.h>
 #include <orbis/Net.h>
-// #include <dbglogger.h>
+#include <dbglogger.h>
 
 #include "imgui.h"
 #include "SDL2/SDL.h"
@@ -271,8 +271,8 @@ static void terminate()
 
 int main()
 {
-	// dbglogger_init();
-	// dbglogger_log("If you see this you've set up dbglogger correctly.");
+	dbglogger_init();
+	dbglogger_log("If you see this you've set up dbglogger correctly.");
 	int rc;
 	// No buffering
 	setvbuf(stdout, NULL, _IONBF, 0);
@@ -298,7 +298,6 @@ int main()
 		return 0;
 
 	CONFIG::LoadConfig();
-	HttpServer::Start();
 
 	// Create a window context
 	window = SDL_CreateWindow("main", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, FRAME_WIDTH, FRAME_HEIGHT, 0);
@@ -321,6 +320,7 @@ int main()
 	{
 		terminate();
 	}
+	HttpServer::Start();
 
 	if (load_sys_modules() != 0)
 		return 0;

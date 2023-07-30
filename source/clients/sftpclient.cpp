@@ -9,13 +9,25 @@
 #include "fs.h"
 #include "lang.h"
 #include "util.h"
-#include "windows.h"
 #include "system.h"
+#ifndef DAEMON
+#include "windows.h"
+#endif
 
 #define FTP_CLIENT_BUFSIZ 1048576
 
+static pthread_mutexattr_t mutexattr;
+static pthread_mutex_t sftp_mutex = PTHREAD_MUTEX_INITIALIZER;
+static bool mutex_initialized = false;
+
 SFTPClient::SFTPClient()
 {
+    if (!mutex_initialized)
+    {
+        pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
+        pthread_mutex_init(&sftp_mutex, &mutexattr);
+        mutex_initialized = true;
+    }
     session = nullptr;
     sftp_session = nullptr;
     sock = 0;
@@ -201,6 +213,9 @@ int SFTPClient::Mkdir(const std::string &path)
 
 int SFTPClient::Rmdir(const std::string &path, bool recursive)
 {
+#ifdef DAEMON
+    bool stop_activity = false;
+#endif
     if (stop_activity)
         return 1;
 
@@ -218,17 +233,23 @@ int SFTPClient::Rmdir(const std::string &path, bool recursive)
             ret = Rmdir(list[i].path, recursive);
             if (ret == 0)
             {
+#ifndef DAEMON
                 sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_DIR_MSG], list[i].path);
+#endif
                 return 0;
             }
         }
         else
         {
+#ifndef DAEMON
             sprintf(activity_message, "%s %s\n", lang_strings[STR_DELETING], list[i].path);
+#endif
             ret = Delete(list[i].path);
             if (ret == 0)
             {
+#ifndef DAEMON
                 sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_FILE_MSG], list[i].path);
+#endif
                 return 0;
             }
         }
@@ -250,7 +271,9 @@ int SFTPClient::Rmdir(const std::string &path)
 int SFTPClient::Size(const std::string &path, int64_t *size)
 {
     LIBSSH2_SFTP_ATTRIBUTES attrs;
+    pthread_mutex_lock(&sftp_mutex);
     int rc = libssh2_sftp_stat(sftp_session, path.c_str(), &attrs);
+    pthread_mutex_unlock(&sftp_mutex);
     if (rc)
     {
         return 0;
@@ -262,6 +285,9 @@ int SFTPClient::Size(const std::string &path, int64_t *size)
 
 int SFTPClient::Get(const std::string &outputfile, const std::string &path, uint64_t offset)
 {
+#ifdef DAEMON
+    int64_t bytes_to_download;
+#endif
     if (!Size(path, &bytes_to_download))
     {
         return 0;
@@ -283,13 +309,17 @@ int SFTPClient::Get(const std::string &outputfile, const std::string &path, uint
 
     char *buff = (char *)malloc(FTP_CLIENT_BUFSIZ);
     int rc, count = 0;
+#ifndef DAEMON
     bytes_transfered = 0;
+#endif
     do
     {
         rc = libssh2_sftp_read(sftp_handle, buff, FTP_CLIENT_BUFSIZ);
         if (rc > 0)
         {
+#ifndef DAEMON
             bytes_transfered += rc;
+#endif
             FS::Write(out, buff, rc);
         }
         else
@@ -306,14 +336,18 @@ int SFTPClient::Get(const std::string &outputfile, const std::string &path, uint
 
 int SFTPClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset)
 {
+    pthread_mutex_lock(&sftp_mutex);
     LIBSSH2_SFTP_HANDLE *sftp_handle = libssh2_sftp_open(sftp_session, path.c_str(), LIBSSH2_FXF_READ, 0);
+    pthread_mutex_unlock(&sftp_mutex);
     if (!sftp_handle)
     {
         sprintf(response, "Unable to open file with SFTP: %ld", libssh2_sftp_last_error(sftp_session));
         return 0;
     }
 
+    pthread_mutex_lock(&sftp_mutex);
     libssh2_sftp_seek64(sftp_handle, offset);
+    pthread_mutex_unlock(&sftp_mutex);
 
     char *buff = (char *)malloc(FTP_CLIENT_BUFSIZ);
     int rc, count = 0;
@@ -321,7 +355,9 @@ int SFTPClient::GetRange(const std::string &path, DataSink &sink, uint64_t size,
     do
     {
         size_t bytes_to_read = std::min<size_t>(FTP_CLIENT_BUFSIZ, bytes_remaining);
+        pthread_mutex_lock(&sftp_mutex);
         rc = libssh2_sftp_read(sftp_handle, buff, bytes_to_read);
+        pthread_mutex_unlock(&sftp_mutex);
         if (rc > 0)
         {
             bytes_remaining -= rc;
@@ -329,7 +365,9 @@ int SFTPClient::GetRange(const std::string &path, DataSink &sink, uint64_t size,
             if (!ok)
             {
                 free((char *)buff);
+                pthread_mutex_lock(&sftp_mutex);
                 libssh2_sftp_close(sftp_handle);
+                pthread_mutex_unlock(&sftp_mutex);
                 return 0;
             }
         }
@@ -340,9 +378,11 @@ int SFTPClient::GetRange(const std::string &path, DataSink &sink, uint64_t size,
     } while (1);
 
     free((char *)buff);
+    pthread_mutex_lock(&sftp_mutex);
     libssh2_sftp_close(sftp_handle);
+    pthread_mutex_unlock(&sftp_mutex);
 
-	return 1;
+    return 1;
 }
 
 int SFTPClient::GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset)
@@ -373,6 +413,10 @@ int SFTPClient::Put(const std::string &inputfile, const std::string &path, uint6
     char *ptr, *buff;
     int rc;
 
+#ifdef DAEMON
+    int64_t bytes_to_download;
+#endif
+
     bytes_to_download = FS::GetSize(inputfile);
     if (bytes_to_download < 0)
     {
@@ -400,7 +444,9 @@ int SFTPClient::Put(const std::string &inputfile, const std::string &path, uint6
 
     buff = (char *)malloc(FTP_CLIENT_BUFSIZ);
     int nread, count = 0;
+#ifndef DAEMON
     bytes_transfered = 0;
+#endif
     do
     {
         nread = FS::Read(in, buff, FTP_CLIENT_BUFSIZ);
@@ -420,7 +466,9 @@ int SFTPClient::Put(const std::string &inputfile, const std::string &path, uint6
                 break;
             ptr += rc;
             nread -= rc;
+#ifndef DAEMON
             bytes_transfered += rc;
+#endif
         } while (nread);
     } while (rc > 0);
 
@@ -465,6 +513,10 @@ int SFTPClient::Move(const std::string &from, const std::string &to)
 
 int SFTPClient::Head(const std::string &path, void *buffer, uint64_t len)
 {
+#ifdef DAEMON
+    int64_t bytes_to_download;
+#endif
+
     if (!Size(path.c_str(), &bytes_to_download))
     {
         return 0;

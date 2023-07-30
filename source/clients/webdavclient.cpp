@@ -10,9 +10,11 @@
 #include "lang.h"
 #include "webdav/client.hpp"
 #include "clients/webdavclient.h"
-#include "windows.h"
 #include "util.h"
 #include "system.h"
+#ifndef DAEMON
+#include "windows.h"
+#endif
 
 static const char *months[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
@@ -136,6 +138,9 @@ namespace WebDAV
 	 */
 	int WebDavClient::Rmdir(const std::string &path, bool recursive)
 	{
+#ifdef DAEMON
+		bool stop_activity = false;
+#endif
 		if (stop_activity)
 			return 1;
 
@@ -153,17 +158,23 @@ namespace WebDAV
 				ret = Rmdir(list[i].path, recursive);
 				if (ret == 0)
 				{
+#ifndef DAEMON
 					sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_DIR_MSG], list[i].path);
+#endif
 					return 0;
 				}
 			}
 			else
 			{
+#ifndef DAEMON
 				sprintf(activity_message, "%s %s\n", lang_strings[STR_DELETING], list[i].path);
+#endif
 				ret = Delete(list[i].path);
 				if (ret == 0)
 				{
+#ifndef DAEMON
 					sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_FILE_MSG], list[i].path);
+#endif
 					return 0;
 				}
 			}
@@ -171,7 +182,9 @@ namespace WebDAV
 		ret = _Rmdir(path);
 		if (ret == 0)
 		{
+#ifndef DAEMON
 			sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_DIR_MSG], path.c_str());
+#endif
 			return 0;
 		}
 
@@ -186,6 +199,9 @@ namespace WebDAV
 
 	int WebDavClient::Get(const std::string &outputfile, const std::string &ppath, uint64_t offset)
 	{
+#ifdef DAEMON
+		int64_t bytes_transfered;
+#endif
 		bool ret = client->download(ppath, outputfile, &bytes_transfered, DownloadCallback);
 		sprintf(response, "Http Code %ld", client->status_code());
 		return ret;
@@ -227,7 +243,11 @@ namespace WebDAV
 	 */
 	int WebDavClient::Put(const std::string &inputfile, const std::string &ppath, uint64_t offset)
 	{
+#ifdef DAEMON
+		int64_t bytes_transfered;
+#endif
 		bool ret = client->upload(ppath, inputfile, &bytes_transfered, UploadCallback);
+
 		sprintf(response, "Http Code %ld", client->status_code());
 		return ret;
 	}

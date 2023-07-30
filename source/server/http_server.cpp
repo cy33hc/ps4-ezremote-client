@@ -10,11 +10,14 @@
 #include "clients/nfsclient.h"
 #include "config.h"
 #include "fs.h"
-#include "windows.h"
 #include "lang.h"
 #include "system.h"
 #include "zip_util.h"
 #include "installer.h"
+#ifndef DAEMON
+#include "windows.h"
+#endif
+#include "dbglogger.h"
 
 #define SERVER_CERT_FILE "/app0/assets/certs/domain.crt"
 #define SERVER_PRIVATE_KEY_FILE "/app0/assets/certs/domain.key"
@@ -22,6 +25,11 @@
 #define SUCCESS_MSG "{ \"result\": { \"success\": true, \"error\": null } }"
 #define FAILURE_MSG "{ \"result\": { \"success\": false, \"error\": \"%s\" } }"
 #define SUCCESS_MSG_LEN 48
+#ifndef DAEMON
+#define INDEX_HTML "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/index.html"
+#else
+#define INDEX_HTML "/mnt/sandbox/pfsmnt/RMTC00002-app0/assets/index.html"
+#endif
 
 using namespace httplib;
 
@@ -189,8 +197,8 @@ namespace HttpServer
 
         svr->Get("/index.html", [&](const Request & req, Response & res)
         {
-            FILE *in = FS::OpenRead("/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/index.html");
-            size_t size = FS::GetSize("/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/index.html");
+            FILE *in = FS::OpenRead(INDEX_HTML);
+            size_t size = FS::GetSize(INDEX_HTML);
             res.set_content_provider(
                 size, "text/html",
                 [in](size_t offset, size_t length, DataSink &sink) {
@@ -920,30 +928,35 @@ namespace HttpServer
             res.set_content(str.c_str(), "text/plain");
         });
 
-        svr->Get("/rmt_inst/(.*)", [&](const Request & req, Response & res)
+        svr->Get("/rmt_inst/Site (\\d+)(/)(.*)", [&](const Request & req, Response & res)
         {
             RemoteClient *tmp_client;
-            auto path = std::string("/") + std::string(req.matches[1]);
+            RemoteSettings *tmp_settings;
+            auto site_idx = std::stoi(req.matches[1])-1;
+            auto path = std::string("/") + std::string(req.matches[3]);
+            dbglogger_log("site_idx=%d, path=%s", site_idx, path.c_str());
 
-            if (remote_settings->type == CLIENT_TYPE_SFTP)
+            tmp_settings = &site_settings[sites[site_idx]];
+
+            if (tmp_settings->type == CLIENT_TYPE_SFTP)
             {
                 tmp_client = new SFTPClient();
-                tmp_client->Connect(remote_settings->server, remote_settings->username, remote_settings->password);
+                tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
             }
-            else if (remote_settings->type == CLIENT_TYPE_SMB)
+            else if (tmp_settings->type == CLIENT_TYPE_SMB)
             {
                 tmp_client = new SmbClient();
-                tmp_client->Connect(remote_settings->server, remote_settings->username, remote_settings->password);
+                tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
             }
-            else if (remote_settings->type == CLIENT_TYPE_FTP)
+            else if (tmp_settings->type == CLIENT_TYPE_FTP)
             {
                 tmp_client = new FtpClient();
-                tmp_client->Connect(remote_settings->server, remote_settings->username, remote_settings->password);
+                tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
             }
-            else if (remote_settings->type == CLIENT_TYPE_NFS)
+            else if (tmp_settings->type == CLIENT_TYPE_NFS)
             {
                 tmp_client = new NfsClient();
-                tmp_client->Connect(remote_settings->server, remote_settings->username, remote_settings->password);
+                tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
             }
             else
             {
@@ -1037,12 +1050,10 @@ namespace HttpServer
             res.set_content(buf, "text/html");
         });
 
-        /*
         svr->set_logger([](const Request &req, const Response &res)
         {
             dbglogger_log("%s", log(req, res).c_str());
         });
-        */
 
         svr->set_payload_max_length(1024 * 1024 * 12);
         svr->set_tcp_nodelay(true);

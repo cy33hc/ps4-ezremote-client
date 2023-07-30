@@ -6,7 +6,9 @@
 #include "clients/iis.h"
 #include "lang.h"
 #include "util.h"
+#ifndef DAEMON
 #include "windows.h"
+#endif
 
 using httplib::Client;
 using httplib::Headers;

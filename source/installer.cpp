@@ -17,11 +17,14 @@
 #include "installer.h"
 #include "util.h"
 #include "config.h"
-#include "windows.h"
 #include "lang.h"
 #include "system.h"
 #include "fs.h"
 #include "clients/webdavclient.h"
+#ifndef DAEMON
+#include "windows.h"
+#endif
+#include "dbglogger.h"
 
 #define BGFT_HEAP_SIZE (1 * 1024 * 1024)
 
@@ -125,11 +128,15 @@ namespace INSTALLER
 		else
 		{
 			std::string encoded_path = path;
+			std::string encoded_site_name = remote_settings->site_name;
 			Web::Urn::Path uri(encoded_path);
+			Web::Urn::Path site_name(encoded_site_name);
 			CURL *curl = curl_easy_init();
 			encoded_path = uri.quote(curl);
+			encoded_site_name = site_name.quote(curl);
 			curl_easy_cleanup(curl);
-			std::string full_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst" + encoded_path;
+			std::string full_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst" + encoded_site_name + encoded_path;
+			dbglogger_log("url=%s", full_url.c_str());
 
 			return full_url;
 		}
@@ -213,6 +220,7 @@ namespace INSTALLER
 			ret = sceBgftServiceIntDebugDownloadRegisterPkg(&params, &task_id);
 		if (ret == 0x80990088 || ret == 0x80990015)
 		{
+#ifndef DAEMON
 			sprintf(confirm_message, "%s - %s?", path.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
 			confirm_state = CONFIRM_WAIT;
 			action_to_take = selected_action;
@@ -226,11 +234,14 @@ namespace INSTALLER
 
 			if (confirm_state == CONFIRM_YES)
 			{
+#endif
 				ret = sceAppInstUtilAppUnInstall(cid.c_str());
 				if (ret != 0)
 					goto err;
 				goto retry;
+#ifndef DAEMON
 			}
+#endif
 		}
 		else if (ret > 0)
 			goto err;
@@ -243,6 +254,7 @@ namespace INSTALLER
 
 		Util::Notify("%s queued", filename.c_str());
 
+#ifndef DAEMON
 		file_transfering = true;
 		bytes_to_download = 100;
 		bytes_transfered = 0;
@@ -255,7 +267,7 @@ namespace INSTALLER
 			bytes_transfered = (uint32_t)(((float)progress_info.transferred / progress_info.length) * 100.f);
 			sceSystemServicePowerTick();
 		}
-
+#endif
 		return 1;
 	err:
 		return 0;
@@ -320,6 +332,7 @@ namespace INSTALLER
 
 		Util::Notify("%s queued", path.c_str());
 
+#ifndef DAEMON
 		file_transfering = true;
 		bytes_to_download = 100;
 		bytes_transfered = 0;
@@ -332,6 +345,7 @@ namespace INSTALLER
 			bytes_transfered = (uint32_t)(((float)progress_info.transferred / progress_info.length) * 100.f);
 			sceSystemServicePowerTick();
 		}
+#endif
 		return 1;
 
 	err:
@@ -381,6 +395,7 @@ namespace INSTALLER
 		ret = sceBgftServiceIntDownloadRegisterTaskByStorageEx(&download_params, &task_id);
 		if (ret == 0x80990088 || ret == 0x80990015)
 		{
+#ifndef DAEMON
 			sprintf(confirm_message, "%s - %s?", path.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
 			confirm_state = CONFIRM_WAIT;
 			action_to_take = selected_action;
@@ -394,16 +409,19 @@ namespace INSTALLER
 
 			if (confirm_state == CONFIRM_YES)
 			{
+#endif
 				ret = sceAppInstUtilAppUnInstall(titleId);
 				if (ret != 0)
 					goto err;
 				goto retry;
+#ifndef DAEMON
 			}
 			else
 			{
 				if (auto_delete_tmp_pkg)
 					FS::Rm(path);
 			}
+#endif
 		}
 		else if (ret > 0)
 			goto err;
@@ -420,6 +438,7 @@ namespace INSTALLER
 			return 1;
 		}
 
+#ifndef DAEMON
 		sprintf(activity_message, "%s", lang_strings[STR_WAIT_FOR_INSTALL_MSG]);
 		bytes_to_download = 1;
 		bytes_transfered = 0;
@@ -435,6 +454,7 @@ namespace INSTALLER
 		}
 		if (auto_delete_tmp_pkg)
 			FS::Rm(path);
+#endif
 		return 1;
 
 	err:

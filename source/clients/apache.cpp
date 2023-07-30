@@ -6,7 +6,6 @@
 #include "clients/apache.h"
 #include "lang.h"
 #include "util.h"
-#include "windows.h"
 
 using httplib::Client;
 using httplib::Headers;

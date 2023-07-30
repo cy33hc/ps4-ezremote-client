@@ -13,8 +13,10 @@
 #include "fs.h"
 #include "lang.h"
 #include "system.h"
-#include "windows.h"
 #include "zip_util.h"
+#ifndef DAEMON
+#include "windows.h"
+#endif
 
 #define TRANSFER_SIZE (128 * 1024)
 
@@ -24,7 +26,11 @@ namespace ZipUtil
 
     void callback_7zip(const char *fileName, unsigned long fileSize, unsigned fileNum, unsigned numFiles)
     {
+#ifndef DAEMON
         sprintf(activity_message, "%s %s: %s", lang_strings[STR_EXTRACTING], filename_extracted, fileName);
+#else
+        return;
+#endif
     }
 
     void convertToZipTime(time_t time, tm_zip *tmzip)
@@ -65,8 +71,10 @@ namespace ZipUtil
         memset(&zi, 0, sizeof(zip_fileinfo));
         convertToZipTime(file_stat.st_mtim.tv_sec, &zi.tmz_date);
 
+#ifndef DAEMON
         bytes_transfered = 0;
         bytes_to_download = file_stat.st_size;
+#endif
 
         // Large file?
         int use_zip64 = (file_stat.st_size >= 0xFFFFFFFF);
@@ -117,7 +125,9 @@ namespace ZipUtil
             }
 
             seek += written;
+#ifndef DAEMON
             bytes_transfered += read;
+#endif
         }
 
         free(buf);
@@ -175,6 +185,9 @@ namespace ZipUtil
             do
             {
                 dirent = readdir(dfd);
+#ifdef DAEMON
+                bool stop_activity = false;
+#endif
                 if (stop_activity)
                     return 1;
                 if (dirent != NULL && strcmp(dirent->d_name, ".") != 0 && strcmp(dirent->d_name, "..") != 0)
@@ -191,7 +204,9 @@ namespace ZipUtil
                     }
                     else
                     {
+#ifndef DAEMON
                         sprintf(activity_message, "%s %s", lang_strings[STR_COMPRESSING], new_path);
+#endif
                         ret = ZipAddFile(zf, new_path, filename_start, level);
                     }
 
@@ -210,7 +225,9 @@ namespace ZipUtil
         }
         else
         {
+#ifndef DAEMON
             sprintf(activity_message, "%s %s", lang_strings[STR_COMPRESSING], path.c_str());
+#endif
             return ZipAddFile(zf, path, filename_start, level);
         }
 
@@ -238,7 +255,9 @@ namespace ZipUtil
 
     int ExtractZip(const DirEntry &file, const std::string &dir)
     {
+#ifndef DAEMON
         file_transfering = true;
+#endif
         unz_global_info global_info;
         unz_file_info file_info;
         unzFile zipfile = unzOpen(file.path);
@@ -260,6 +279,9 @@ namespace ZipUtil
         char ext_fname[512];
         char read_buffer[TRANSFER_SIZE];
 
+#ifdef DAEMON
+        bool stop_activity = false;
+#endif
         for (int zip_idx = 0; zip_idx < num_files; ++zip_idx)
         {
             if (stop_activity)
@@ -267,11 +289,15 @@ namespace ZipUtil
             unzGetCurrentFileInfo(zipfile, &file_info, fname, 512, NULL, 0, NULL, 0);
             sprintf(ext_fname, "%s%s", dest_dir.c_str(), fname);
             const size_t filename_length = strlen(ext_fname);
+#ifndef DAEMON
             bytes_transfered = 0;
             bytes_to_download = file_info.uncompressed_size;
+#endif
             if (ext_fname[filename_length - 1] != '/')
             {
+#ifndef DAEMON
                 snprintf(activity_message, 255, "%s %s: %s", lang_strings[STR_EXTRACTING], file.name, fname);
+#endif
                 curr_file_bytes = 0;
                 unzOpenCurrentFile(zipfile);
                 FS::MkDirs(ext_fname, true);
@@ -284,7 +310,9 @@ namespace ZipUtil
                         fwrite(read_buffer, 1, rbytes, f);
                         curr_extracted_bytes += rbytes;
                         curr_file_bytes += rbytes;
+#ifndef DAEMON
                         bytes_transfered = curr_file_bytes;
+#endif
                     }
                 }
                 fclose(f);
@@ -305,7 +333,9 @@ namespace ZipUtil
 
     int Extract7Zip(const DirEntry &file, const std::string &dir)
     {
+#ifndef DAEMON
         file_transfering = false;
+#endif
         FS::MkDirs(dir, true);
         sprintf(filename_extracted, "%s", file.name);
         int res = Extract7zFileEx(file.path, dir.c_str(), callback_7zip, DEFAULT_IN_BUF_SIZE);
@@ -314,7 +344,9 @@ namespace ZipUtil
 
     int ExtractRar(const DirEntry &file, const std::string &dir)
     {
+#ifndef DAEMON
         file_transfering = false;
+#endif
         HANDLE hArcData; // Archive Handle
         struct RAROpenArchiveDataEx rarOpenArchiveData;
         struct RARHeaderDataEx rarHeaderData;
@@ -337,7 +369,9 @@ namespace ZipUtil
 
         while (RARReadHeaderEx(hArcData, &rarHeaderData) == ERAR_SUCCESS)
         {
+#ifndef DAEMON
             sprintf(activity_message, "%s %s: %s", lang_strings[STR_EXTRACTING], file.name, rarHeaderData.FileName);
+#endif
             if (RARProcessFile(hArcData, RAR_EXTRACT, destPath, NULL) != ERAR_SUCCESS)
             {
                 RARCloseArchive(hArcData);
@@ -361,7 +395,9 @@ namespace ZipUtil
             return ExtractRar(file, dir);
         else
         {
+#ifndef DAEMON
             sprintf(status_message, "%s - %s", file.name, lang_strings[STR_UNSUPPORTED_FILE_FORMAT]);
+#endif
             return -1;
         }
         return 1;

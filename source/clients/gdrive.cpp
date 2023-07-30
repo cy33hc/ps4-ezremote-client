@@ -10,7 +10,9 @@
 #include "fs.h"
 #include "lang.h"
 #include "util.h"
+#ifndef DAEMON
 #include "windows.h"
+#endif
 #include "system.h"
 
 #define GOOGLE_BUF_SIZE 262144
@@ -306,8 +308,9 @@ int GDriveClient::Head(const std::string &path, void *buffer, uint64_t len)
 int GDriveClient::Get(const std::string &outputfile, const std::string &path, uint64_t offset)
 {
     std::ofstream file_stream(outputfile, std::ios::binary);
+#ifndef DAEMON
     bytes_transfered = 0;
-
+#endif
     std::string id = GetValue(path_id_map, path);
     std::string drive_id = GetDriveId(path);
     std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id) + "?alt=media";
@@ -317,7 +320,9 @@ int GDriveClient::Get(const std::string &outputfile, const std::string &path, ui
                                [&](const char *data, size_t data_length)
                                {
                                    file_stream.write(data, data_length);
+#ifndef DAEMON
                                    bytes_transfered += data_length;
+#endif
                                    return true;
                                }))
     {
@@ -397,11 +402,14 @@ int GDriveClient::GetRange(const std::string &path, void *buffer, uint64_t size,
 
 int GDriveClient::Update(const std::string &inputfile, const std::string &path)
 {
+#ifndef DAEMON
     bytes_to_download = FS::GetSize(inputfile);
     bytes_transfered = 0;
+#else
+    size_t bytes_to_download = FS::GetSize(inputfile);
+#endif
 
     std::ifstream file_stream(inputfile, std::ios::binary);
-    bytes_transfered = 0;
 
     std::string id = GetValue(path_id_map, path);
     std::string drive_id = GetDriveId(path);
@@ -435,7 +443,9 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
                             file_stream.read(buf, bytes_to_transfer);
                             sink.write(buf, bytes_to_transfer);
                             count += bytes_to_transfer;
+#ifndef DAEMON
                             bytes_transfered += bytes_to_transfer;
+#endif
                             bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
                         } while (count < length);
                         return true;
@@ -471,11 +481,13 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
     if (FileExists(path))
         return Update(inputfile, path);
 
+#ifndef DAEMON
     bytes_to_download = FS::GetSize(inputfile);
     bytes_transfered = 0;
-
+#else
+    int64_t bytes_to_download = FS::GetSize(inputfile);
+#endif
     std::ifstream file_stream(inputfile, std::ios::binary);
-    bytes_transfered = 0;
 
     size_t path_pos = path.find_last_of("/");
     std::string parent_dir;
@@ -521,7 +533,9 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
                             file_stream.read(buf, bytes_to_transfer);
                             sink.write(buf, bytes_to_transfer);
                             count += bytes_to_transfer;
+#ifndef DAEMON
                             bytes_transfered += bytes_to_transfer;
+#endif
                             bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
                         } while (count < length);
                         return true;

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en" data-ng-app="FileManagerApp">
+
+<head>
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+  <meta charset="utf-8">
+  <title>ezRemote Client</title>
+
+  <!-- third party -->
+  <script src="/mnt/sandbox/pfsmnt/RMTC00002-app0/assets/res/jquery.min.js"></script>
+  <script src="/mnt/sandbox/pfsmnt/RMTC00002-app0/assets/res/angular.min.js"></script>
+  <script src="/mnt/sandbox/pfsmnt/RMTC00002-app0/assets/res/angular-translate.min.js"></script>
+  <script src="/mnt/sandbox/pfsmnt/RMTC00002-app0/assets/res/ng-file-upload.min.js"></script>
+  <script src="/mnt/sandbox/pfsmnt/RMTC00002-app0/assets/res/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="/mnt/sandbox/pfsmnt/RMTC00002-app0/assets/res/bootstrap.min.css" />
+  <!-- /third party -->
+
+  <!-- Comment if you need to use raw source code -->
+  <link href="/mnt/sandbox/pfsmnt/RMTC00002-app0/assets/res/angular-filemanager.min.css" rel="stylesheet">
+  <script src="/mnt/sandbox/pfsmnt/RMTC00002-app0/assets/res/angular-filemanager.min.js"></script>
+  <!-- /Comment if you need to use raw source code -->
+
+  <script type="text/javascript">
+    angular.module('FileManagerApp').config(['fileManagerConfigProvider', function (config) {
+      var defaults = config.$get();
+      config.set({
+        appName: 'ezRemote Client',
+        listUrl: '/__local__/list',
+        uploadUrl: '/__local__/upload',
+        renameUrl: '/__local__/rename',
+        copyUrl: '/__local__/copy',
+        moveUrl: '/__local__/move',
+        removeUrl: '/__local__/remove',
+        editUrl: '/__local__/edit',
+        getContentUrl: '/__local__/getContent',
+        createFolderUrl: '/__local__/createFolder',
+        downloadFileUrl: '/__local__/downloadFile',
+        downloadMultipleUrl: '/__local__/downloadMultiple',
+        compressUrl: '/__local__/compress',
+        extractUrl: '/__local__/extract',
+        permissionsUrl: '/__local__/permission',
+        installUrl: '/__local__/install',
+        uploadResumeSizeUrl: '__local__/uploadResumeSize',
+        multipleDownloadFileName: 'ezremote-client.zip',
+        isExtractableFilePattern: /\.(7z|rar|zip)$/i,
+        pickCallback: function (item) {
+          var msg = 'Picked %s "%s" for external use'
+            .replace('%s', item.type)
+            .replace('%s', item.fullPath());
+        },
+        allowedActions: angular.extend(defaults.allowedActions, {
+          pickFiles: false,
+          pickFolders: false,
+          changePermissions: false
+        }),
+      });
+    }]);
+  </script>
+</head>
+
+<body class="ng-cloak">
+  <angular-filemanager></angular-filemanager>
+</body>
+
+</html>

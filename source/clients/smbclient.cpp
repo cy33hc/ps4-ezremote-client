@@ -13,11 +13,23 @@
 #include "fs.h"
 #include "lang.h"
 #include "clients/smbclient.h"
-#include "windows.h"
 #include "util.h"
+#ifndef DAEMON
+#include "windows.h"
+#endif
+
+static pthread_mutexattr_t mutexattr;
+static pthread_mutex_t smb_mutex = PTHREAD_MUTEX_INITIALIZER;
+static bool mutex_initialized = false;
 
 SmbClient::SmbClient()
 {
+	if (!mutex_initialized)
+	{
+		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&smb_mutex, &mutexattr);
+		mutex_initialized = true;
+	}
 }
 
 SmbClient::~SmbClient()
@@ -132,6 +144,9 @@ int SmbClient::_Rmdir(const std::string &ppath)
  */
 int SmbClient::Rmdir(const std::string &path, bool recursive)
 {
+#ifdef DAEMON
+	bool stop_activity = false;
+#endif
 	if (stop_activity)
 		return 1;
 
@@ -149,17 +164,23 @@ int SmbClient::Rmdir(const std::string &path, bool recursive)
 			ret = Rmdir(list[i].path, recursive);
 			if (ret == 0)
 			{
+#ifndef DAEMON
 				sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_DIR_MSG], list[i].path);
+#endif
 				return 0;
 			}
 		}
 		else
 		{
+#ifndef DAEMON
 			sprintf(activity_message, "%s %s\n", lang_strings[STR_DELETING], list[i].path);
+#endif
 			ret = Delete(list[i].path);
 			if (ret == 0)
 			{
+#ifndef DAEMON
 				sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_FILE_MSG], list[i].path);
+#endif
 				return 0;
 			}
 		}
@@ -167,7 +188,9 @@ int SmbClient::Rmdir(const std::string &path, bool recursive)
 	ret = _Rmdir(path);
 	if (ret == 0)
 	{
+#ifndef DAEMON
 		sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_DIR_MSG], path.c_str());
+#endif
 		return 0;
 	}
 
@@ -184,29 +207,34 @@ int SmbClient::Get(const std::string &outputfile, const std::string &ppath, uint
 {
 	std::string path = std::string(ppath);
 	path = Util::Trim(path, "/");
+#ifdef DAEMON
+	int64_t bytes_to_download;
+#endif
 	if (!Size(path.c_str(), &bytes_to_download))
 	{
 		sprintf(response, "%s", smb2_get_error(smb2));
 		return 0;
 	}
 
-	struct smb2fh* in = smb2_open(smb2, path.c_str(), O_RDONLY);
+	struct smb2fh *in = smb2_open(smb2, path.c_str(), O_RDONLY);
 	if (in == NULL)
 	{
 		sprintf(response, "%s", smb2_get_error(smb2));
 		return 0;
 	}
 
-	FILE* out = FS::Create(outputfile);
+	FILE *out = FS::Create(outputfile);
 	if (out == NULL)
 	{
 		sprintf(response, "%s", lang_strings[STR_FAILED]);
 		return 0;
 	}
 
-	uint8_t *buff = (uint8_t*)malloc(max_read_size);
+	uint8_t *buff = (uint8_t *)malloc(max_read_size);
 	int count = 0;
+#ifndef DAEMON
 	bytes_transfered = 0;
+#endif
 	while ((count = smb2_read(smb2, in, buff, max_read_size)) > 0)
 	{
 		if (count < 0)
@@ -214,15 +242,17 @@ int SmbClient::Get(const std::string &outputfile, const std::string &ppath, uint
 			sprintf(response, "%s", smb2_get_error(smb2));
 			FS::Close(out);
 			smb2_close(smb2, in);
-			free((void*)buff);
+			free((void *)buff);
 			return 0;
 		}
 		FS::Write(out, buff, count);
+#ifndef DAEMON
 		bytes_transfered += count;
+#endif
 	}
 	FS::Close(out);
 	smb2_close(smb2, in);
-	free((void*)buff);
+	free((void *)buff);
 	return 1;
 }
 
@@ -230,40 +260,50 @@ int SmbClient::GetRange(const std::string &ppath, DataSink &sink, uint64_t size,
 {
 	std::string path = std::string(ppath);
 	path = Util::Trim(path, "/");
-	struct smb2fh* in = smb2_open(smb2, path.c_str(), O_RDONLY);
+	pthread_mutex_lock(&smb_mutex);
+	struct smb2fh *in = smb2_open(smb2, path.c_str(), O_RDONLY);
+	pthread_mutex_unlock(&smb_mutex);
 	if (in == NULL)
 	{
 		return 0;
 	}
 
-    smb2_lseek(smb2, in, offset, SEEK_SET, NULL);
+	pthread_mutex_lock(&smb_mutex);
+	smb2_lseek(smb2, in, offset, SEEK_SET, NULL);
+	pthread_mutex_unlock(&smb_mutex);
 
-	uint8_t *buff = (uint8_t*)malloc(max_read_size);
-    int count = 0;
-    size_t bytes_remaining = size;
-    do
-    {
-        size_t bytes_to_read = std::min<size_t>(max_read_size, bytes_remaining);
-        count = smb2_read(smb2, in, buff, bytes_to_read);
-        if (count > 0)
-        {
-            bytes_remaining -= count;
-            bool ok = sink.write((char*)buff, count);
+	uint8_t *buff = (uint8_t *)malloc(max_read_size);
+	int count = 0;
+	size_t bytes_remaining = size;
+	do
+	{
+		size_t bytes_to_read = std::min<size_t>(max_read_size, bytes_remaining);
+		pthread_mutex_lock(&smb_mutex);
+		count = smb2_read(smb2, in, buff, bytes_to_read);
+		pthread_mutex_unlock(&smb_mutex);
+		if (count > 0)
+		{
+			bytes_remaining -= count;
+			bool ok = sink.write((char *)buff, count);
 			if (!ok)
 			{
 				free((uint8_t *)buff);
+				pthread_mutex_lock(&smb_mutex);
 				smb2_close(smb2, in);
+				pthread_mutex_unlock(&smb_mutex);
 				return 0;
 			}
-        }
-        else
-        {
-            break;
-        }
-    } while (1);
+		}
+		else
+		{
+			break;
+		}
+	} while (1);
 
-    free((char *)buff);
-    smb2_close(smb2, in);
+	free((char *)buff);
+	pthread_mutex_lock(&smb_mutex);
+	smb2_close(smb2, in);
+	pthread_mutex_unlock(&smb_mutex);
 
 	return 1;
 }
@@ -278,7 +318,7 @@ int SmbClient::GetRange(const std::string &ppath, void *buffer, uint64_t size, u
 		return 0;
 	}
 
-	struct smb2fh* in = smb2_open(smb2, path.c_str(), O_RDONLY);
+	struct smb2fh *in = smb2_open(smb2, path.c_str(), O_RDONLY);
 	if (in == NULL)
 	{
 		return 0;
@@ -286,7 +326,7 @@ int SmbClient::GetRange(const std::string &ppath, void *buffer, uint64_t size, u
 
 	smb2_lseek(smb2, in, offset, SEEK_SET, NULL);
 
-	int count = smb2_read(smb2, in, (uint8_t*)buffer, size);
+	int count = smb2_read(smb2, in, (uint8_t *)buffer, size);
 	smb2_close(smb2, in);
 	if (count != size)
 		return 0;
@@ -316,14 +356,14 @@ int SmbClient::CopyToSocket(const std::string &ppath, int socket_fd)
 		return 0;
 	}
 
-	struct smb2fh* in = smb2_open(smb2, path.c_str(), O_RDONLY);
+	struct smb2fh *in = smb2_open(smb2, path.c_str(), O_RDONLY);
 	if (in == NULL)
 	{
 		sprintf(response, "%s", smb2_get_error(smb2));
 		return 0;
 	}
 
-	uint8_t *buff = (uint8_t*)malloc(max_read_size);
+	uint8_t *buff = (uint8_t *)malloc(max_read_size);
 	int count = 0;
 	while ((count = smb2_read(smb2, in, buff, max_read_size)) > 0)
 	{
@@ -331,7 +371,7 @@ int SmbClient::CopyToSocket(const std::string &ppath, int socket_fd)
 		{
 			sprintf(response, "%s", smb2_get_error(smb2));
 			smb2_close(smb2, in);
-			free((void*)buff);
+			free((void *)buff);
 			return 0;
 		}
 		int ret = sceNetSend(socket_fd, buff, count, 0);
@@ -341,7 +381,7 @@ int SmbClient::CopyToSocket(const std::string &ppath, int socket_fd)
 		}
 	}
 	smb2_close(smb2, in);
-	free((void*)buff);
+	free((void *)buff);
 	return 1;
 }
 
@@ -370,30 +410,36 @@ int SmbClient::Put(const std::string &inputfile, const std::string &ppath, uint6
 	std::string path = std::string(ppath);
 	path = Util::Trim(path, "/");
 
+#ifndef DAEMON
 	bytes_to_download = FS::GetSize(inputfile);
+#else
+	int64_t bytes_to_download = FS::GetSize(inputfile);
+#endif
 	if (bytes_to_download < 0)
 	{
 		sprintf(response, "%s", lang_strings[STR_FAILED]);
 		return 0;
 	}
 
-	FILE* in = FS::OpenRead(inputfile);
+	FILE *in = FS::OpenRead(inputfile);
 	if (in == NULL)
 	{
 		sprintf(response, "%s", lang_strings[STR_FAILED]);
 		return 0;
 	}
-	
-	struct smb2fh* out = smb2_open(smb2, path.c_str(), O_WRONLY | O_CREAT | O_TRUNC);
+
+	struct smb2fh *out = smb2_open(smb2, path.c_str(), O_WRONLY | O_CREAT | O_TRUNC);
 	if (out == NULL)
 	{
 		sprintf(response, "%s", smb2_get_error(smb2));
 		return 0;
 	}
 
-	uint8_t* buff = (uint8_t*)malloc(max_write_size);
+	uint8_t *buff = (uint8_t *)malloc(max_write_size);
 	int count = 0;
+#ifndef DAEMON
 	bytes_transfered = 0;
+#endif
 	while ((count = FS::Read(in, buff, max_write_size)) > 0)
 	{
 		if (count < 0)
@@ -405,14 +451,15 @@ int SmbClient::Put(const std::string &inputfile, const std::string &ppath, uint6
 			return 0;
 		}
 		smb2_write(smb2, out, buff, count);
+#ifndef DAEMON
 		bytes_transfered += count;
+#endif
 	}
 	FS::Close(in);
 	smb2_close(smb2, out);
 	free(buff);
 
 	return 1;
-
 }
 
 int SmbClient::Rename(const std::string &src, const std::string &dst)
@@ -448,11 +495,14 @@ int SmbClient::Size(const std::string &ppath, int64_t *size)
 	std::string path = std::string(ppath);
 	path = Util::Trim(path, "/");
 	smb2_stat_64 st;
+	pthread_mutex_lock(&smb_mutex);
 	if (smb2_stat(smb2, path.c_str(), &st) != 0)
 	{
 		sprintf(response, "%s", smb2_get_error(smb2));
+		pthread_mutex_lock(&smb_mutex);
 		return 0;
 	}
+	pthread_mutex_unlock(&smb_mutex);
 	*size = st.smb2_size;
 
 	return 1;
@@ -472,7 +522,9 @@ std::vector<DirEntry> SmbClient::ListDir(const std::string &path)
 	dir = smb2_opendir(smb2, Util::Ltrim(ppath, "/").c_str());
 	if (dir == NULL)
 	{
+#ifndef DAEMON
 		sprintf(status_message, "%s - %s", lang_strings[STR_FAIL_READ_LOCAL_DIR_MSG], smb2_get_error(smb2));
+#endif
 		return out;
 	}
 
@@ -541,18 +593,21 @@ int SmbClient::Head(const std::string &ppath, void *buffer, uint64_t len)
 {
 	std::string path = std::string(ppath);
 	path = Util::Trim(path, "/");
+#ifdef DAEMON
+	int64_t bytes_to_download;
+#endif
 	if (!Size(path.c_str(), &bytes_to_download))
 	{
 		return 0;
 	}
 
-	struct smb2fh* in = smb2_open(smb2, path.c_str(), O_RDONLY);
+	struct smb2fh *in = smb2_open(smb2, path.c_str(), O_RDONLY);
 	if (in == NULL)
 	{
 		return 0;
 	}
 
-	int count = smb2_read(smb2, in, (uint8_t*)buffer, len);
+	int count = smb2_read(smb2, in, (uint8_t *)buffer, len);
 	smb2_close(smb2, in);
 	if (count != len)
 		return 0;
