@@ -20,6 +20,7 @@
 #include "server/http_server.h"
 #include "clients/gdrive.h"
 #include "config.h"
+#include "daemon.h"
 #include "lang.h"
 #include "gui.h"
 #include "util.h"
@@ -320,7 +321,10 @@ int main()
 	{
 		terminate();
 	}
-	HttpServer::Start();
+	
+	//HttpServer::Start();
+	if (!BootDaemonService())
+		return 0;
 
 	if (load_sys_modules() != 0)
 		return 0;

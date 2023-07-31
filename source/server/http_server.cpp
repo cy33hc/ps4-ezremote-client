@@ -1075,7 +1075,11 @@ namespace HttpServer
         {
             return;
         }
+#ifndef DAEMON
         int ret = pthread_create(&http_server_thid, NULL, ServerThread, NULL);
+#else
+        ServerThread(nullptr);
+#endif
     }
 
     void Stop()

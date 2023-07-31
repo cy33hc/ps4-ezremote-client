@@ -44,6 +44,7 @@ add_executable(ezremote_client
   source/actions.cpp
   source/config.cpp
   source/crypt.c
+  source/daemon.cpp
   source/fs.cpp
   source/gui.cpp
   source/getentropy.c
@@ -52,6 +53,7 @@ add_executable(ezremote_client
   source/installer.cpp
   source/lang.cpp
   source/main.cpp
+  source/md5.cpp
   source/orbis_jbc.c
   source/system.cpp
   source/sfo.cpp
@@ -103,4 +105,5 @@ target_link_libraries(ezremote_client
   SceNet
   SceBgft
   SceAppInstUtil
+  SceLncUtil
 )

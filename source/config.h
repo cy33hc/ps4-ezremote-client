@@ -17,6 +17,7 @@
 #define TMP_EDITOR_FILE DATA_PATH "/tmp_editor.txt"
 #define TMP_SFO_PATH DATA_PATH "/tmp_pkg.sfo"
 #define TMP_ICON_PATH DATA_PATH "/tmp_icon.png"
+#define DAEMON_PATH "/system/vsh/app/RMTC00002"
 
 #define CONFIG_GLOBAL "Global"
 

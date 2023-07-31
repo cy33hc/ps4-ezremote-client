@@ -26,13 +26,10 @@ extern "C"
 #include "orbis_jbc.h"
 }
 
-#define FRAME_WIDTH 1920
-#define FRAME_HEIGHT 1080
 #define NET_HEAP_SIZE   (5 * 1024 * 1024)
 
 static void terminate()
 {
-	INSTALLER::Exit();
 	terminate_jbc();
 	sceSystemServiceLoadExec("exit", NULL);
 }
@@ -40,33 +37,36 @@ static void terminate()
 int main()
 {
 	dbglogger_init();
-	dbglogger_log("If you see this you've set up dbglogger correctly.");
+	dbglogger_log("In daemon");
 	int rc;
-	// No buffering
-	setvbuf(stdout, NULL, _IONBF, 0);
 
 	// load common modules
+	dbglogger_log("loading modules");
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_IME_DIALOG) < 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_SYSTEM_SERVICE) < 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_USER_SERVICE) < 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_BGFT) < 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_APP_INST_UTIL) < 0) return 0;
-	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_PAD) < 0) return 0;
-	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_AUDIOOUT) < 0 || sceAudioOutInit() != 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_NET) < 0 || sceNetInit() != 0) return 0;
+
+	dbglogger_log("sceUserServiceInitialize");
+    OrbisUserServiceInitializeParams param;
+    param.priority = ORBIS_KERNEL_PRIO_FIFO_LOWEST;
+    sceUserServiceInitialize(&param);
 
 	sceNetPoolCreate("simple", NET_HEAP_SIZE, 0);
 
-	if (INSTALLER::Init() < 0)
-		return 0;
+	dbglogger_log("initialize_jbc");
+	if (!initialize_jbc())
+	{
+		terminate();
+	}
+	atexit(terminate);
 
-	CONFIG::LoadConfig();
-
-	HttpServer::ServerThread(nullptr);
+	dbglogger_log("load_sys_modules");
 	if (load_sys_modules() != 0)
 		return 0;
 
-	atexit(terminate);
-
+	dbglogger_log("Exit daemon");
 	return 0;
 }

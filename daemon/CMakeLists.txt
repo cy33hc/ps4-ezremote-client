@@ -39,7 +39,6 @@ add_executable(ezremote_client
   ../source/crypt.c
   ../source/fs.cpp
   ../source/getentropy.c
-  ../source/ime_dialog.cpp
   ../source/inifile.c
   ../source/installer.cpp
   ../source/lang.cpp
@@ -58,14 +57,8 @@ target_link_libraries(ezremote_client
   dbglogger
   c
   c++
-  png
-  webp
-  jpeg
   z
   pthread
-  SDL2
-  SDL2_image
-  samplerate
   jbc
   crypto
   ssl
@@ -82,14 +75,9 @@ target_link_libraries(ezremote_client
   SceShellCoreUtil
   SceSysmodule
   SceSystemService
-  ScePigletv2VSH
-  ScePrecompiledShaders
   SceRtc
   SceUserService
-  ScePad
-  SceAudioOut
   SceSysUtil
-  SceImeDialog
   SceNet
   SceBgft
   SceAppInstUtil

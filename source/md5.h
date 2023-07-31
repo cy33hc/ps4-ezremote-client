@@ -5,6 +5,9 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
+
+#define MD5_HASH_LENGTH 16
 
 typedef struct{
     uint64_t size;        // Size of input in bytes
@@ -20,5 +23,6 @@ void md5Step(uint32_t *buffer, uint32_t *input);
 
 void md5String(char *input, uint8_t *result);
 void md5File(FILE *file, uint8_t *result);
+int md5FileCompare(const char *file1, const char *file2);
 
 #endif
