@@ -319,3 +319,23 @@ std::string BaseClient::DecodeUrl(const std::string &url)
     }
     return "";
 }
+
+lxb_dom_node_t *BaseClient::NextChildElement(lxb_dom_element_t *element)
+{
+    lxb_dom_node_t *node = element->node.first_child;
+    while (node != nullptr && node->type != LXB_DOM_NODE_TYPE_ELEMENT)
+    {
+        node = node->next;
+    }
+    return node;
+}
+
+lxb_dom_node_t *BaseClient::NextElement(lxb_dom_node_t *node)
+{
+    lxb_dom_node_t *next = node->next;
+    while (next != nullptr && next->type != LXB_DOM_NODE_TYPE_ELEMENT)
+    {
+        next = next->next;
+    }
+    return next;
+}

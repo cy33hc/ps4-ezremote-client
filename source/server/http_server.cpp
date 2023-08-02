@@ -920,30 +920,34 @@ namespace HttpServer
             res.set_content(str.c_str(), "text/plain");
         });
 
-        svr->Get("/rmt_inst/(.*)", [&](const Request & req, Response & res)
+        svr->Get("/rmt_inst/Site (\\d+)(/)(.*)", [&](const Request & req, Response & res)
         {
             RemoteClient *tmp_client;
-            auto path = std::string("/") + std::string(req.matches[1]);
+            RemoteSettings *tmp_settings;
+            auto site_idx = std::stoi(req.matches[1])-1;
+            auto path = std::string("/") + std::string(req.matches[3]);
 
-            if (remote_settings->type == CLIENT_TYPE_SFTP)
+            tmp_settings = &site_settings[sites[site_idx]];
+
+            if (tmp_settings->type == CLIENT_TYPE_SFTP)
             {
                 tmp_client = new SFTPClient();
-                tmp_client->Connect(remote_settings->server, remote_settings->username, remote_settings->password);
+                tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
             }
-            else if (remote_settings->type == CLIENT_TYPE_SMB)
+            else if (tmp_settings->type == CLIENT_TYPE_SMB)
             {
                 tmp_client = new SmbClient();
-                tmp_client->Connect(remote_settings->server, remote_settings->username, remote_settings->password);
+                tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
             }
-            else if (remote_settings->type == CLIENT_TYPE_FTP)
+            else if (tmp_settings->type == CLIENT_TYPE_FTP)
             {
                 tmp_client = new FtpClient();
-                tmp_client->Connect(remote_settings->server, remote_settings->username, remote_settings->password);
+                tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
             }
-            else if (remote_settings->type == CLIENT_TYPE_NFS)
+            else if (tmp_settings->type == CLIENT_TYPE_NFS)
             {
                 tmp_client = new NfsClient();
-                tmp_client->Connect(remote_settings->server, remote_settings->username, remote_settings->password);
+                tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
             }
             else
             {

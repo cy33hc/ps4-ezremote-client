@@ -12,26 +12,6 @@ using httplib::Client;
 using httplib::Headers;
 using httplib::Result;
 
-lxb_dom_node_t *nextChildElement(lxb_dom_element_t *element)
-{
-    lxb_dom_node_t *node = element->node.first_child;
-    while (node != nullptr && node->type != LXB_DOM_NODE_TYPE_ELEMENT)
-    {
-        node = node->next;
-    }
-    return node;
-}
-
-lxb_dom_node_t *nextElement(lxb_dom_node_t *node)
-{
-    lxb_dom_node_t *next = node->next;
-    while (next != nullptr && next->type != LXB_DOM_NODE_TYPE_ELEMENT)
-    {
-        next = next->next;
-    }
-    return next;
-}
-
 std::vector<DirEntry> ApacheClient::ListDir(const std::string &path)
 {
     std::vector<DirEntry> out;
@@ -101,7 +81,7 @@ std::vector<DirEntry> ApacheClient::ListDir(const std::string &path)
             memset(&entry, 0, sizeof(DirEntry));
 
             element = lxb_dom_collection_element(collection, i);
-            node = nextChildElement(element);
+            node = NextChildElement(element);
             if (node == nullptr) continue;
 
             value = lxb_dom_element_local_name(lxb_dom_interface_element(node), &value_len);
@@ -114,7 +94,7 @@ std::vector<DirEntry> ApacheClient::ListDir(const std::string &path)
             if (tmp_string.compare("td") == 0)
             {
                 // get the child img element
-                lxb_dom_node_t *img = nextChildElement(lxb_dom_interface_element(node));
+                lxb_dom_node_t *img = NextChildElement(lxb_dom_interface_element(node));
                 if (img == nullptr) continue;
 
                 value = lxb_dom_element_local_name(lxb_dom_interface_element(img), &value_len);
@@ -142,7 +122,7 @@ std::vector<DirEntry> ApacheClient::ListDir(const std::string &path)
             else continue; // invalid record
 
             // file/folder name
-            node = nextElement(node);
+            node = NextElement(node);
             if (node == nullptr) continue;
             value = lxb_dom_element_local_name(lxb_dom_interface_element(node), &value_len);
             tmp_string = std::string((const char *)value, value_len);
@@ -165,7 +145,7 @@ std::vector<DirEntry> ApacheClient::ListDir(const std::string &path)
             else continue; // not valid record
 
             // datetime
-            node = nextElement(node);
+            node = NextElement(node);
             if (node == nullptr) continue;
             value = lxb_dom_element_local_name(lxb_dom_interface_element(node), &value_len);
             tmp_string = std::string((const char *)value, value_len);
@@ -195,7 +175,7 @@ std::vector<DirEntry> ApacheClient::ListDir(const std::string &path)
             else continue; // invalid record
 
             // filesize
-            node = nextElement(node);
+            node = NextElement(node);
             if (node == nullptr) continue;
             value = lxb_dom_element_local_name(lxb_dom_interface_element(node), &value_len);
             tmp_string = std::string((const char *)value, value_len);

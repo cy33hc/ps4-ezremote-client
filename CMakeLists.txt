@@ -40,6 +40,8 @@ add_executable(ezremote_client
   source/clients/smbclient.cpp
   source/clients/webdavclient.cpp
   source/clients/sftpclient.cpp
+  source/clients/rclone.cpp
+  source/filehost/gdrive_host.cpp
   source/server/http_server.cpp
   source/actions.cpp
   source/config.cpp
@@ -65,6 +67,7 @@ add_self(ezremote_client)
 add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.10" 32 0)
 
 target_link_libraries(ezremote_client
+  dbglogger
   c
   c++
   png

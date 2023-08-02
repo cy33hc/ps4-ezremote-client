@@ -14,6 +14,7 @@
 #include "clients/npxserve.h"
 #include "clients/nfsclient.h"
 #include "clients/iis.h"
+#include "clients/rclone.h"
 #include "clients/sftpclient.h"
 #include "common.h"
 #include "fs.h"
@@ -1133,6 +1134,8 @@ namespace Actions
                 remoteclient = new NginxClient();
             else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_NPX_SERVE) == 0)
                 remoteclient = new NpxServeClient();
+            else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_RCLONE) == 0)
+                remoteclient = new RCloneClient();
         }
         else if (strncmp(remote_settings->server, "webdavs://", 10) == 0 || strncmp(remote_settings->server, "webdav://", 9) == 0)
         {

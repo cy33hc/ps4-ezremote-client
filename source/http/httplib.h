@@ -1900,6 +1900,7 @@ namespace detail {
 
 std::string encode_query_param(const std::string &value);
 
+std::string encode_url(const std::string &s);
 std::string decode_url(const std::string &s, bool convert_plus_to_space);
 
 void read_file(const std::string &path, std::string &out);

@@ -125,11 +125,14 @@ namespace INSTALLER
 		else
 		{
 			std::string encoded_path = path;
+			std::string encoded_site_name = remote_settings->site_name;
 			Web::Urn::Path uri(encoded_path);
+			Web::Urn::Path site_name(encoded_site_name);
 			CURL *curl = curl_easy_init();
 			encoded_path = uri.quote(curl);
+			encoded_site_name = site_name.quote(curl);
 			curl_easy_cleanup(curl);
-			std::string full_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst" + encoded_path;
+			std::string full_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst" + encoded_site_name + encoded_path;
 
 			return full_url;
 		}

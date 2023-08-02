@@ -3,6 +3,8 @@
 
 #include <string>
 #include <vector>
+#include <lexbor/html/parser.h>
+#include <lexbor/dom/interfaces/element.h>
 #include "http/httplib.h"
 #include "clients/remote_client.h"
 #include "http/httplib.h"
@@ -38,6 +40,8 @@ public:
     uint32_t SupportedActions();
     static std::string EncodeUrl(const std::string &url);
     static std::string DecodeUrl(const std::string &url);
+    static lxb_dom_node_t *NextChildElement(lxb_dom_element_t *element);
+    static lxb_dom_node_t *NextElement(lxb_dom_node_t *node);
 
 protected:
     httplib::Client *client;
