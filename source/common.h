@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include <string.h>
+#include <lexbor/html/parser.h>
+#include <lexbor/dom/interfaces/element.h>
 
 #define HTTP_SUCCESS(x) (x >= 200 && x < 300)
 #define MIN(a,b) (((a)<(b))?(a):(b))
@@ -85,5 +87,45 @@ struct DirEntry
         }
     }
 };
+
+static lxb_dom_node_t *NextChildElement(lxb_dom_element_t *element)
+{
+    lxb_dom_node_t *node = element->node.first_child;
+    while (node != nullptr && node->type != LXB_DOM_NODE_TYPE_ELEMENT)
+    {
+        node = node->next;
+    }
+    return node;
+}
+
+static lxb_dom_node_t *NextElement(lxb_dom_node_t *node)
+{
+    lxb_dom_node_t *next = node->next;
+    while (next != nullptr && next->type != LXB_DOM_NODE_TYPE_ELEMENT)
+    {
+        next = next->next;
+    }
+    return next;
+}
+
+static lxb_dom_node_t *NextChildTextNode(lxb_dom_element_t *element)
+{
+    lxb_dom_node_t *node = element->node.first_child;
+    while (node != nullptr && node->type != LXB_DOM_NODE_TYPE_TEXT)
+    {
+        node = node->next;
+    }
+    return node;
+}
+
+static lxb_dom_node_t *NextTextNode(lxb_dom_node_t *node)
+{
+    lxb_dom_node_t *next = node->next;
+    while (next != nullptr && next->type != LXB_DOM_NODE_TYPE_TEXT)
+    {
+        next = next->next;
+    }
+    return next;
+}
 
 #endif

@@ -6,7 +6,7 @@
 class Base64
 {
 public:
-  static int Encode(const std::string &input, std::string &out)
+  static int Encode(unsigned char *input, size_t in_len, std::string &out)
   {
     static constexpr char sEncodingTable[] = {
         'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
@@ -18,7 +18,6 @@ public:
         'w', 'x', 'y', 'z', '0', '1', '2', '3',
         '4', '5', '6', '7', '8', '9', '+', '/'};
 
-    size_t in_len = input.size();
     size_t out_len = 4 * ((in_len + 2) / 3);
     out.resize(out_len);
     size_t i;
@@ -48,6 +47,11 @@ public:
     }
 
     return 1;
+  }
+
+  static int Encode(const std::string &input, std::string &out)
+  {
+    return Encode((unsigned char*)input.data(), input.size(), out);
   }
 
   static int Decode(const std::string &input, std::string &out)

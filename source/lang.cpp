@@ -94,7 +94,7 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Not a valid Package",																		// STR_NOT_A_VALID_PACKAGE
 	"Waiting for Package to finish installing",													// STR_WAIT_FOR_INSTALL_MSG
 	"Failed to install pkg file. Please delete the tmp pkg manually",							// STR_FAIL_INSTALL_TMP_PKG_MSG
-	"Failed to obtain google download URL",														// STR_FAIL_TO_OBTAIN_GG_DL_MSG
+	"Failed to obtain download URL",															// STR_FAIL_TO_OBTAIN_GG_DL_MSG
 	"Auto delete temporary downloaded pkg file after install",									// STR_AUTO_DELETE_TMP_PKG
 	"Protocol not supported",																	// STR_PROTOCOL_NOT_SUPPORTED
 	"Could not resolve hostname",																// STR_COULD_NOT_RESOLVE_HOST

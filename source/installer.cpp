@@ -145,15 +145,12 @@ namespace INSTALLER
 		return true;
 	}
 
-	int InstallRemotePkg(const std::string &path, pkg_header *header)
+	int InstallRemotePkg(const std::string &url, pkg_header *header, bool prompt)
 	{
-		std::string url = getRemoteUrl(path, true);
-
 		if (url.empty())
 			return 0;
 
 		int ret;
-		std::string filename = path.substr(path.find_last_of("/")+1);
 		std::string cid = std::string((char *)header->pkg_content_id);
 		cid = cid.substr(cid.find_first_of("-") + 1, 9);
 		int user_id;
@@ -199,7 +196,7 @@ namespace INSTALLER
 			params.entitlementType = 5;
 			params.id = (char *)header->pkg_content_id;
 			params.contentUrl = url.c_str();
-			params.contentName = filename.c_str();
+			params.contentName = cid.c_str();
 			params.iconPath = "";
 			params.playgoScenarioId = "0";
 			params.option = ORBIS_BGFT_TASK_OPT_DISABLE_CDN_QUERY_PARAM;
@@ -216,18 +213,28 @@ namespace INSTALLER
 			ret = sceBgftServiceIntDebugDownloadRegisterPkg(&params, &task_id);
 		if (ret == 0x80990088 || ret == 0x80990015)
 		{
-			sprintf(confirm_message, "%s - %s?", path.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
-			confirm_state = CONFIRM_WAIT;
-			action_to_take = selected_action;
-			activity_inprogess = false;
-			while (confirm_state == CONFIRM_WAIT)
+			if (prompt)
 			{
-				sceKernelUsleep(100000);
-			}
-			activity_inprogess = true;
-			selected_action = action_to_take;
+				sprintf(confirm_message, "%s - %s?", cid.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
+				confirm_state = CONFIRM_WAIT;
+				action_to_take = selected_action;
+				activity_inprogess = false;
+				while (confirm_state == CONFIRM_WAIT)
+				{
+					sceKernelUsleep(100000);
+				}
+				activity_inprogess = true;
+				selected_action = action_to_take;
 
-			if (confirm_state == CONFIRM_YES)
+				if (confirm_state == CONFIRM_YES)
+				{
+					ret = sceAppInstUtilAppUnInstall(cid.c_str());
+					if (ret != 0)
+						goto err;
+					goto retry;
+				}
+			}
+			else
 			{
 				ret = sceAppInstUtilAppUnInstall(cid.c_str());
 				if (ret != 0)
@@ -244,19 +251,22 @@ namespace INSTALLER
 			goto err;
 		}
 
-		Util::Notify("%s queued", filename.c_str());
+		Util::Notify("%s queued", cid.c_str());
 
-		file_transfering = true;
-		bytes_to_download = 100;
-		bytes_transfered = 0;
-		while (bytes_transfered < 99)
+		if (prompt)
 		{
-			memset(&progress_info, 0, sizeof(progress_info));
-			ret = sceBgftServiceDownloadGetProgress(task_id, &progress_info);
-			if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
-				return 0;
-			bytes_transfered = (uint32_t)(((float)progress_info.transferred / progress_info.length) * 100.f);
-			sceSystemServicePowerTick();
+			file_transfering = true;
+			bytes_to_download = 100;
+			bytes_transfered = 0;
+			while (bytes_transfered < 99)
+			{
+				memset(&progress_info, 0, sizeof(progress_info));
+				ret = sceBgftServiceDownloadGetProgress(task_id, &progress_info);
+				if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
+					return 0;
+				bytes_transfered = (uint32_t)(((float)progress_info.transferred / progress_info.length) * 100.f);
+				sceSystemServicePowerTick();
+			}
 		}
 
 		return 1;

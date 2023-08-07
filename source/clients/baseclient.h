@@ -40,8 +40,6 @@ public:
     uint32_t SupportedActions();
     static std::string EncodeUrl(const std::string &url);
     static std::string DecodeUrl(const std::string &url);
-    static lxb_dom_node_t *NextChildElement(lxb_dom_element_t *element);
-    static lxb_dom_node_t *NextElement(lxb_dom_node_t *node);
 
 protected:
     httplib::Client *client;

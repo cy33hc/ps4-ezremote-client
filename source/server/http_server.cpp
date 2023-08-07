@@ -8,6 +8,7 @@
 #include "clients/smbclient.h"
 #include "clients/ftpclient.h"
 #include "clients/nfsclient.h"
+#include "filehost/filehost.h"
 #include "config.h"
 #include "fs.h"
 #include "windows.h"
@@ -925,33 +926,50 @@ namespace HttpServer
             RemoteClient *tmp_client;
             RemoteSettings *tmp_settings;
             auto site_idx = std::stoi(req.matches[1])-1;
-            auto path = std::string("/") + std::string(req.matches[3]);
+            std::string path;
 
-            tmp_settings = &site_settings[sites[site_idx]];
+            if (site_idx != 98)
+            {
+                path = std::string("/") + std::string(req.matches[3]);
 
-            if (tmp_settings->type == CLIENT_TYPE_SFTP)
-            {
-                tmp_client = new SFTPClient();
-                tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
-            }
-            else if (tmp_settings->type == CLIENT_TYPE_SMB)
-            {
-                tmp_client = new SmbClient();
-                tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
-            }
-            else if (tmp_settings->type == CLIENT_TYPE_FTP)
-            {
-                tmp_client = new FtpClient();
-                tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
-            }
-            else if (tmp_settings->type == CLIENT_TYPE_NFS)
-            {
-                tmp_client = new NfsClient();
-                tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
+                tmp_settings = &site_settings[sites[site_idx]];
+
+                if (tmp_settings->type == CLIENT_TYPE_SFTP)
+                {
+                    tmp_client = new SFTPClient();
+                    tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
+                }
+                else if (tmp_settings->type == CLIENT_TYPE_SMB)
+                {
+                    tmp_client = new SmbClient();
+                    tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
+                }
+                else if (tmp_settings->type == CLIENT_TYPE_FTP)
+                {
+                    tmp_client = new FtpClient();
+                    tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
+                }
+                else if (tmp_settings->type == CLIENT_TYPE_NFS)
+                {
+                    tmp_client = new NfsClient();
+                    tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
+                }
+                else
+                {
+                    tmp_client = remoteclient;
+                }
             }
             else
             {
-                tmp_client = remoteclient;
+                std::string hash = std::string(req.matches[3]);
+                std::string url = FileHost::GetCachedDownloadUrl(hash);
+                size_t scheme_pos = url.find("://");
+                size_t root_pos = url.find("/", scheme_pos + 3);
+                std::string host = url.substr(0, root_pos);
+                path = url.substr(root_pos);
+
+                tmp_client = new BaseClient();
+                tmp_client->Connect(host, "", "");
             }
 
             if (tmp_client == nullptr || !tmp_client->IsConnected())
@@ -987,11 +1005,12 @@ namespace HttpServer
                         int ret = tmp_client->GetRange(path, sink, length, offset);
                         return (ret == 1);
                     },
-                    [tmp_client, path](bool success) {
+                    [tmp_client, path, site_idx](bool success) {
                         if (tmp_client != nullptr && (tmp_client->clientType() == CLIENT_TYPE_SFTP
                             || tmp_client->clientType() == CLIENT_TYPE_SMB
                             || tmp_client->clientType() == CLIENT_TYPE_FTP
-                            || tmp_client->clientType() == CLIENT_TYPE_NFS))
+                            || tmp_client->clientType() == CLIENT_TYPE_NFS
+                            || (tmp_client->clientType() == CLIENT_TYPE_HTTP_SERVER && site_idx == 98)))
                         {
                             tmp_client->Quit();
                             delete tmp_client;
@@ -1015,17 +1034,80 @@ namespace HttpServer
                         int ret = tmp_client->GetRange(path, sink, range_len, range.first);
                         return (ret == 1);
                     },
-                    [tmp_client, path, range, range_len](bool success) {
+                    [tmp_client, site_idx, path, range, range_len](bool success) {
                         if (tmp_client != nullptr && (tmp_client->clientType() == CLIENT_TYPE_SFTP 
                             || tmp_client->clientType() == CLIENT_TYPE_SMB
                             || tmp_client->clientType() == CLIENT_TYPE_FTP
-                            || tmp_client->clientType() == CLIENT_TYPE_NFS))
+                            || tmp_client->clientType() == CLIENT_TYPE_NFS
+                            || (tmp_client->clientType() == CLIENT_TYPE_HTTP_SERVER && site_idx == 98)))
                         {
                             tmp_client->Quit();
                             delete tmp_client;
                         }
                     });
             }
+        });
+
+        svr->Post("/__local__/install_url", [&](const Request & req, Response & res)
+        {
+            std::string url;
+            const char *url_param;
+            json_object *jobj = json_tokener_parse(req.body.c_str());
+            if (jobj != nullptr)
+            {
+                url_param = json_object_get_string(json_object_object_get(jobj, "url"));
+                if (url_param == nullptr)
+                {
+                    bad_request(res, "Required newPath parameter missing");
+                    return;
+                }
+            }
+            else
+            {
+                bad_request(res, "Invalid payload");
+                return;
+            }
+
+            url = std::string(url_param);
+            FileHost *filehost = FileHost::getFileHost(url);
+
+            if (!filehost->IsValidUrl())
+            {
+                failed(res, 200, "InValid URL");
+                return;
+            }
+
+            std::string hash = filehost->Hash();
+            std::string download_url = filehost->GetDownloadUrl();
+            if (download_url.empty())
+            {
+                failed(res, 200, "Couldn't extract download url");
+                return;
+            }
+
+            FileHost::AddCacheDownloadUrl(hash, download_url);
+            delete(filehost);
+
+			size_t scheme_pos = download_url.find("://");
+			size_t root_pos = download_url.find("/", scheme_pos + 3);
+			std::string host = download_url.substr(0, root_pos);
+			std::string path = download_url.substr(root_pos);
+            pkg_header header;
+
+            BaseClient *baseclient = new BaseClient();
+            baseclient->Connect(host, "", "");
+            baseclient->Head(path, &header, sizeof(pkg_header));
+            delete(baseclient);
+
+            std::string remote_install_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst/Site%2099/" + hash;
+            int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header);
+            if (rc == 0)
+            {
+                failed(res, 200, "Failed to install from URL");
+                return;
+            }
+            
+            success(res);
         });
 
         svr->Get("/stop", [&](const Request & /*req*/, Response & /*res*/)
@@ -1047,7 +1129,7 @@ namespace HttpServer
             dbglogger_log("%s", log(req, res).c_str());
         });
         */
-
+       
         svr->set_payload_max_length(1024 * 1024 * 12);
         svr->set_tcp_nodelay(true);
         svr->set_mount_point("/", "/");

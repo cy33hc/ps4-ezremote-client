@@ -16,6 +16,7 @@
 #include "clients/iis.h"
 #include "clients/rclone.h"
 #include "clients/sftpclient.h"
+#include "filehost/filehost.h"
 #include "common.h"
 #include "fs.h"
 #include "config.h"
@@ -707,7 +708,8 @@ namespace Actions
                             }
                             else
                             {
-                                if (INSTALLER::InstallRemotePkg(it->path, &header) == 0)
+                                std::string url = INSTALLER::getRemoteUrl(it->path, true);
+                                if (INSTALLER::InstallRemotePkg(url, &header, true) == 0)
                                     failed++;
                                 else
                                     success++;
@@ -919,87 +921,6 @@ namespace Actions
         }
     }
 
-    std::string GetGoogleDownloadUrl(std::string &url)
-    {
-        size_t scheme_pos = url.find_first_of("://");
-        size_t path_pos = url.find_first_of("/", scheme_pos + 3);
-        std::string host = url.substr(0, path_pos);
-        std::string path = url.substr(path_pos);
-
-        std::string first_download_path;
-        size_t file_id_start_pos = path.find("/file/d/");
-        if (file_id_start_pos != std::string::npos)
-        {
-            file_id_start_pos = file_id_start_pos + 8;
-            std::string file_id = path.substr(file_id_start_pos);
-            size_t file_id_end_pos = file_id.find_first_of("/");
-            file_id = file_id.substr(0, file_id_end_pos);
-            first_download_path = "/uc?export=download&id=" + file_id;
-        }
-        else if (path.find("/uc?export=download") != std::string::npos)
-        {
-            first_download_path = path;
-        }
-        else
-        {
-            return "";
-        }
-
-        WebDAV::WebDavClient tmp_client;
-        tmp_client.Connect(host.c_str(), "", "", false);
-        WebDAV::dict_t headers;
-        tmp_client.GetHeaders(first_download_path.c_str(), &headers);
-
-        std::string content_type = WebDAV::get(headers, "content-type");
-        if (content_type.find("application/octet-stream") != std::string::npos)
-        {
-            return first_download_path;
-        }
-        else if (content_type.find("text/html") == std::string::npos)
-        {
-            return "";
-        }
-        char *buffer_ptr = nullptr;
-        unsigned long long buffer_size = 0;
-        tmp_client.GetClient()->download_to(first_download_path, buffer_ptr, buffer_size);
-
-        lxb_status_t status;
-        lxb_dom_element_t *element;
-        lxb_html_document_t *document;
-        lxb_dom_collection_t *collection;
-        lxb_dom_attr_t *attr;
-        document = lxb_html_document_create();
-        status = lxb_html_document_parse(document, (lxb_char_t *)buffer_ptr, buffer_size);
-        if (status != LXB_STATUS_OK)
-            return "";
-        collection = lxb_dom_collection_make(&document->dom_document, 128);
-        if (collection == NULL)
-        {
-            return "";
-        }
-        status = lxb_dom_elements_by_tag_name(lxb_dom_interface_element(document->body),
-                                              collection, (const lxb_char_t *)"form", 4);
-        if (status != LXB_STATUS_OK)
-            return "";
-        std::string download_url;
-        for (size_t i = 0; i < lxb_dom_collection_length(collection); i++)
-        {
-            element = lxb_dom_collection_element(collection, i);
-            std::string form_id((char *)element->attr_id->value->data, element->attr_id->value->length);
-            if (form_id == "download-form")
-            {
-                size_t value_len;
-                const lxb_char_t *value = lxb_dom_element_get_attribute(element, (const lxb_char_t *)"action", 6, &value_len);
-                download_url = std::string((char *)value, value_len);
-                break;
-            }
-        }
-        lxb_dom_collection_destroy(collection, true);
-        lxb_html_document_destroy(document);
-
-        return download_url;
-    }
-
     void *InstallUrlPkgThread(void *argp)
     {
         bytes_transfered = 0;
@@ -1013,8 +934,16 @@ namespace Actions
         sprintf(filename, "%s/%lu.pkg", DATA_PATH, tick.mytick);
 
         std::string full_url = std::string(install_pkg_url.url);
-        if (full_url.find("https://drive.google.com") != std::string::npos)
-            full_url = GetGoogleDownloadUrl(full_url);
+        FileHost *filehost = FileHost::getFileHost(full_url);
+        if (!filehost->IsValidUrl())
+        {
+            sprintf(status_message, "%s", lang_strings[STR_FAIL_TO_OBTAIN_GG_DL_MSG]);
+            activity_inprogess = false;
+            Windows::SetModalMode(false);
+            return NULL;
+        }
+        full_url = filehost->GetDownloadUrl();
+        delete(filehost);
 
         if (full_url.empty())
         {
