@@ -62,5 +62,6 @@ std::string FileHost::GetCachedDownloadUrl(std::string &hash)
 void FileHost::AddCacheDownloadUrl(std::string &hash, std::string &url)
 {
     std::pair<std::string, std::string> pair = std::make_pair(hash, url);
+    cache_downloal_urls.erase(hash);
     cache_downloal_urls.insert(pair);
 }
