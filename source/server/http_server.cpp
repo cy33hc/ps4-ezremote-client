@@ -1052,13 +1052,15 @@ namespace HttpServer
         {
             std::string url;
             const char *url_param;
+            bool use_alldebrid;
             json_object *jobj = json_tokener_parse(req.body.c_str());
             if (jobj != nullptr)
             {
                 url_param = json_object_get_string(json_object_object_get(jobj, "url"));
+                use_alldebrid  = json_object_get_boolean(json_object_object_get(jobj, "use_alldebrid"));
                 if (url_param == nullptr)
                 {
-                    bad_request(res, "Required newPath parameter missing");
+                    bad_request(res, "Required url_param, use_alldebrid parameter missing");
                     return;
                 }
             }
@@ -1068,12 +1070,18 @@ namespace HttpServer
                 return;
             }
 
+            if (use_alldebrid && strlen(alldebrid_api_key) == 0)
+            {
+                failed(res, 200, lang_strings[STR_ALLDEBRID_API_KEY_MISSING_MSG]);
+                return;
+            }
+
             url = std::string(url_param);
-            FileHost *filehost = FileHost::getFileHost(url);
+            FileHost *filehost = FileHost::getFileHost(url, use_alldebrid);
 
             if (!filehost->IsValidUrl())
             {
-                failed(res, 200, "InValid URL");
+                failed(res, 200, lang_strings[STR_INVALID_URL]);
                 return;
             }
 
@@ -1081,7 +1089,7 @@ namespace HttpServer
             std::string download_url = filehost->GetDownloadUrl();
             if (download_url.empty())
             {
-                failed(res, 200, "Couldn't extract download url");
+                failed(res, 200, lang_strings[STR_CANT_EXTRACT_URL_MSG]);
                 return;
             }
 
@@ -1103,7 +1111,7 @@ namespace HttpServer
             int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header);
             if (rc == 0)
             {
-                failed(res, 200, "Failed to install from URL");
+                failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
                 return;
             }
             

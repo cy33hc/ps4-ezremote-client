@@ -41,6 +41,7 @@ add_executable(ezremote_client
   source/clients/webdavclient.cpp
   source/clients/sftpclient.cpp
   source/clients/rclone.cpp
+  source/filehost/alldebrid.cpp
   source/filehost/directhost.cpp
   source/filehost/gdrive.cpp
   source/filehost/filehost.cpp

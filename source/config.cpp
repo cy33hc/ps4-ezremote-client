@@ -37,6 +37,7 @@ bool auto_delete_tmp_pkg;
 int max_edit_file_size;
 GoogleAppInfo gg_app;
 bool show_hidden_files;
+char alldebrid_api_key[32];
 
 unsigned char cipher_key[32] = {'s', '5', 'v', '8', 'y', '/', 'B', '?', 'E', '(', 'H', '+', 'M', 'b', 'Q', 'e', 'T', 'h', 'W', 'm', 'Z', 'q', '4', 't', '7', 'w', '9', 'z', '$', 'C', '&', 'F'};
 unsigned char cipher_iv[16] = {'Y', 'p', '3', 's', '6', 'v', '9', 'y', '$', 'B', '&', 'E', ')', 'H', '@', 'M'};
@@ -180,6 +181,22 @@ namespace CONFIG
 
         show_hidden_files = ReadBool(CONFIG_GLOBAL, CONFIG_SHOW_HIDDEN_FILES, false);
         WriteBool(CONFIG_GLOBAL, CONFIG_SHOW_HIDDEN_FILES, show_hidden_files);
+
+        // alldebrid api key
+        char tmp_api_key[512];
+        sprintf(tmp_api_key, "%s", ReadString(CONFIG_GLOBAL, CONFIG_ALLDEBRID_API_KEY, ""));
+        std::string encrypted_api_key;
+        if (strlen(tmp_api_key) > 0)
+        {
+            std::string decrypted__api_key;
+            int ret = Decrypt(tmp_api_key, decrypted__api_key);
+            if (ret == 0)
+                sprintf(alldebrid_api_key, "%s", tmp_api_key);
+            else
+                sprintf(alldebrid_api_key, "%s", decrypted__api_key.c_str());
+            Encrypt(alldebrid_api_key, encrypted_api_key);
+        }
+        WriteString(CONFIG_GLOBAL, CONFIG_ALLDEBRID_API_KEY, encrypted_api_key.c_str());
 
         // Load Google Account Info
         sprintf(gg_app.client_id, "%s", ReadString(CONFIG_GOOGLE, CONFIG_GOOGLE_CLIENT_ID, ""));
@@ -355,9 +372,17 @@ namespace CONFIG
             Encrypt(gg_app.client_secret, encrypted_secret);
         else
             encrypted_secret = std::string(gg_app.client_secret);
+
+        std::string encrypted_api_key;
+        if (strlen(alldebrid_api_key) > 0)
+            Encrypt(alldebrid_api_key, encrypted_api_key);
+        else
+            encrypted_api_key = std::string(alldebrid_api_key);
+
         WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_CLIENT_SECRET, encrypted_secret.c_str());
         WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_CLIENT_ID, gg_app.client_id);
         WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_PERMISSIONS, gg_app.permissions);
+        WriteString(CONFIG_GLOBAL, CONFIG_ALLDEBRID_API_KEY, encrypted_api_key.c_str());
         WriteBool(CONFIG_GLOBAL, CONFIG_AUTO_DELETE_TMP_PKG, auto_delete_tmp_pkg);
         WriteBool(CONFIG_GLOBAL, CONFIG_SHOW_HIDDEN_FILES, show_hidden_files);
         WriteInt(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_PORT, http_server_port);

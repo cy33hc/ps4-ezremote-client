@@ -57,6 +57,8 @@
 #define CONFIG_REMOTE_HTTP_SERVER_TYPE "remote_server_http_server_type"
 #define CONFIG_REMOTE_DEFAULT_DIRECTORY "remote_server_default_directory"
 
+#define CONFIG_ALLDEBRID_API_KEY "alldebrid_api_key"
+
 #define CONFIG_VERSION "config_version"
 #define CONFIG_VERSION_NUM 1
 
@@ -135,6 +137,7 @@ extern unsigned char cipher_key[32];
 extern unsigned char cipher_iv[16];
 extern GoogleAppInfo gg_app;
 extern bool show_hidden_files;
+extern char alldebrid_api_key[32];
 
 namespace CONFIG
 {

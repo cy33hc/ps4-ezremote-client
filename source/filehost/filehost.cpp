@@ -6,10 +6,12 @@
 
 #include "filehost.h"
 #include "1fichier.h"
+#include "filehost/alldebrid.h"
 #include "filehost/directhost.h"
 #include "filehost/gdrive.h"
 #include "filehost/mediafire.h"
 #include "filehost/pixeldrain.h"
+#include "config.h"
 #include "base64.h"
 #include "util.h"
 
@@ -33,21 +35,21 @@ std::string FileHost::Hash()
     return out;
 }
 
-FileHost *FileHost::getFileHost(const std::string &url)
+FileHost *FileHost::getFileHost(const std::string &url, bool use_alldebrid)
 {
     std::regex google_re(GDRIVE_REGEX);
     std::regex mediafire_re(MEDIAFIRE_REGEX);
     std::regex pixeldrain_re(PIXELDRAIN_REGEX);
     std::regex fichier_re(FICHIER_REGEX);
 
-    if (std::regex_match(url, google_re))
+    if (use_alldebrid)
+        return new AllDebridHost(url);
+    else if (std::regex_match(url, google_re))
         return new GDriveHost(url);
     else if (std::regex_match(url, mediafire_re))
         return new MediaFireHost(url);
     else if (std::regex_match(url, pixeldrain_re))
         return new PixelDrainHost(url);
-    else if (std::regex_match(url, fichier_re))
-        return new FichierHost(url);
     else
         return new DirectHost(url);
 }

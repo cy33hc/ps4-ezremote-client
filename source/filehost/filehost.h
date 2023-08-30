@@ -13,7 +13,7 @@ public:
     virtual std::string GetDownloadUrl() = 0;
 
     std::string Hash();
-    static FileHost *getFileHost(const std::string &url);
+    static FileHost *getFileHost(const std::string &url, bool use_alldebrid = false);
     static std::string GetCachedDownloadUrl(std::string &hash);
     static void AddCacheDownloadUrl(std::string &hash, std::string &url);
 

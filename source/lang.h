@@ -153,9 +153,15 @@
 	FUNC(STR_FAIL_INIT_NFS_CONTEXT)      \
 	FUNC(STR_FAIL_MOUNT_NFS_MSG)         \
 	FUNC(STR_WEB_SERVER)                 \
-	FUNC(STR_ENABLE)                    \
+	FUNC(STR_ENABLE)                     \
 	FUNC(STR_COMPRESSED_FILE_PATH)       \
-	FUNC(STR_COMPRESSED_FILE_PATH_MSG)
+	FUNC(STR_COMPRESSED_FILE_PATH_MSG)   \
+	FUNC(STR_ALLDEBRID)                  \
+	FUNC(STR_API_KEY)                    \
+	FUNC(STR_CANT_EXTRACT_URL_MSG)       \
+	FUNC(STR_FAIL_INSTALL_FROM_URL_MSG)  \
+	FUNC(STR_INVALID_URL)                \
+	FUNC(STR_ALLDEBRID_API_KEY_MISSING_MSG)
 
 #define GET_VALUE(x) x,
 #define GET_STRING(x) #x,
@@ -165,7 +171,7 @@ enum
 	FOREACH_STR(GET_VALUE)
 };
 
-#define LANG_STRINGS_NUM 152
+#define LANG_STRINGS_NUM 158
 #define LANG_ID_SIZE 64
 #define LANG_STR_SIZE 384
 extern char lang_identifiers[LANG_STRINGS_NUM][LANG_ID_SIZE];

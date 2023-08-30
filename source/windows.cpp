@@ -1605,7 +1605,7 @@ namespace Windows
             ImGui::OpenPopup(lang_strings[STR_SETTINGS]);
 
             ImGui::SetNextWindowPos(ImVec2(1050, 80));
-            ImGui::SetNextWindowSizeConstraints(ImVec2(850, 80), ImVec2(850, 500), NULL, NULL);
+            ImGui::SetNextWindowSizeConstraints(ImVec2(850, 80), ImVec2(850, 650), NULL, NULL);
             if (ImGui::BeginPopupModal(lang_strings[STR_SETTINGS], NULL, ImGuiWindowFlags_AlwaysAutoResize))
             {
                 ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_GLOBAL]);
@@ -1669,6 +1669,34 @@ namespace Windows
                     ime_field_size = 512;
                     ime_callback = SingleValueImeCallback;
                     Dialog::initImeDialog(lang_strings[STR_COMPRESSED_FILE_PATH], compressed_file_path, 512, ORBIS_TYPE_BASIC_LATIN, 1050, 80);
+                    gui_mode = GUI_MODE_IME;
+                }
+                ImGui::PopStyleVar();
+                ImGui::Separator();
+
+                // Google settings
+                ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_ALLDEBRID]);
+                ImGui::Separator();
+
+                field_size = ImGui::CalcTextSize(lang_strings[STR_API_KEY]);
+                width = field_size.x + 45;
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                ImGui::Text("%s", lang_strings[STR_API_KEY]);
+                ImGui::SameLine();
+                ImGui::SetCursorPosX(width);
+                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 1.0f));
+
+                if (strlen(alldebrid_api_key) > 0)
+                    sprintf(id, "%s", "*********************************************##alldebrid_api_key");
+                else
+                    sprintf(id, "%s", "##client_secret_input");
+                if (ImGui::Button(id, ImVec2(835-width, 0)))
+                {
+                    ResetImeCallbacks();
+                    ime_single_field = alldebrid_api_key;
+                    ime_field_size = 31;
+                    ime_callback = SingleValueImeCallback;
+                    Dialog::initImeDialog(lang_strings[STR_API_KEY], alldebrid_api_key, 31, ORBIS_TYPE_BASIC_LATIN, 1050, 80);
                     gui_mode = GUI_MODE_IME;
                 }
                 ImGui::PopStyleVar();

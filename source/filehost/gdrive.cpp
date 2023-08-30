@@ -70,7 +70,11 @@ std::string GDriveHost::GetDownloadUrl()
         document = lxb_html_document_create();
         status = lxb_html_document_parse(document, (lxb_char_t *)res->body.c_str(), res->body.length());
         if (status != LXB_STATUS_OK)
+        {
+            lxb_html_document_destroy(document);
             return "";
+        }
+
         collection = lxb_dom_collection_make(&document->dom_document, 128);
         if (collection == NULL)
         {
@@ -91,13 +95,16 @@ std::string GDriveHost::GetDownloadUrl()
         for (size_t i = 0; i < lxb_dom_collection_length(collection); i++)
         {
             element = lxb_dom_collection_element(collection, i);
-            std::string form_id((char *)element->attr_id->value->data, element->attr_id->value->length);
-            if (form_id == "download-form")
+            if (element->attr_id != nullptr)
             {
-                size_t value_len;
-                const lxb_char_t *value = lxb_dom_element_get_attribute(element, (const lxb_char_t *)"action", 6, &value_len);
-                download_url = std::string((char *)value, value_len);
-                break;
+                std::string form_id((char *)element->attr_id->value->data, element->attr_id->value->length);
+                if (form_id == "download-form")
+                {
+                    size_t value_len;
+                    const lxb_char_t *value = lxb_dom_element_get_attribute(element, (const lxb_char_t *)"action", 6, &value_len);
+                    download_url = std::string((char *)value, value_len);
+                    break;
+                }
             }
         }
 
