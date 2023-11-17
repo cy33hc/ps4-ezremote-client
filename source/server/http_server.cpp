@@ -1105,10 +1105,11 @@ namespace HttpServer
             BaseClient *baseclient = new BaseClient();
             baseclient->Connect(host, "", "");
             baseclient->Head(path, &header, sizeof(pkg_header));
+            std::string title = INSTALLER::GetRemotePkgTitle(baseclient, path, &header);
             delete(baseclient);
 
             std::string remote_install_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst/Site%2099/" + hash;
-            int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header);
+            int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header, title);
             if (rc == 0)
             {
                 failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);

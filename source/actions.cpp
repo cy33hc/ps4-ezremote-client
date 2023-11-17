@@ -28,6 +28,7 @@
 #include "web/request.hpp"
 #include "web/urn.hpp"
 #include "system.h"
+#include "sfo.h"
 #include "zip_util.h"
 
 namespace Actions
@@ -709,7 +710,9 @@ namespace Actions
                             else
                             {
                                 std::string url = INSTALLER::getRemoteUrl(it->path, true);
-                                if (INSTALLER::InstallRemotePkg(url, &header, true) == 0)
+                                std::string title = INSTALLER::GetRemotePkgTitle(remoteclient, it->path, &header);
+
+                                if (INSTALLER::InstallRemotePkg(url, &header, title, true) == 0)
                                     failed++;
                                 else
                                     success++;

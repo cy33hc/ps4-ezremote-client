@@ -1,5 +1,7 @@
 #pragma once
 
+#include "clients/remote_client.h"
+
 #define SWAP16(x)                                         \
     ((uint16_t)((((uint16_t)(x)&UINT16_C(0x00FF)) << 8) | \
                 (((uint16_t)(x)&UINT16_C(0xFF00)) >> 8)))
@@ -121,9 +123,11 @@ namespace INSTALLER
 
     bool canInstallRemotePkg(const std::string &url);
     std::string getRemoteUrl(const std::string path, bool encodeUrl = false);
-    int InstallRemotePkg(const std::string &path, pkg_header *header, bool prompt = false);
+    int InstallRemotePkg(const std::string &path, pkg_header *header, std::string title, bool prompt = false);
     int InstallLocalPkg(const std::string &path);
     int InstallLocalPkg(const std::string &path, pkg_header *header, bool remove_after_install = false);
     bool ExtractLocalPkg(const std::string &path, const std::string sfo_path, const std::string icon_path);
     bool ExtractRemotePkg(const std::string &path, const std::string sfo_path, const std::string icon_path);
+    std::string GetRemotePkgTitle(RemoteClient *client, const std::string &path, pkg_header *header);
+    std::string GetLocalPkgTitle(const std::string &path, pkg_header *header);
 }
