@@ -34,7 +34,14 @@ int SmbClient::Connect(const std::string &url, const std::string &user, const st
 		sprintf(response, "Failed to init SMB context");
 		return 0;
 	}
+
 	smb_url = smb2_parse_url(smb2, url.c_str());
+	if (smb_url == NULL || smb_url->share == NULL || strlen(smb_url->share) == 0)
+	{
+		sprintf(response, "Invalid SMB Url");
+		return 0;
+	}
+
 	if (pass.length() > 0)
 		smb2_set_password(smb2, pass.c_str());
 	smb2_set_security_mode(smb2, SMB2_NEGOTIATE_SIGNING_ENABLED);
