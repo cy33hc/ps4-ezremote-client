@@ -9,18 +9,23 @@
 #include <minizip/zip.h>
 #include <un7zip.h>
 #include <unrar.h>
+#include <archive.h>
+#include <archive_entry.h>
+
 #include "common.h"
 #include "fs.h"
+#include "ime_dialog.h"
 #include "lang.h"
 #include "system.h"
 #include "windows.h"
 #include "zip_util.h"
 
-#define TRANSFER_SIZE (128 * 1024)
+#define TRANSFER_SIZE (16 * 1024)
 
 namespace ZipUtil
 {
     static char filename_extracted[256];
+    static char password[128];
 
     void callback_7zip(const char *fileName, unsigned long fileSize, unsigned fileNum, unsigned numFiles)
     {
@@ -217,153 +222,253 @@ namespace ZipUtil
         return 1;
     }
 
-    CompressFileType getCompressFileType(const std::string &file)
+    /* duplicate a path name, possibly converting to lower case */
+    static char *pathdup(const char *path)
     {
-        char buf[8];
+        char *str;
+        size_t i, len;
 
-        memset(buf, 0, 8);
-        int ret = FS::Head(file, buf, 8);
-        if (ret == 0)
-            return COMPRESS_FILE_TYPE_UNKNOWN;
+        if (path == NULL || path[0] == '\0')
+            return (NULL);
 
-        if (strncmp(buf, (const char *)MAGIC_7Z_1, 6) == 0)
-            return COMPRESS_FILE_TYPE_7Z;
-        else if (strncmp(buf, (const char *)MAGIC_RAR_1, 7) == 0 || strncmp(buf, (const char *)MAGIC_RAR_2, 8) == 0)
-            return COMPRESS_FILE_TYPE_RAR;
-        else if (strncmp(buf, (const char *)MAGIC_ZIP_1, 4) == 0 || strncmp(buf, (const char *)MAGIC_ZIP_2, 4) == 0 || strncmp(buf, (const char *)MAGIC_ZIP_3, 4) == 0)
-            return COMPRESS_FILE_TYPE_ZIP;
+        len = strlen(path);
+        while (len && path[len - 1] == '/')
+            len--;
+        if ((str = (char*) malloc(len + 1)) == NULL) {
+            errno = ENOMEM;
+        }
+        memcpy(str, path, len);
 
-        return COMPRESS_FILE_TYPE_UNKNOWN;
+        str[len] = '\0';
+
+        return (str);
     }
 
-    int ExtractZip(const DirEntry &file, const std::string &dir)
+    /* concatenate two path names */
+    static char *pathcat(const char *prefix, const char *path)
     {
-        file_transfering = true;
-        unz_global_info global_info;
-        unz_file_info file_info;
-        unzFile zipfile = unzOpen(file.path);
-        std::string dest_dir = std::string(dir);
-        if (dest_dir[dest_dir.length() - 1] != '/')
-        {
-            dest_dir = dest_dir + "/";
-        }
-        if (zipfile == NULL)
-        {
-            return 0;
-        }
-        unzGetGlobalInfo(zipfile, &global_info);
-        unzGoToFirstFile(zipfile);
-        uint64_t curr_extracted_bytes = 0;
-        uint64_t curr_file_bytes = 0;
-        int num_files = global_info.number_entry;
-        char fname[512];
-        char ext_fname[512];
-        char read_buffer[TRANSFER_SIZE];
+        char *str;
+        size_t prelen, len;
 
-        for (int zip_idx = 0; zip_idx < num_files; ++zip_idx)
-        {
-            if (stop_activity)
-                break;
-            unzGetCurrentFileInfo(zipfile, &file_info, fname, 512, NULL, 0, NULL, 0);
-            sprintf(ext_fname, "%s%s", dest_dir.c_str(), fname);
-            const size_t filename_length = strlen(ext_fname);
-            bytes_transfered = 0;
-            bytes_to_download = file_info.uncompressed_size;
-            if (ext_fname[filename_length - 1] != '/')
-            {
-                snprintf(activity_message, 255, "%s %s: %s", lang_strings[STR_EXTRACTING], file.name, fname);
-                curr_file_bytes = 0;
-                unzOpenCurrentFile(zipfile);
-                FS::MkDirs(ext_fname, true);
-                FILE *f = fopen(ext_fname, "wb");
-                while (curr_file_bytes < file_info.uncompressed_size)
-                {
-                    int rbytes = unzReadCurrentFile(zipfile, read_buffer, TRANSFER_SIZE);
-                    if (rbytes > 0)
-                    {
-                        fwrite(read_buffer, 1, rbytes, f);
-                        curr_extracted_bytes += rbytes;
-                        curr_file_bytes += rbytes;
-                        bytes_transfered = curr_file_bytes;
-                    }
-                }
-                fclose(f);
-                unzCloseCurrentFile(zipfile);
-            }
-            else
-            {
-                FS::MkDirs(ext_fname, true);
-            }
-            if ((zip_idx + 1) < num_files)
-            {
-                unzGoToNextFile(zipfile);
-            }
+        prelen = prefix ? strlen(prefix) + 1 : 0;
+        len = strlen(path) + 1;
+        if ((str = (char*) malloc(prelen + len)) == NULL) {
+            errno = ENOMEM;
         }
-        unzClose(zipfile);
-        return 1;
+        if (prefix) {
+            memcpy(str, prefix, prelen);	/* includes zero */
+            str[prelen - 1] = '/';		/* splat zero */
+        }
+        memcpy(str + prelen, path, len);	/* includes zero */
+
+        return (str);
     }
 
-    int Extract7Zip(const DirEntry &file, const std::string &dir)
+    /*
+    * Extract a directory.
+    */
+    static void extract_dir(struct archive *a, struct archive_entry *e, const std::string &path)
     {
-        file_transfering = false;
-        FS::MkDirs(dir, true);
-        sprintf(filename_extracted, "%s", file.name);
-        int res = Extract7zFileEx(file.path, dir.c_str(), callback_7zip, DEFAULT_IN_BUF_SIZE);
-        return res == 0;
+        int mode;
+
+        if (path[0] == '\0')
+            return;
+
+        FS::MkDirs(path);
+        archive_read_data_skip(a);
     }
 
-    int ExtractRar(const DirEntry &file, const std::string &dir)
+    /*
+    * Extract to a file descriptor
+    */
+    static int extract2fd(struct archive *a, const std::string &pathname, int fd)
     {
-        file_transfering = false;
-        HANDLE hArcData; // Archive Handle
-        struct RAROpenArchiveDataEx rarOpenArchiveData;
-        struct RARHeaderDataEx rarHeaderData;
-        char destPath[256];
+        ssize_t len;
+        unsigned char buffer[TRANSFER_SIZE];
 
-        memset(&rarOpenArchiveData, 0, sizeof(rarOpenArchiveData));
-        memset(&rarHeaderData, 0, sizeof(rarHeaderData));
+        /* loop over file contents and write to fd */
+        for (int n = 0; ; n++) {
+            len = archive_read_data(a, buffer, sizeof buffer);
 
-        sprintf(destPath, "%s", dir.c_str());
-        rarOpenArchiveData.ArcName = (char *)file.path;
-        rarOpenArchiveData.CmtBuf = NULL;
-        rarOpenArchiveData.CmtBufSize = 0;
-        rarOpenArchiveData.OpenMode = RAR_OM_EXTRACT;
-        hArcData = RAROpenArchiveEx(&rarOpenArchiveData);
+            if (len == 0)
+                return 1;
 
-        if (rarOpenArchiveData.OpenResult != ERAR_SUCCESS)
-        {
-            return 0;
-        }
-
-        while (RARReadHeaderEx(hArcData, &rarHeaderData) == ERAR_SUCCESS)
-        {
-            sprintf(activity_message, "%s %s: %s", lang_strings[STR_EXTRACTING], file.name, rarHeaderData.FileName);
-            if (RARProcessFile(hArcData, RAR_EXTRACT, destPath, NULL) != ERAR_SUCCESS)
+            if (len < 0)
             {
-                RARCloseArchive(hArcData);
+                sprintf(status_message, "error archive_read_data('%s')", pathname.c_str());
+                return 0;
+            }
+
+            if (write(fd, buffer, len) != len)
+            {
+                sprintf(status_message, "error write('%s')", pathname.c_str());
                 return 0;
             }
         }
 
-        RARCloseArchive(hArcData);
         return 1;
     }
 
-    int Extract(const DirEntry &file, const std::string &dir)
+    /*
+    * Extract a regular file.
+    */
+    static void extract_file(struct archive *a, struct archive_entry *e, const std::string &path)
     {
-        CompressFileType fileType = getCompressFileType(file.path);
+        struct stat sb;
+        int fd;
+        const char *linkname;
 
-        if (fileType == COMPRESS_FILE_TYPE_ZIP)
-            return ExtractZip(file, dir);
-        else if (fileType == COMPRESS_FILE_TYPE_7Z)
-            return Extract7Zip(file, dir);
-        else if (fileType == COMPRESS_FILE_TYPE_RAR)
-            return ExtractRar(file, dir);
+        /* look for existing file of same name */
+    recheck:
+        if (lstat(path.c_str(), &sb) == 0) {
+            (void)unlink(path.c_str());
+        }
+
+        /* process symlinks */
+        linkname = archive_entry_symlink(e);
+        if (linkname != NULL) {
+            if (symlink(linkname, path.c_str()) != 0)
+            {
+                sprintf(status_message, "error symlink('%s')", path.c_str());
+                return;
+            }
+
+            /* set access and modification time */
+            return;
+        }
+
+        if ((fd = open(path.c_str(), O_RDWR|O_CREAT|O_TRUNC, 0777)) < 0)
+        {
+            sprintf(status_message, "error open('%s')", path.c_str());
+            return;
+        }
+
+        extract2fd(a, path, fd);
+
+        /* set access and modification time */
+        if (close(fd) != 0)
+        {
+            return;
+        }
+    }
+
+    static void extract(struct archive *a, struct archive_entry *e, const std::string &base_dir)
+    {
+        char *pathname, *realpathname;
+        mode_t filetype;
+        char *p, *q;
+
+        if ((pathname = pathdup(archive_entry_pathname(e))) == NULL) {
+            archive_read_data_skip(a);
+            return;
+        }
+        filetype = archive_entry_filetype(e);
+
+        /* sanity checks */
+        if (pathname[0] == '/' ||
+            strncmp(pathname, "../", 3) == 0 ||
+            strstr(pathname, "/../") != NULL) {
+            archive_read_data_skip(a);
+            free(pathname);
+            return;
+        }
+
+        /* I don't think this can happen in a zipfile.. */
+        if (!S_ISDIR(filetype) && !S_ISREG(filetype) && !S_ISLNK(filetype)) {
+            archive_read_data_skip(a);
+            free(pathname);
+            return;
+        }
+
+        realpathname = pathcat(base_dir.c_str(), pathname);
+
+        /* ensure that parent directory exists */
+        FS::MkDirs(realpathname, true);
+
+        if (S_ISDIR(filetype))
+            extract_dir(a, e, realpathname);
         else
         {
-            sprintf(status_message, "%s - %s", file.name, lang_strings[STR_UNSUPPORTED_FILE_FORMAT]);
-            return -1;
+            snprintf(activity_message, 255, "%s: %s", lang_strings[STR_EXTRACTING], pathname);
+            extract_file(a, e, realpathname);
         }
+
+        free(realpathname);
+        free(pathname);
+    }
+
+    /*
+    * Callback function for reading passphrase.
+    * Originally from cpio.c and passphrase.c, libarchive.
+    */
+    static const char *passphrase_callback(struct archive *a, void *_client_data)
+    {
+        Dialog::initImeDialog(lang_strings[STR_PASSWORD], password, 127, ORBIS_TYPE_DEFAULT, 560, 200);
+        int ime_result = Dialog::updateImeDialog();
+        if (ime_result == IME_DIALOG_RESULT_FINISHED || ime_result == IME_DIALOG_RESULT_CANCELED)
+        {
+            if (ime_result == IME_DIALOG_RESULT_FINISHED)
+            {
+                snprintf(password, 127, "%s", (char *)Dialog::getImeDialogInputText());
+                return password;
+            }
+            else
+            {
+                memset(password, 0, sizeof(password));
+            }
+        }
+
+        memset(password, 0, sizeof(password));
+        return password;
+    }
+
+    /*
+    * Main loop: open the zipfile, iterate over its contents and decide what
+    * to do with each entry.
+    */
+    int Extract(const DirEntry &file, const std::string &basepath)
+    {
+        struct archive *a;
+        struct archive_entry *e;
+        int ret;
+        uintmax_t total_size, file_count, error_count;
+
+        if ((a = archive_read_new()) == NULL)
+            sprintf(status_message, "%s", "archive_read_new failed");
+
+        archive_read_support_format_all(a);
+        archive_read_support_filter_all(a);
+        archive_read_set_passphrase_callback(a, NULL, &passphrase_callback);
+
+        ret = archive_read_open_filename(a, file.path, TRANSFER_SIZE);
+        if (ret < ARCHIVE_OK)
+        {
+            sprintf(status_message, "%s", "archive_read_open_filename failed");
+            return 0;
+        }
+
+        for (;;) {
+            if (stop_activity)
+                break;
+
+            ret = archive_read_next_header(a, &e);
+
+            if (ret < ARCHIVE_OK)
+            {
+                sprintf(status_message, "%s", "archive_read_next_header failed");
+                archive_read_free(a);
+                return 0;
+            }
+
+            if (ret == ARCHIVE_EOF)
+                break;
+            
+            extract(a, e, basepath);
+        }
+
+        archive_read_free(a);
+
         return 1;
     }
+
 }

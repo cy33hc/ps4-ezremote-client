@@ -1062,7 +1062,7 @@ namespace Windows
                     ime_after_update = AfterExtractFolderCallback;
                     Dialog::initImeDialog(lang_strings[STR_EXTRACT_LOCATION], extract_zip_folder, 255, ORBIS_TYPE_BASIC_LATIN, 600, 350);
                     gui_mode = GUI_MODE_IME;
-                    file_transfering = true;
+                    file_transfering = false;
                     SetModalMode(false);
                     ImGui::CloseCurrentPopup();
                 }
@@ -2000,7 +2000,7 @@ namespace Windows
             activity_inprogess = true;
             sprintf(activity_message, "%s", "");
             stop_activity = false;
-            file_transfering = true;
+            file_transfering = false;
             selected_action = ACTION_NONE;
             Actions::ExtractLocalZips();
             break;

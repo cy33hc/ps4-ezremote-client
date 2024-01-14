@@ -93,6 +93,11 @@ target_link_libraries(ezremote_client
   minizip
   un7zip
   unrar
+  bz2
+  b2
+  lzma
+  lz4
+  archive
   json-c
   ssh2
   kernel
