@@ -1611,6 +1611,29 @@ namespace Windows
                 ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_GLOBAL]);
                 ImGui::Separator();
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                ImGui::Text("%s", lang_strings[STR_LANGUAGE]);
+                ImGui::SameLine();
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                ImGui::SetNextItemWidth(690);
+                if (ImGui::BeginCombo("##Language", language, ImGuiComboFlags_PopupAlignLeft | ImGuiComboFlags_HeightLargest))
+                {
+                    for (int n = 0; n < langs.size(); n++)
+                    {
+                        const bool is_selected = strcmp(langs[n].c_str(), language) == 0;
+                        if (ImGui::Selectable(langs[n].c_str(), is_selected))
+                        {
+                            sprintf(language, "%s", langs[n].c_str());
+                        }
+
+                        // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+                        if (is_selected)
+                            ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
+                }
+                ImGui::Separator();
+
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
                 ImGui::Text("%s", lang_strings[STR_AUTO_DELETE_TMP_PKG]);
                 ImGui::SameLine();
                 ImGui::SetCursorPosX(805);

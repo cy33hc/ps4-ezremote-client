@@ -25,6 +25,7 @@ char remote_directory[255];
 char app_ver[6];
 char last_site[32];
 char display_site[32];
+std::vector<std::string> langs;
 char language[128];
 std::vector<std::string> sites;
 std::vector<std::string> http_servers;
@@ -152,6 +153,10 @@ namespace CONFIG
         sites = {"Site 1", "Site 2", "Site 3", "Site 4", "Site 5", "Site 6", "Site 7", "Site 8", "Site 9", "Site 10",
                  "Site 11", "Site 12", "Site 13", "Site 14", "Site 15", "Site 16", "Site 17", "Site 18", "Site 19", "Site 20"};
 
+        langs = { "Default", "Arabic", "Catalan", "Croatian", "Dutch", "English", "Euskera", "French", "Galego", "German", "Greek", 
+                  "Hungarian", "Indonesian", "Italiano", "Japanese", "Korean", "Polish", "Portuguese_BR", "Russian", "Romanian", "Ryukyuan", "Spanish", "Turkish",
+                  "Simplified Chinese", "Traditional Chinese", "Thai", "Ukrainian"};
+
         http_servers = {HTTP_SERVER_APACHE, HTTP_SERVER_MS_IIS, HTTP_SERVER_NGINX, HTTP_SERVER_NPX_SERVE, HTTP_SERVER_RCLONE};
         text_file_extensions = { ".txt", ".ini", ".log", ".json", ".xml", ".html", ".xhtml", ".conf", ".config" };
         image_file_extensions = { ".bmp", ".jpg", ".jpeg", ".png", ".webp" };
@@ -167,7 +172,7 @@ namespace CONFIG
         WriteInt(CONFIG_GLOBAL, CONFIG_VERSION, CONFIG_VERSION_NUM);
 
         // Load global config
-        sprintf(language, "%s", ReadString(CONFIG_GLOBAL, CONFIG_LANGUAGE, ""));
+        sprintf(language, "%s", ReadString(CONFIG_GLOBAL, CONFIG_LANGUAGE, "Default"));
         WriteString(CONFIG_GLOBAL, CONFIG_LANGUAGE, language);
 
         sprintf(local_directory, "%s", ReadString(CONFIG_GLOBAL, CONFIG_LOCAL_DIRECTORY, "/"));
@@ -385,6 +390,7 @@ namespace CONFIG
         WriteString(CONFIG_GLOBAL, CONFIG_ALLDEBRID_API_KEY, encrypted_api_key.c_str());
         WriteBool(CONFIG_GLOBAL, CONFIG_AUTO_DELETE_TMP_PKG, auto_delete_tmp_pkg);
         WriteBool(CONFIG_GLOBAL, CONFIG_SHOW_HIDDEN_FILES, show_hidden_files);
+        WriteString(CONFIG_GLOBAL, CONFIG_LANGUAGE, language);
         WriteInt(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_PORT, http_server_port);
         WriteString(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_COMPRESSED_FILE_PATH, compressed_file_path);
         WriteBool(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_ENABLED, web_server_enabled);

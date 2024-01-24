@@ -168,6 +168,7 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Failed to install from URL",																// STR_FAIL_INSTALL_FROM_URL_MSG
 	"InValid URL",																				// STR_INVALID_URL
 	"To use this function, an API Key needs to be configured in the ezRemote Client settings",	// STR_ALLDEBRID_API_KEY_MISSING_MSG
+	"Language",																					// STR_LANGUAGE
 };
 
 bool needs_extended_font = false;
@@ -181,7 +182,7 @@ namespace Lang
 
 		std::string lang = std::string(language);
 		lang = Util::Trim(lang, " ");
-		if (lang.size() > 0)
+		if (lang.size() > 0 && lang.compare("Default") != 0)
 		{
 			sprintf(langFile, "/app0/assets/langs/%s.ini", lang.c_str());
 		}

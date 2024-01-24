@@ -126,6 +126,7 @@ extern char remote_directory[255];
 extern char app_ver[6];
 extern char last_site[32];
 extern char display_site[32];
+extern std::vector<std::string> langs;
 extern char language[128];
 extern RemoteSettings *remote_settings;
 extern RemoteClient *remoteclient;
