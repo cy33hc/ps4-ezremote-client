@@ -172,6 +172,7 @@ Romanian
 Ryukyuan
 Thai
 Turkish
+Ukrainian
 ```
 User must modify the file **/data/ezremote-client/config.ini** located in the ps4 hard drive and update the **language** setting to with the **exact** values from the list above.
 
