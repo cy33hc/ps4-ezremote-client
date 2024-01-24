@@ -9,7 +9,7 @@
 #include "clients/remote_client.h"
 #include "http/httplib.h"
 
-#define FTP_CLIENT_MAX_FILENAME_LEN 128
+#define FTP_CLIENT_MAX_FILENAME_LEN 255
 
 typedef int (*FtpCallbackXfer)(int64_t xfered, void *arg);
 
