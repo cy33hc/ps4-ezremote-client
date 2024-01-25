@@ -465,6 +465,7 @@ namespace Actions
         }
         activity_inprogess = false;
         file_transfering = false;
+        multi_selected_local_files.clear();
         Windows::SetModalMode(false);
         selected_action = ACTION_REFRESH_REMOTE_FILES;
         return NULL;
