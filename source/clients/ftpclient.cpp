@@ -132,14 +132,31 @@ int FtpClient::Connect(const std::string &url, const std::string &user, const st
 		return 0;
 	}
 
-	std::string cmd = "USER " + user;
+	std::string cmd;
+	if (user.length() > 0)
+	{
+		cmd = "USER " + user;
+	}
+	else
+	{
+		cmd = "USER anonymous";
+	}
+
 	if (!FtpSendCmd(cmd, '3', mp_ftphandle))
 	{
 		if (mp_ftphandle->ctrl != NULL)
 			return 1;
 		if (*LastResponse() == '2')
+		{
+			mp_ftphandle->is_connected = true;
 			return 1;
-		return 0;
+		}
+		else
+		{
+			Quit();
+			sprintf(mp_ftphandle->response, "%s", lang_strings[STR_FAIL_LOGIN_MSG]);
+			return 0;
+		}
 	}
 
 	cmd = "PASS " + pass;
@@ -1276,29 +1293,29 @@ int FtpClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, 
 	}
 
 	char buf[FTP_CLIENT_BUFSIZ];
-    int count = 0;
-    size_t bytes_remaining = size;
+	int count = 0;
+	size_t bytes_remaining = size;
 
-    do
-    {
-        size_t bytes_to_read = std::min<size_t>(FTP_CLIENT_BUFSIZ, bytes_remaining);
-        count = FtpRead(buf, bytes_to_read, nData);
-        if (count > 0)
-        {
-            bytes_remaining -= count;
-            bool ok = sink.write((char*)buf, count);
+	do
+	{
+		size_t bytes_to_read = std::min<size_t>(FTP_CLIENT_BUFSIZ, bytes_remaining);
+		count = FtpRead(buf, bytes_to_read, nData);
+		if (count > 0)
+		{
+			bytes_remaining -= count;
+			bool ok = sink.write((char *)buf, count);
 			if (!ok)
 			{
 				FtpClose(nData);
 				mp_ftphandle->offset = 0;
 				return 0;
 			}
-        }
-        else
-        {
-            break;
-        }
-    } while (1);
+		}
+		else
+		{
+			break;
+		}
+	} while (1);
 	FtpClose(nData);
 	mp_ftphandle->offset = 0;
 
@@ -1317,7 +1334,7 @@ int FtpClient::GetRange(const std::string &path, void *buffer, uint64_t size, ui
 	char buf[8192];
 	int l = 0;
 	uint64_t remaining = size;
-	char *p = (char*) buffer;
+	char *p = (char *)buffer;
 	while ((l = FtpRead(buf, 8192, nData)) > 0)
 	{
 		if (l <= remaining)
@@ -1336,7 +1353,6 @@ int FtpClient::GetRange(const std::string &path, void *buffer, uint64_t size, ui
 	mp_ftphandle->offset = 0;
 
 	return 1;
-
 }
 
 /*
