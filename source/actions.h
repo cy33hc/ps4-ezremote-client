@@ -56,7 +56,8 @@ enum ACTIONS
     ACTION_VIEW_LOCAL_IMAGE,
     ACTION_VIEW_REMOTE_IMAGE,
     ACTION_VIEW_LOCAL_PKG,
-    ACTION_VIEW_REMOTE_PKG
+    ACTION_VIEW_REMOTE_PKG,
+    ACTION_EXTRACT_REMOTE_ZIP,
 };
 
 enum OverWriteType
@@ -103,6 +104,8 @@ namespace Actions
     void *KeepAliveThread(void *argp);
     void *ExtractZipThread(void *argp);
     void ExtractLocalZips();
+    void *ExtractRemoteZipThread(void *argp);
+    void ExtractRemoteZips();
     void *MakeZipThread(void *argp);
     void MakeLocalZip();
     void *MoveLocalFilesThread(void *argp);

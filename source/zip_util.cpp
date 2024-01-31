@@ -12,6 +12,8 @@
 #include <archive.h>
 #include <archive_entry.h>
 
+#include "clients/remote_client.h"
+#include "config.h"
 #include "common.h"
 #include "fs.h"
 #include "ime_dialog.h"
@@ -20,12 +22,21 @@
 #include "windows.h"
 #include "zip_util.h"
 
-#define TRANSFER_SIZE (16 * 1024)
+#define TRANSFER_SIZE (512 * 1024)
 
 namespace ZipUtil
 {
     static char filename_extracted[256];
     static char password[128];
+
+    struct RemoteArchiveData
+    {
+        std::string path;
+        ssize_t size;
+        ssize_t offset;
+        uint8_t buf[TRANSFER_SIZE];
+        RemoteClient *client;
+    };
 
     void callback_7zip(const char *fileName, unsigned long fileSize, unsigned fileNum, unsigned numFiles)
     {
@@ -422,14 +433,58 @@ namespace ZipUtil
         return password;
     }
 
+    static RemoteArchiveData *OpenRemoteArchive(const DirEntry &file)
+    {
+        RemoteArchiveData *data;
+
+        data = (RemoteArchiveData*)malloc(sizeof(RemoteArchiveData));
+        memset(data, 0, sizeof(RemoteArchiveData));
+
+        data->offset = 0;
+        remoteclient->Size(file.path, &data->size);
+        data->client = remoteclient;
+        data->path = file.path;
+        return data;
+    }
+
+    static ssize_t ReadRemoteArchive(struct archive *a, void *client_data, const void **buff)
+    {
+        ssize_t to_read;
+        int ret;
+        RemoteArchiveData *data;
+
+        data = (RemoteArchiveData*)client_data;
+        *buff = data->buf;
+
+        to_read = data->size - data->offset;
+        if (to_read == 0)
+            return 0;
+        
+        to_read = MIN(to_read, TRANSFER_SIZE);
+        ret = data->client->GetRange(data->path, data->buf, to_read, data->offset);
+        if (ret == 0)
+            return -1;
+        data->offset = data->offset + to_read;
+
+        return to_read;
+    }
+
+    static int CloseRemoteArchive(struct archive *a, void *client_data)
+    {
+        if (client_data != nullptr)
+            free(client_data);
+        return 0;
+    }
+    
     /*
     * Main loop: open the zipfile, iterate over its contents and decide what
     * to do with each entry.
     */
-    int Extract(const DirEntry &file, const std::string &basepath)
+    int Extract(const DirEntry &file, const std::string &basepath, bool is_remote)
     {
         struct archive *a;
         struct archive_entry *e;
+        void *client_data;
         int ret;
         uintmax_t total_size, file_count, error_count;
 
@@ -440,11 +495,30 @@ namespace ZipUtil
         archive_read_support_filter_all(a);
         archive_read_set_passphrase_callback(a, NULL, &passphrase_callback);
 
-        ret = archive_read_open_filename(a, file.path, TRANSFER_SIZE);
-        if (ret < ARCHIVE_OK)
+        if (!is_remote)
         {
-            sprintf(status_message, "%s", "archive_read_open_filename failed");
-            return 0;
+            ret = archive_read_open_filename(a, file.path, TRANSFER_SIZE);
+            if (ret < ARCHIVE_OK)
+            {
+                sprintf(status_message, "%s", "archive_read_open_filename failed");
+                return 0;
+            }
+        }
+        else
+        {
+            client_data = OpenRemoteArchive(file);
+            if (client_data == nullptr)
+            {
+                sprintf(status_message, "%s", "archive_read_open_filename failed");
+                return 0;
+            }
+
+            ret = archive_read_open(a, client_data, NULL, ReadRemoteArchive, CloseRemoteArchive);
+            if (ret < ARCHIVE_OK)
+            {
+                sprintf(status_message, "%s", "archive_read_open_filename failed");
+                return 0;
+            }
         }
 
         for (;;) {

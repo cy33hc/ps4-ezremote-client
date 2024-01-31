@@ -206,6 +206,7 @@ namespace Windows
     void AfterPackageUrlCallback(int ime_result);
     void AfterFavoriteUrlCallback(int ime_result);
     void AfterExtractFolderCallback(int ime_result);
+    void AfterExtractRemoteFolderCallback(int ime_result);
     void AfterZipFileCallback(int ime_result);
     void AferServerChangeCallback(int ime_result);
     void AfterHttpPortChangeCallback(int ime_result);

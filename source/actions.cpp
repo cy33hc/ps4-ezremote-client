@@ -877,6 +877,49 @@ namespace Actions
         }
     }
 
+    void *ExtractRemoteZipThread(void *argp)
+    {
+        FS::MkDirs(extract_zip_folder);
+        std::vector<DirEntry> files;
+        if (multi_selected_remote_files.size() > 0)
+            std::copy(multi_selected_remote_files.begin(), multi_selected_remote_files.end(), std::back_inserter(files));
+        else
+            files.push_back(selected_remote_file);
+
+        for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
+        {
+            if (stop_activity)
+                break;
+            if (!it->isDir)
+            {
+                int ret = ZipUtil::Extract(*it, extract_zip_folder, true);
+                if (ret == 0)
+                {
+                    sprintf(status_message, "%s %s", lang_strings[STR_FAILED_TO_EXTRACT], it->name);
+                    sceKernelUsleep(100000);
+                }
+            }
+        }
+        activity_inprogess = false;
+        multi_selected_remote_files.clear();
+        Windows::SetModalMode(false);
+        selected_action = ACTION_REFRESH_LOCAL_FILES;
+        return NULL;
+    }
+
+    void ExtractRemoteZips()
+    {
+        sprintf(status_message, "%s", "");
+        int res = pthread_create(&bk_activity_thid, NULL, ExtractRemoteZipThread, NULL);
+        if (res != 0)
+        {
+            file_transfering = false;
+            activity_inprogess = false;
+            multi_selected_remote_files.clear();
+            Windows::SetModalMode(false);
+        }
+    }
+
     void *MakeZipThread(void *argp)
     {
         zipFile zf = zipOpen64(zip_file_path, APPEND_STATUS_CREATE);

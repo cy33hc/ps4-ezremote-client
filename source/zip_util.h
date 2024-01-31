@@ -27,6 +27,6 @@ enum CompressFileType {
 namespace ZipUtil
 {
     int ZipAddPath(zipFile zf, const std::string &path, int filename_start, int level);
-    int Extract(const DirEntry &file, const std::string &dir);
+    int Extract(const DirEntry &file, const std::string &dir, bool is_remote = false);
 }
 #endif
