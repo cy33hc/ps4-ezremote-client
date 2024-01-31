@@ -269,7 +269,7 @@ namespace Windows
         }
         else if (files.size() > 1)
         {
-            zipfolder = files.begin()->directory;
+            zipfolder = local_directory;
         }
         else
         {
