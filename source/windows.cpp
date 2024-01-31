@@ -243,14 +243,27 @@ namespace Windows
     {
         std::string zipfolder;
         std::vector<DirEntry> files;
+        bool local_browser_selected = saved_selected_browser & LOCAL_BROWSER;
+        bool remote_browser_selected = saved_selected_browser & REMOTE_BROWSER;
 
-        if (multi_selected_local_files.size() > 0)
-            std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(files));
+        if (local_browser_selected)
+        {
+            if (multi_selected_local_files.size() > 0)
+                std::copy(multi_selected_local_files.begin(), multi_selected_local_files.end(), std::back_inserter(files));
+            else
+                files.push_back(selected_local_file);
+        }
         else
-            files.push_back(selected_local_file);
+        {
+            if (multi_selected_remote_files.size() > 0)
+                std::copy(multi_selected_remote_files.begin(), multi_selected_remote_files.end(), std::back_inserter(files));
+            else
+                files.push_back(selected_remote_file);
+        }
 
-        if (strncmp(files.begin()->directory, "/data", 5) != 0 &&
-            strncmp(files.begin()->directory, "/mnt/usb", 8) != 0)
+        if (strncmp(local_directory, "/data", 5) != 0 &&
+            strncmp(local_directory, "/mnt/usb", 8) != 0 &&
+            strncmp(local_directory, "/user/data", 10) != 0)
         {
             zipfolder = "/data";
         }
