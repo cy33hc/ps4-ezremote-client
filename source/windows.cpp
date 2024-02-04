@@ -1624,6 +1624,10 @@ namespace Windows
             ImGui::SetNextWindowSizeConstraints(ImVec2(850, 80), ImVec2(850, 650), NULL, NULL);
             if (ImGui::BeginPopupModal(lang_strings[STR_SETTINGS], NULL, ImGuiWindowFlags_AlwaysAutoResize))
             {
+                char id[192];
+                ImVec2 field_size;
+                float width;
+
                 ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_GLOBAL]);
                 ImGui::Separator();
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
@@ -1662,6 +1666,26 @@ namespace Windows
                 ImGui::Checkbox("##show_hidden_files", &show_hidden_files);
                 ImGui::Separator();
 
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                ImGui::Text("%s", lang_strings[STR_TEMP_DIRECTORY]);
+                ImGui::SameLine();
+                field_size = ImGui::CalcTextSize(lang_strings[STR_TEMP_DIRECTORY]);
+                width = field_size.x + 45;
+                sprintf(id, "%s##temp_direcotry", temp_folder);
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 1.0f));
+                if (ImGui::Button(id, ImVec2(835-width, 0)))
+                {
+                    ResetImeCallbacks();
+                    ime_single_field = temp_folder;
+                    ime_field_size = 512;
+                    ime_callback = SingleValueImeCallback;
+                    Dialog::initImeDialog(lang_strings[STR_COMPRESSED_FILE_PATH], temp_folder, 255, ORBIS_TYPE_BASIC_LATIN, 1050, 80);
+                    gui_mode = GUI_MODE_IME;
+                }
+                ImGui::PopStyleVar();
+                ImGui::Separator();
+
                 // Web Server settings
                 ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_WEB_SERVER]);
                 ImGui::Separator();
@@ -1672,15 +1696,13 @@ namespace Windows
                 ImGui::Checkbox("##web_server_enabled", &web_server_enabled);
                 ImGui::Separator();
 
-                ImVec2 field_size;
                 field_size = ImGui::CalcTextSize(lang_strings[STR_PORT]);
-                float width = field_size.x + 45;
+                width = field_size.x + 45;
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
                 ImGui::Text("%s", lang_strings[STR_PORT]);
                 ImGui::SameLine();
                 ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 1.0f));
 
-                char id[192];
                 sprintf(id, "%s##http_server_port", txt_http_server_port);
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
                 if (ImGui::Button(id, ImVec2(835-width, 0)))

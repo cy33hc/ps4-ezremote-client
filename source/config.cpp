@@ -39,6 +39,7 @@ int max_edit_file_size;
 GoogleAppInfo gg_app;
 bool show_hidden_files;
 char alldebrid_api_key[32];
+char temp_folder[256];
 
 unsigned char cipher_key[32] = {'s', '5', 'v', '8', 'y', '/', 'B', '?', 'E', '(', 'H', '+', 'M', 'b', 'Q', 'e', 'T', 'h', 'W', 'm', 'Z', 'q', '4', 't', '7', 'w', '9', 'z', '$', 'C', '&', 'F'};
 unsigned char cipher_iv[16] = {'Y', 'p', '3', 's', '6', 'v', '9', 'y', '$', 'B', '&', 'E', ')', 'H', '@', 'M'};
@@ -186,6 +187,14 @@ namespace CONFIG
 
         show_hidden_files = ReadBool(CONFIG_GLOBAL, CONFIG_SHOW_HIDDEN_FILES, false);
         WriteBool(CONFIG_GLOBAL, CONFIG_SHOW_HIDDEN_FILES, show_hidden_files);
+
+        sprintf(temp_folder, ReadString(CONFIG_GLOBAL, CONFIG_TMP_FOLDER_PATH, TMP_FOLDER_PATH));
+        WriteString(CONFIG_GLOBAL, CONFIG_TMP_FOLDER_PATH, temp_folder);
+
+        if (!FS::FolderExists(temp_folder))
+        {
+            FS::MkDirs(temp_folder);
+        }
 
         // alldebrid api key
         char tmp_api_key[512];
@@ -388,6 +397,7 @@ namespace CONFIG
         WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_CLIENT_ID, gg_app.client_id);
         WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_PERMISSIONS, gg_app.permissions);
         WriteString(CONFIG_GLOBAL, CONFIG_ALLDEBRID_API_KEY, encrypted_api_key.c_str());
+        WriteString(CONFIG_GLOBAL, CONFIG_TMP_FOLDER_PATH, temp_folder);
         WriteBool(CONFIG_GLOBAL, CONFIG_AUTO_DELETE_TMP_PKG, auto_delete_tmp_pkg);
         WriteBool(CONFIG_GLOBAL, CONFIG_SHOW_HIDDEN_FILES, show_hidden_files);
         WriteString(CONFIG_GLOBAL, CONFIG_LANGUAGE, language);
@@ -397,6 +407,16 @@ namespace CONFIG
 
         WriteIniFile(CONFIG_INI_FILE);
         CloseIniFile();
+
+        if (!FS::FolderExists(temp_folder))
+        {
+            FS::MkDirs(temp_folder);
+        }
+
+        if (!FS::FolderExists(compressed_file_path))
+        {
+            FS::MkDirs(compressed_file_path);
+        }
     }
 
     void SaveLocalDirecotry(const std::string &path)

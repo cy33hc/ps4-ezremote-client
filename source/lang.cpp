@@ -169,6 +169,7 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"InValid URL",																				// STR_INVALID_URL
 	"To use this function, an API Key needs to be configured in the ezRemote Client settings",	// STR_ALLDEBRID_API_KEY_MISSING_MSG
 	"Language",																					// STR_LANGUAGE
+	"Temp Directory",                                                                           // STR_TEMP_DIRECTORY
 };
 
 bool needs_extended_font = false;

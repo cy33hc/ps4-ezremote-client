@@ -1,6 +1,9 @@
 #pragma once
 
 #include "clients/remote_client.h"
+#include "zip_util.h"
+#include "split_file.h"
+#include "pthread.h"
 
 #define SWAP16(x)                                         \
     ((uint16_t)((((uint16_t)(x)&UINT16_C(0x00FF)) << 8) | \
@@ -45,6 +48,8 @@
 
 #define PKG_ENTRY_ID__PARAM_SFO 0x1000
 #define PKG_ENTRY_ID__ICON0_PNG 0x1200
+
+#define INSTALL_ARCHIVE_PKG_SPLIT_SIZE 10485760
 
 typedef struct
 {
@@ -116,6 +121,14 @@ enum pkg_content_type
     PKG_CONTENT_TYPE_DP = 0x1E, /* pkg_ps4_delta_patch */
 };
 
+struct ArchivePkgInstallData
+{
+    SplitFile *split_file;
+    ArchiveEntry *archive_entry;
+    pthread_t thread;
+    bool stop_write_thread;
+};
+
 namespace INSTALLER
 {
     int Init(void);
@@ -130,4 +143,8 @@ namespace INSTALLER
     bool ExtractRemotePkg(const std::string &path, const std::string sfo_path, const std::string icon_path);
     std::string GetRemotePkgTitle(RemoteClient *client, const std::string &path, pkg_header *header);
     std::string GetLocalPkgTitle(const std::string &path, pkg_header *header);
+    ArchivePkgInstallData *GetArchivePkgInstallData(const std::string &hash);
+    void AddArchivePkgInstallData(const std::string &hash, ArchivePkgInstallData *pkg_data);
+    void RemoveArchivePkgInstallData(const std::string &hash);
+    bool InstallArchivePkg(const std::string &path, ArchivePkgInstallData* pkg_data);
 }

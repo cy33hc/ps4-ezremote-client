@@ -20,23 +20,13 @@
 #include "lang.h"
 #include "system.h"
 #include "windows.h"
+#include "util.h"
 #include "zip_util.h"
-
-#define TRANSFER_SIZE (512 * 1024)
 
 namespace ZipUtil
 {
     static char filename_extracted[256];
     static char password[128];
-
-    struct RemoteArchiveData
-    {
-        std::string path;
-        ssize_t size;
-        ssize_t offset;
-        uint8_t buf[TRANSFER_SIZE];
-        RemoteClient *client;
-    };
 
     void callback_7zip(const char *fileName, unsigned long fileSize, unsigned fileNum, unsigned numFiles)
     {
@@ -106,12 +96,12 @@ namespace ZipUtil
         }
 
         // Add file to zip
-        void *buf = memalign(4096, TRANSFER_SIZE);
+        void *buf = memalign(4096, ARCHIVE_TRANSFER_SIZE);
         uint64_t seek = 0;
 
         while (1)
         {
-            int read = FS::Read(fd, buf, TRANSFER_SIZE);
+            int read = FS::Read(fd, buf, ARCHIVE_TRANSFER_SIZE);
             if (read < 0)
             {
                 free(buf);
@@ -245,7 +235,8 @@ namespace ZipUtil
         len = strlen(path);
         while (len && path[len - 1] == '/')
             len--;
-        if ((str = (char*) malloc(len + 1)) == NULL) {
+        if ((str = (char *)malloc(len + 1)) == NULL)
+        {
             errno = ENOMEM;
         }
         memcpy(str, path, len);
@@ -263,21 +254,23 @@ namespace ZipUtil
 
         prelen = prefix ? strlen(prefix) + 1 : 0;
         len = strlen(path) + 1;
-        if ((str = (char*) malloc(prelen + len)) == NULL) {
+        if ((str = (char *)malloc(prelen + len)) == NULL)
+        {
             errno = ENOMEM;
         }
-        if (prefix) {
-            memcpy(str, prefix, prelen);	/* includes zero */
-            str[prelen - 1] = '/';		/* splat zero */
+        if (prefix)
+        {
+            memcpy(str, prefix, prelen); /* includes zero */
+            str[prelen - 1] = '/';       /* splat zero */
         }
-        memcpy(str + prelen, path, len);	/* includes zero */
+        memcpy(str + prelen, path, len); /* includes zero */
 
         return (str);
     }
 
     /*
-    * Extract a directory.
-    */
+     * Extract a directory.
+     */
     static void extract_dir(struct archive *a, struct archive_entry *e, const std::string &path)
     {
         int mode;
@@ -290,15 +283,16 @@ namespace ZipUtil
     }
 
     /*
-    * Extract to a file descriptor
-    */
+     * Extract to a file descriptor
+     */
     static int extract2fd(struct archive *a, const std::string &pathname, int fd)
     {
         ssize_t len;
-        unsigned char buffer[TRANSFER_SIZE];
+        unsigned char buffer[ARCHIVE_TRANSFER_SIZE];
 
         /* loop over file contents and write to fd */
-        for (int n = 0; ; n++) {
+        for (int n = 0;; n++)
+        {
             len = archive_read_data(a, buffer, sizeof buffer);
 
             if (len == 0)
@@ -321,8 +315,8 @@ namespace ZipUtil
     }
 
     /*
-    * Extract a regular file.
-    */
+     * Extract a regular file.
+     */
     static void extract_file(struct archive *a, struct archive_entry *e, const std::string &path)
     {
         struct stat sb;
@@ -331,13 +325,15 @@ namespace ZipUtil
 
         /* look for existing file of same name */
     recheck:
-        if (lstat(path.c_str(), &sb) == 0) {
+        if (lstat(path.c_str(), &sb) == 0)
+        {
             (void)unlink(path.c_str());
         }
 
         /* process symlinks */
         linkname = archive_entry_symlink(e);
-        if (linkname != NULL) {
+        if (linkname != NULL)
+        {
             if (symlink(linkname, path.c_str()) != 0)
             {
                 sprintf(status_message, "error symlink('%s')", path.c_str());
@@ -348,7 +344,7 @@ namespace ZipUtil
             return;
         }
 
-        if ((fd = open(path.c_str(), O_RDWR|O_CREAT|O_TRUNC, 0777)) < 0)
+        if ((fd = open(path.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0777)) < 0)
         {
             sprintf(status_message, "error open('%s')", path.c_str());
             return;
@@ -367,9 +363,9 @@ namespace ZipUtil
     {
         char *pathname, *realpathname;
         mode_t filetype;
-        char *p, *q;
 
-        if ((pathname = pathdup(archive_entry_pathname(e))) == NULL) {
+        if ((pathname = pathdup(archive_entry_pathname(e))) == NULL)
+        {
             archive_read_data_skip(a);
             return;
         }
@@ -378,14 +374,16 @@ namespace ZipUtil
         /* sanity checks */
         if (pathname[0] == '/' ||
             strncmp(pathname, "../", 3) == 0 ||
-            strstr(pathname, "/../") != NULL) {
+            strstr(pathname, "/../") != NULL)
+        {
             archive_read_data_skip(a);
             free(pathname);
             return;
         }
 
         /* I don't think this can happen in a zipfile.. */
-        if (!S_ISDIR(filetype) && !S_ISREG(filetype) && !S_ISLNK(filetype)) {
+        if (!S_ISDIR(filetype) && !S_ISREG(filetype) && !S_ISLNK(filetype))
+        {
             archive_read_data_skip(a);
             free(pathname);
             return;
@@ -409,9 +407,9 @@ namespace ZipUtil
     }
 
     /*
-    * Callback function for reading passphrase.
-    * Originally from cpio.c and passphrase.c, libarchive.
-    */
+     * Callback function for reading passphrase.
+     * Originally from cpio.c and passphrase.c, libarchive.
+     */
     static const char *passphrase_callback(struct archive *a, void *_client_data)
     {
         Dialog::initImeDialog(lang_strings[STR_PASSWORD], password, 127, ORBIS_TYPE_DEFAULT, 560, 200);
@@ -433,17 +431,17 @@ namespace ZipUtil
         return password;
     }
 
-    static RemoteArchiveData *OpenRemoteArchive(const DirEntry &file)
+    static RemoteArchiveData *OpenRemoteArchive(const std::string &file)
     {
         RemoteArchiveData *data;
 
-        data = (RemoteArchiveData*)malloc(sizeof(RemoteArchiveData));
+        data = (RemoteArchiveData *)malloc(sizeof(RemoteArchiveData));
         memset(data, 0, sizeof(RemoteArchiveData));
 
         data->offset = 0;
-        remoteclient->Size(file.path, &data->size);
+        remoteclient->Size(file, &data->size);
         data->client = remoteclient;
-        data->path = file.path;
+        data->path = file;
         return data;
     }
 
@@ -453,14 +451,14 @@ namespace ZipUtil
         int ret;
         RemoteArchiveData *data;
 
-        data = (RemoteArchiveData*)client_data;
+        data = (RemoteArchiveData *)client_data;
         *buff = data->buf;
 
         to_read = data->size - data->offset;
         if (to_read == 0)
             return 0;
-        
-        to_read = MIN(to_read, TRANSFER_SIZE);
+
+        to_read = MIN(to_read, ARCHIVE_TRANSFER_SIZE);
         ret = data->client->GetRange(data->path, data->buf, to_read, data->offset);
         if (ret == 0)
             return -1;
@@ -475,16 +473,16 @@ namespace ZipUtil
             free(client_data);
         return 0;
     }
-    
+
     /*
-    * Main loop: open the zipfile, iterate over its contents and decide what
-    * to do with each entry.
-    */
+     * Main loop: open the zipfile, iterate over its contents and decide what
+     * to do with each entry.
+     */
     int Extract(const DirEntry &file, const std::string &basepath, bool is_remote)
     {
         struct archive *a;
         struct archive_entry *e;
-        void *client_data;
+        RemoteArchiveData *client_data = nullptr;
         int ret;
         uintmax_t total_size, file_count, error_count;
 
@@ -497,7 +495,7 @@ namespace ZipUtil
 
         if (!is_remote)
         {
-            ret = archive_read_open_filename(a, file.path, TRANSFER_SIZE);
+            ret = archive_read_open_filename(a, file.path, ARCHIVE_TRANSFER_SIZE);
             if (ret < ARCHIVE_OK)
             {
                 sprintf(status_message, "%s", "archive_read_open_filename failed");
@@ -506,7 +504,7 @@ namespace ZipUtil
         }
         else
         {
-            client_data = OpenRemoteArchive(file);
+            client_data = OpenRemoteArchive(file.path);
             if (client_data == nullptr)
             {
                 sprintf(status_message, "%s", "archive_read_open_filename failed");
@@ -516,12 +514,17 @@ namespace ZipUtil
             ret = archive_read_open(a, client_data, NULL, ReadRemoteArchive, CloseRemoteArchive);
             if (ret < ARCHIVE_OK)
             {
-                sprintf(status_message, "%s", "archive_read_open_filename failed");
+                if (client_data != nullptr)
+                {
+                    free(client_data);
+                }
+                sprintf(status_message, "%s", "archive_read_open failed");
                 return 0;
             }
         }
 
-        for (;;) {
+        for (;;)
+        {
             if (stop_activity)
                 break;
 
@@ -536,7 +539,7 @@ namespace ZipUtil
 
             if (ret == ARCHIVE_EOF)
                 break;
-            
+
             extract(a, e, basepath);
         }
 
@@ -545,4 +548,120 @@ namespace ZipUtil
         return 1;
     }
 
+    ArchiveEntry *GetPackageEntry(const std::string &zip_file, bool is_remote)
+    {
+        struct archive *a;
+        struct archive_entry *e;
+        RemoteArchiveData *client_data = nullptr;
+        char *pathname;
+        mode_t filetype;
+        ArchiveEntry *pkg_entry = nullptr;
+        int ret;
+
+        if ((a = archive_read_new()) == NULL)
+            sprintf(status_message, "%s", "archive_read_new failed");
+
+        archive_read_support_format_all(a);
+        archive_read_support_filter_all(a);
+        archive_read_set_passphrase_callback(a, NULL, &passphrase_callback);
+
+        if (!is_remote)
+        {
+            ret = archive_read_open_filename(a, zip_file.c_str(), ARCHIVE_TRANSFER_SIZE);
+            if (ret < ARCHIVE_OK)
+            {
+                sprintf(status_message, "%s", "archive_read_open_filename failed");
+                return nullptr;
+            }
+        }
+        else
+        {
+            client_data = OpenRemoteArchive(zip_file);
+            if (client_data == nullptr)
+            {
+                sprintf(status_message, "%s", "archive_read_open_filename failed");
+                return nullptr;
+            }
+
+            ret = archive_read_open(a, client_data, NULL, ReadRemoteArchive, CloseRemoteArchive);
+            if (ret < ARCHIVE_OK)
+            {
+                if (client_data != nullptr)
+                {
+                    free(client_data);
+                }
+                sprintf(status_message, "%s", "archive_read_open_filename failed");
+                return nullptr;
+            }
+        }
+
+        for (;;)
+        {
+            ret = archive_read_next_header(a, &e);
+
+            if (ret < ARCHIVE_OK)
+            {
+                sprintf(status_message, "%s", "archive_read_next_header failed");
+                if (client_data != nullptr)
+                {
+                    free(client_data);
+                }
+                archive_read_free(a);
+                return nullptr;
+            }
+
+            if (ret == ARCHIVE_EOF)
+                break;
+
+            char *p, *q;
+
+            if ((pathname = pathdup(archive_entry_pathname(e))) == NULL)
+            {
+                archive_read_data_skip(a);
+                continue;
+            }
+
+            filetype = archive_entry_filetype(e);
+
+            /* sanity checks */
+            if (pathname[0] == '/' ||
+                strncmp(pathname, "../", 3) == 0 ||
+                strstr(pathname, "/../") != NULL)
+            {
+                archive_read_data_skip(a);
+                free(pathname);
+                continue;
+                ;
+            }
+
+            /* I don't think this can happen in a zipfile.. */
+            if (!S_ISREG(filetype))
+            {
+                archive_read_data_skip(a);
+                free(pathname);
+                continue;
+            }
+
+            if (Util::EndsWith(Util::ToLower(pathname), ".pkg"))
+            {
+                pkg_entry = (ArchiveEntry *)malloc(sizeof(ArchiveEntry));
+                memset(pkg_entry, 0, sizeof(ArchiveEntry));
+
+                pkg_entry->archive = a;
+                pkg_entry->entry = e;
+                pkg_entry->client_data = client_data;
+                pkg_entry->filename = pathname;
+                pkg_entry->filesize = archive_entry_size(e);
+
+                free(pathname);
+                return pkg_entry;
+            }
+
+            free(pathname);
+        }
+
+        archive_read_free(a);
+
+        return nullptr;
+    }
 }

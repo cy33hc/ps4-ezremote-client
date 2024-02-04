@@ -31,6 +31,8 @@ static OrbisBgftInitParams s_bgft_init_params;
 
 static bool s_bgft_initialized = false;
 
+static std::map<std::string, ArchivePkgInstallData *> archive_pkg_install_data_list;
+
 namespace INSTALLER
 {
 	int Init(void)
@@ -698,5 +700,165 @@ namespace INSTALLER
 		}
 
 		return true;
+	}
+
+	ArchivePkgInstallData *GetArchivePkgInstallData(const std::string &hash)
+	{
+		return archive_pkg_install_data_list[hash];
+	}
+
+	void AddArchivePkgInstallData(const std::string &hash, ArchivePkgInstallData *pkg_data)
+	{
+		std::pair<std::string, ArchivePkgInstallData*> pair = std::make_pair(hash, pkg_data);
+		archive_pkg_install_data_list.erase(hash);
+		archive_pkg_install_data_list.insert(pair);
+	}
+
+	void RemoveArchivePkgInstallData(const std::string &hash)
+	{
+		archive_pkg_install_data_list.erase(hash);
+	}
+
+	bool InstallArchivePkg(const std::string &path, ArchivePkgInstallData* pkg_data)
+	{
+		pkg_header header;
+		pkg_data->split_file->Read((char*)&header, sizeof(pkg_header), 0);
+
+		int ret;
+		std::string cid = std::string((char *)header.pkg_content_id);
+		cid = cid.substr(cid.find_first_of("-") + 1, 9);
+		std::string display_title = cid;
+		int user_id;
+		ret = sceUserServiceGetForegroundUser(&user_id);
+		const char *package_type;
+		uint32_t content_type = BE32(header.pkg_content_type);
+		uint32_t flags = BE32(header.pkg_content_flags);
+		bool is_patch = false;
+		bool completed = false;
+
+		switch (content_type)
+		{
+		case PKG_CONTENT_TYPE_GD:
+			package_type = "PS4GD";
+			break;
+		case PKG_CONTENT_TYPE_AC:
+			package_type = "PS4AC";
+			break;
+		case PKG_CONTENT_TYPE_AL:
+			package_type = "PS4AL";
+			break;
+		case PKG_CONTENT_TYPE_DP:
+			package_type = "PS4DP";
+			break;
+		default:
+			package_type = NULL;
+			return 0;
+			break;
+		}
+
+		if (flags & PKG_CONTENT_FLAGS_FIRST_PATCH ||
+			flags & PKG_CONTENT_FLAGS_SUBSEQUENT_PATCH ||
+			flags & PKG_CONTENT_FLAGS_DELTA_PATCH ||
+			flags & PKG_CONTENT_FLAGS_CUMULATIVE_PATCH)
+		{
+			is_patch = true;
+		}
+
+		std::string hash = Util::UrlHash(path);
+		std::string full_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/archive_inst/" + hash;
+		AddArchivePkgInstallData(hash, pkg_data);
+
+		OrbisBgftTaskProgress progress_info;
+		OrbisBgftDownloadParam params;
+		memset(&params, 0, sizeof(params));
+		{
+			params.userId = user_id;
+			params.entitlementType = 5;
+			params.id = (char *)header.pkg_content_id;
+			params.contentUrl = full_url.c_str();
+			params.contentName = display_title.c_str();
+			params.iconPath = "";
+			params.playgoScenarioId = "0";
+			params.option = ORBIS_BGFT_TASK_OPT_DISABLE_CDN_QUERY_PARAM;
+			params.packageType = package_type;
+			params.packageSubType = "";
+			params.packageSize = BE64(header.pkg_size);
+		}
+
+	retry:
+		int task_id = -1;
+		if (!is_patch)
+			ret = sceBgftServiceIntDownloadRegisterTask(&params, &task_id);
+		else
+			ret = sceBgftServiceIntDebugDownloadRegisterPkg(&params, &task_id);
+		if (ret == 0x80990088 || ret == 0x80990015)
+		{
+			sprintf(confirm_message, "%s - %s?", display_title.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
+			confirm_state = CONFIRM_WAIT;
+			action_to_take = selected_action;
+			activity_inprogess = false;
+			while (confirm_state == CONFIRM_WAIT)
+			{
+				sceKernelUsleep(100000);
+			}
+			activity_inprogess = true;
+			selected_action = action_to_take;
+
+			if (confirm_state == CONFIRM_YES)
+			{
+				ret = sceAppInstUtilAppUnInstall(cid.c_str());
+				if (ret != 0)
+				{
+					ret = 0;
+					goto finish;
+				}
+				goto retry;
+			}
+		}
+		else if (ret > 0)
+		{
+			ret = 0;
+			goto finish;
+		}
+
+		ret = sceBgftServiceDownloadStartTask(task_id);
+		if (ret)
+		{
+			ret = 0;
+			goto finish;
+		}
+
+		Util::Notify("%s queued", display_title.c_str());
+
+		file_transfering = true;
+		bytes_to_download = 100;
+		bytes_transfered = 0;
+		while (!completed)
+		{
+			memset(&progress_info, 0, sizeof(progress_info));
+			ret = sceBgftServiceDownloadGetProgress(task_id, &progress_info);
+			if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
+			{
+				ret = 0;
+				goto finish;
+			}
+			bytes_transfered = (uint32_t)(((float)progress_info.transferred / progress_info.length) * 100.f);
+			if (progress_info.length > 0)
+			{
+				completed = progress_info.transferred == progress_info.length;
+			}
+			sceSystemServicePowerTick();
+		}
+
+		ret = 1;
+	finish:
+		pkg_data->stop_write_thread = true;
+		pthread_join(pkg_data->thread, NULL);
+		delete(pkg_data->split_file);
+		free(pkg_data->archive_entry);
+		free(pkg_data);
+		RemoveArchivePkgInstallData(hash);
+		return ret;
+
 	}
 }

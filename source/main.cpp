@@ -11,7 +11,6 @@
 #include <orbis/Pad.h>
 #include <orbis/AudioOut.h>
 #include <orbis/Net.h>
-// #include <dbglogger.h>
 
 #include "imgui.h"
 #include "SDL2/SDL.h"

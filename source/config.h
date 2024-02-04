@@ -17,6 +17,7 @@
 #define TMP_EDITOR_FILE DATA_PATH "/tmp_editor.txt"
 #define TMP_SFO_PATH DATA_PATH "/tmp_pkg.sfo"
 #define TMP_ICON_PATH DATA_PATH "/tmp_icon.png"
+#define TMP_FOLDER_PATH DATA_PATH "/tmp"
 
 #define CONFIG_GLOBAL "Global"
 
@@ -70,6 +71,7 @@
 #define CONFIG_AUTO_DELETE_TMP_PKG "auto_delete_tmp_pkg"
 
 #define CONFIG_LOCAL_DIRECTORY "local_directory"
+#define CONFIG_TMP_FOLDER_PATH "temp_folder"
 
 #define CONFIG_LANGUAGE "language"
 
@@ -139,6 +141,7 @@ extern unsigned char cipher_iv[16];
 extern GoogleAppInfo gg_app;
 extern bool show_hidden_files;
 extern char alldebrid_api_key[32];
+extern char temp_folder[256];
 
 namespace CONFIG
 {

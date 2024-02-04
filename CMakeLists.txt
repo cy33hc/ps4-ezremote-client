@@ -66,6 +66,7 @@ add_executable(ezremote_client
   source/textures.cpp
   source/windows.cpp
   source/zip_util.cpp
+  source/split_file.cpp
 )
 
 add_self(ezremote_client)

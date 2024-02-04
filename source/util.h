@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <stdarg.h>
 #include <orbis/libkernel.h>
+#include "base64.h"
+#include "openssl/md5.h"
 #include "lang.h"
 
 namespace Util
@@ -47,6 +49,13 @@ namespace Util
         return s;
     }
 
+    static inline bool EndsWith(std::string const &value, std::string const &ending)
+    {
+        if (ending.size() > value.size())
+            return false;
+        return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+    }
+
     static inline std::vector<std::string> Split(const std::string &str, const std::string &delimiter)
     {
         std::string text = std::string(str);
@@ -64,6 +73,19 @@ namespace Util
         }
 
         return tokens;
+    }
+
+    static inline std::string UrlHash(const std::string &text)
+    {
+        std::vector<unsigned char> res(16);
+        MD5((const unsigned char *)text.c_str(), text.length(), res.data());
+
+        std::string out;
+        Base64::Encode(res.data(), res.size(), out);
+        Util::ReplaceAll(out, "=", "_");
+        Util::ReplaceAll(out, "+", "_");
+        out = out + ".pkg";
+        return out;
     }
 
     static inline void Notify(const char *fmt, ...)

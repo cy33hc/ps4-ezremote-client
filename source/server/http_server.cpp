@@ -15,6 +15,7 @@
 #include "lang.h"
 #include "system.h"
 #include "zip_util.h"
+#include "util.h"
 #include "installer.h"
 
 #define SERVER_CERT_FILE "/app0/assets/certs/domain.crt"
@@ -1048,6 +1049,64 @@ namespace HttpServer
             }
         });
 
+        svr->Get("/archive_inst/(.*)", [&](const Request & req, Response & res)
+        {
+            RemoteClient *tmp_client;
+            RemoteSettings *tmp_settings;
+            std::string hash = req.matches[1];
+
+            ArchivePkgInstallData *pkg_data = INSTALLER::GetArchivePkgInstallData(hash);
+
+            if (req.method == "HEAD")
+            {
+                res.status = 204;
+                res.set_header("Content-Length", std::to_string(pkg_data->archive_entry->filesize));
+                res.set_header("Accept-Ranges", "bytes");
+                return;
+            }
+
+            if (req.ranges.empty())
+            {
+                res.status = 200;
+                res.set_content_provider(
+                    131072, "application/octet-stream",
+                    [pkg_data](size_t offset, size_t length, DataSink &sink) {
+                        char *buf = (char*) malloc(131072);
+                        size_t bytes_read = pkg_data->split_file->Read(buf, 131072, offset);
+                        sink.write(buf, bytes_read);
+                        free(buf);
+                        return true;
+                    },
+                    [](bool success) {
+                        return true;
+                    });
+            }
+            else
+            {
+                res.status = 206;
+                size_t range_len = (req.ranges[0].second - req.ranges[0].first) + 1;
+                if (req.ranges[0].second >= 18000000000000000000ul)
+                {
+                    range_len = 65536ul - req.ranges[0].first;
+                    res.set_header("Content-Length", std::to_string(range_len));
+                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-65535/"+std::to_string(range_len));
+                }
+                std::pair<ssize_t, ssize_t> range = req.ranges[0];
+                res.set_content_provider(
+                    range_len, "application/octet-stream",
+                    [pkg_data, range, range_len](size_t offset, size_t length, DataSink &sink) {
+                        char *buf = (char*) malloc(range_len);
+                        size_t bytes_read = pkg_data->split_file->Read(buf, range_len, range.first);
+                        sink.write(buf, bytes_read);
+                        free(buf);
+                        return true;
+                    },
+                    [](bool success) {
+                        return true;
+                    });
+            }
+        });
+
         svr->Post("/__local__/install_url", [&](const Request & req, Response & res)
         {
             std::string url;
@@ -1085,7 +1144,7 @@ namespace HttpServer
                 return;
             }
 
-            std::string hash = filehost->Hash();
+            std::string hash = Util::UrlHash(filehost->GetUrl());
             std::string download_url = filehost->GetDownloadUrl();
             if (download_url.empty())
             {

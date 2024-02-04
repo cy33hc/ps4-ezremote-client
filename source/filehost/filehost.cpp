@@ -2,7 +2,6 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "openssl/md5.h"
 
 #include "filehost.h"
 #include "1fichier.h"
@@ -12,7 +11,6 @@
 #include "filehost/mediafire.h"
 #include "filehost/pixeldrain.h"
 #include "config.h"
-#include "base64.h"
 #include "util.h"
 
 #define GDRIVE_REGEX "https:\\/\\/drive\\.google\\.com\\/(.*)"
@@ -22,17 +20,9 @@
 
 static std::map<std::string, std::string> cache_downloal_urls;
 
-std::string FileHost::Hash()
+std::string FileHost::GetUrl()
 {
-    std::vector<unsigned char> res(16);
-    MD5((const unsigned char *)this->url.c_str(), this->url.length(), res.data());
-
-    std::string out;
-    Base64::Encode(res.data(), res.size(), out);
-    Util::ReplaceAll(out, "=", "_");
-    Util::ReplaceAll(out, "+", "_");
-    out = out + ".pkg";
-    return out;
+    return url;
 }
 
 FileHost *FileHost::getFileHost(const std::string &url, bool use_alldebrid)
