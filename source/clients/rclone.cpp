@@ -161,7 +161,7 @@ std::vector<DirEntry> RCloneClient::ListDir(const std::string &path)
                 lxb_dom_node_t *size_node = NextChildElement(td_element);
                 value = lxb_dom_node_text_content(size_node->first_child, &value_len);
                 tmp_string = std::string((const char *)value, value_len);
-                entry.file_size = atoi(tmp_string.c_str());
+                entry.file_size = atol(tmp_string.c_str());
                 DirEntry::SetDisplaySize(&entry);
             }
 
