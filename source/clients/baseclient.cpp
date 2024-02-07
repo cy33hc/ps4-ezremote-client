@@ -280,7 +280,7 @@ ClientType BaseClient::clientType()
 
 uint32_t BaseClient::SupportedActions()
 {
-    return REMOTE_ACTION_DOWNLOAD | REMOTE_ACTION_INSTALL;
+    return REMOTE_ACTION_DOWNLOAD | REMOTE_ACTION_INSTALL | REMOTE_ACTION_EXTRACT;
 }
 
 std::string BaseClient::EncodeUrl(const std::string &url)
