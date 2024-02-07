@@ -729,19 +729,26 @@ namespace Actions
                     ArchiveEntry *entry = ZipUtil::GetPackageEntry(it->path, true);
                     if (entry != nullptr)
                     {
-                        ArchivePkgInstallData *install_data = (ArchivePkgInstallData*) malloc(sizeof(ArchivePkgInstallData));
-                        memset(install_data, 0, sizeof(ArchivePkgInstallData));
+                        while (entry != nullptr)
+                        {
+                            ArchivePkgInstallData *install_data = (ArchivePkgInstallData*) malloc(sizeof(ArchivePkgInstallData));
+                            memset(install_data, 0, sizeof(ArchivePkgInstallData));
 
-                        std::string install_pkg_path = std::string(temp_folder) + "/" + entry->filename;
-                        SplitFile *sp = new SplitFile(install_pkg_path, INSTALL_ARCHIVE_PKG_SPLIT_SIZE);
-                        
-                        install_data->archive_entry = entry;
-                        install_data->split_file = sp;
-                        install_data->stop_write_thread = false;
+                            std::string install_pkg_path = std::string(temp_folder) + "/" + entry->filename;
+                            SplitFile *sp = new SplitFile(install_pkg_path, INSTALL_ARCHIVE_PKG_SPLIT_SIZE);
+                            
+                            install_data->archive_entry = entry;
+                            install_data->split_file = sp;
+                            install_data->stop_write_thread = false;
 
-                        int res = pthread_create(&install_data->thread, NULL, ExtractArchivePkg, install_data);
+                            int res = pthread_create(&install_data->thread, NULL, ExtractArchivePkg, install_data);
 
-                        INSTALLER::InstallArchivePkg(entry->filename, install_data);
+                            INSTALLER::InstallArchivePkg(entry->filename, install_data);
+
+                            ArchiveEntry *previos = entry;
+                            entry = ZipUtil::GetNextPackageEntry(entry);
+                            free(previos);
+                        }
                         success++;
                     }
                     else
@@ -871,19 +878,26 @@ namespace Actions
                     ArchiveEntry *entry = ZipUtil::GetPackageEntry(it->path);
                     if (entry != nullptr)
                     {
-                        ArchivePkgInstallData *install_data = (ArchivePkgInstallData*) malloc(sizeof(ArchivePkgInstallData));
-                        memset(install_data, 0, sizeof(ArchivePkgInstallData));
+                        while (entry != nullptr)
+                        {
+                            ArchivePkgInstallData *install_data = (ArchivePkgInstallData*) malloc(sizeof(ArchivePkgInstallData));
+                            memset(install_data, 0, sizeof(ArchivePkgInstallData));
 
-                        std::string install_pkg_path = std::string(temp_folder) + "/" + entry->filename;
-                        SplitFile *sp = new SplitFile(install_pkg_path, INSTALL_ARCHIVE_PKG_SPLIT_SIZE);
-                        
-                        install_data->archive_entry = entry;
-                        install_data->split_file = sp;
-                        install_data->stop_write_thread = false;
+                            std::string install_pkg_path = std::string(temp_folder) + "/" + entry->filename;
+                            SplitFile *sp = new SplitFile(install_pkg_path, INSTALL_ARCHIVE_PKG_SPLIT_SIZE);
+                            
+                            install_data->archive_entry = entry;
+                            install_data->split_file = sp;
+                            install_data->stop_write_thread = false;
 
-                        int res = pthread_create(&install_data->thread, NULL, ExtractArchivePkg, install_data);
+                            int res = pthread_create(&install_data->thread, NULL, ExtractArchivePkg, install_data);
 
-                        INSTALLER::InstallArchivePkg(entry->filename, install_data);
+                            INSTALLER::InstallArchivePkg(entry->filename, install_data);
+
+                            ArchiveEntry *previous = entry;
+                            entry = ZipUtil::GetNextPackageEntry(entry);
+                            free(previous);
+                        }
                         success++;
                     }
                     else

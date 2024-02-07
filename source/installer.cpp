@@ -855,7 +855,6 @@ namespace INSTALLER
 		pkg_data->stop_write_thread = true;
 		pthread_join(pkg_data->thread, NULL);
 		delete(pkg_data->split_file);
-		free(pkg_data->archive_entry);
 		free(pkg_data);
 		RemoveArchivePkgInstallData(hash);
 		return ret;

@@ -51,5 +51,6 @@ namespace ZipUtil
     int ZipAddPath(zipFile zf, const std::string &path, int filename_start, int level);
     int Extract(const DirEntry &file, const std::string &dir, bool is_remote = false);
     ArchiveEntry *GetPackageEntry(const std::string &zip_file, bool is_remote = false);
+    ArchiveEntry *GetNextPackageEntry(ArchiveEntry *archive_entry);
 }
 #endif

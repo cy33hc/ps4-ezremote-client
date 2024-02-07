@@ -613,7 +613,83 @@ namespace ZipUtil
             if (ret == ARCHIVE_EOF)
                 break;
 
-            char *p, *q;
+            if ((pathname = pathdup(archive_entry_pathname(e))) == NULL)
+            {
+                archive_read_data_skip(a);
+                continue;
+            }
+
+            filetype = archive_entry_filetype(e);
+
+            /* sanity checks */
+            if (pathname[0] == '/' ||
+                strncmp(pathname, "../", 3) == 0 ||
+                strstr(pathname, "/../") != NULL)
+            {
+                archive_read_data_skip(a);
+                free(pathname);
+                continue;
+                ;
+            }
+
+            /* I don't think this can happen in a zipfile.. */
+            if (!S_ISREG(filetype))
+            {
+                archive_read_data_skip(a);
+                free(pathname);
+                continue;
+            }
+
+            if (Util::EndsWith(Util::ToLower(pathname), ".pkg"))
+            {
+                pkg_entry = (ArchiveEntry *)malloc(sizeof(ArchiveEntry));
+                memset(pkg_entry, 0, sizeof(ArchiveEntry));
+
+                pkg_entry->archive = a;
+                pkg_entry->entry = e;
+                pkg_entry->client_data = client_data;
+                pkg_entry->filename = pathname;
+                pkg_entry->filesize = archive_entry_size(e);
+
+                free(pathname);
+                return pkg_entry;
+            }
+
+            free(pathname);
+        }
+
+        archive_read_free(a);
+
+        return nullptr;
+    }
+
+    ArchiveEntry *GetNextPackageEntry(ArchiveEntry *archive_entry)
+    {
+        struct archive *a = archive_entry->archive;
+        struct archive_entry *e = nullptr;
+        RemoteArchiveData *client_data = archive_entry->client_data;
+        char *pathname;
+        mode_t filetype;
+        ArchiveEntry *pkg_entry = nullptr;
+        int ret;
+
+        for (;;)
+        {
+            ret = archive_read_next_header(a, &e);
+
+            if (ret < ARCHIVE_OK)
+            {
+                sprintf(status_message, "%s", "archive_read_next_header failed");
+                if (client_data != nullptr)
+                {
+                    free(client_data);
+                }
+                archive_read_free(a);
+                return nullptr;
+            }
+
+            if (ret == ARCHIVE_EOF)
+                break;
 
             if ((pathname = pathdup(archive_entry_pathname(e))) == NULL)
             {
