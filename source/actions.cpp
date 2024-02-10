@@ -726,7 +726,7 @@ namespace Actions
                 else if (Util::EndsWith(path,".zip") || Util::EndsWith(path,".rar") ||
                         Util::EndsWith(path,".tar.xz") || Util::EndsWith(path,".tar.gz"))
                 {
-                    ArchiveEntry *entry = ZipUtil::GetPackageEntry(it->path, true);
+                    ArchiveEntry *entry = ZipUtil::GetPackageEntry(it->path, remoteclient);
                     if (entry != nullptr)
                     {
                         while (entry != nullptr)
@@ -989,7 +989,7 @@ namespace Actions
                 break;
             if (!it->isDir)
             {
-                int ret = ZipUtil::Extract(*it, extract_zip_folder, true);
+                int ret = ZipUtil::Extract(*it, extract_zip_folder, remoteclient);
                 if (ret == 0)
                 {
                     sprintf(status_message, "%s %s", lang_strings[STR_FAILED_TO_EXTRACT], it->name);

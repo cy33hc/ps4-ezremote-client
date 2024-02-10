@@ -1152,7 +1152,6 @@ namespace HttpServer
                 return;
             }
 
-            FileHost::AddCacheDownloadUrl(hash, download_url);
             delete(filehost);
 
 			size_t scheme_pos = download_url.find("://");
@@ -1164,17 +1163,47 @@ namespace HttpServer
             BaseClient *baseclient = new BaseClient();
             baseclient->Connect(host, "", "");
             baseclient->Head(path, &header, sizeof(pkg_header));
-            std::string title = INSTALLER::GetRemotePkgTitle(baseclient, path, &header);
-            delete(baseclient);
 
-            std::string remote_install_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst/Site%2099/" + hash;
-            int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header, title);
-            if (rc == 0)
-            {
-                failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
-                return;
+            if (BE32(header.pkg_magic) == 0x7F434E54)
+            {            
+                FileHost::AddCacheDownloadUrl(hash, download_url);
+                std::string title = INSTALLER::GetRemotePkgTitle(baseclient, path, &header);
+                delete(baseclient);
+
+                std::string remote_install_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst/Site%2099/" + hash;
+                int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header, title);
+                if (rc == 0)
+                {
+                    failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
+                    return;
+                }
             }
-            
+            else
+            {
+                ArchiveEntry *entry = ZipUtil::GetPackageEntry(path, baseclient);
+                if (entry != nullptr)
+                {
+                    ArchivePkgInstallData *install_data = (ArchivePkgInstallData*) malloc(sizeof(ArchivePkgInstallData));
+                    memset(install_data, 0, sizeof(ArchivePkgInstallData));
+
+                    std::string install_pkg_path = std::string(temp_folder) + "/" + entry->filename;
+                    SplitFile *sp = new SplitFile(install_pkg_path, INSTALL_ARCHIVE_PKG_SPLIT_SIZE);
+                    
+                    install_data->archive_entry = entry;
+                    install_data->split_file = sp;
+                    install_data->stop_write_thread = false;
+
+                    int res = pthread_create(&install_data->thread, NULL, Actions::ExtractArchivePkg, install_data);
+
+                    INSTALLER::InstallArchivePkg(entry->filename, install_data);
+                    free(entry);
+                }
+                else
+                {
+                    failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
+                    return;
+                }
+            }
             success(res);
         });
 

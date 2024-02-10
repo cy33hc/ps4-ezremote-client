@@ -431,7 +431,7 @@ namespace ZipUtil
         return password;
     }
 
-    static RemoteArchiveData *OpenRemoteArchive(const std::string &file)
+    static RemoteArchiveData *OpenRemoteArchive(const std::string &file, RemoteClient *client)
     {
         RemoteArchiveData *data;
 
@@ -439,8 +439,8 @@ namespace ZipUtil
         memset(data, 0, sizeof(RemoteArchiveData));
 
         data->offset = 0;
-        remoteclient->Size(file, &data->size);
-        data->client = remoteclient;
+        client->Size(file, &data->size);
+        data->client = client;
         data->path = file;
         return data;
     }
@@ -478,7 +478,7 @@ namespace ZipUtil
      * Main loop: open the zipfile, iterate over its contents and decide what
      * to do with each entry.
      */
-    int Extract(const DirEntry &file, const std::string &basepath, bool is_remote)
+    int Extract(const DirEntry &file, const std::string &basepath, RemoteClient *client)
     {
         struct archive *a;
         struct archive_entry *e;
@@ -493,7 +493,7 @@ namespace ZipUtil
         archive_read_support_filter_all(a);
         archive_read_set_passphrase_callback(a, NULL, &passphrase_callback);
 
-        if (!is_remote)
+        if (client == nullptr)
         {
             ret = archive_read_open_filename(a, file.path, ARCHIVE_TRANSFER_SIZE);
             if (ret < ARCHIVE_OK)
@@ -504,7 +504,7 @@ namespace ZipUtil
         }
         else
         {
-            client_data = OpenRemoteArchive(file.path);
+            client_data = OpenRemoteArchive(file.path, client);
             if (client_data == nullptr)
             {
                 sprintf(status_message, "%s", "archive_read_open_filename failed");
@@ -548,7 +548,7 @@ namespace ZipUtil
         return 1;
     }
 
-    ArchiveEntry *GetPackageEntry(const std::string &zip_file, bool is_remote)
+    ArchiveEntry *GetPackageEntry(const std::string &zip_file, RemoteClient *client)
     {
         struct archive *a;
         struct archive_entry *e;
@@ -565,7 +565,7 @@ namespace ZipUtil
         archive_read_support_filter_all(a);
         archive_read_set_passphrase_callback(a, NULL, &passphrase_callback);
 
-        if (!is_remote)
+        if (client == nullptr)
         {
             ret = archive_read_open_filename(a, zip_file.c_str(), ARCHIVE_TRANSFER_SIZE);
             if (ret < ARCHIVE_OK)
@@ -576,7 +576,7 @@ namespace ZipUtil
         }
         else
         {
-            client_data = OpenRemoteArchive(zip_file);
+            client_data = OpenRemoteArchive(zip_file, client);
             if (client_data == nullptr)
             {
                 sprintf(status_message, "%s", "archive_read_open_filename failed");

@@ -33,6 +33,12 @@ static bool s_bgft_initialized = false;
 
 static std::map<std::string, ArchivePkgInstallData *> archive_pkg_install_data_list;
 
+struct BackgroundArchiveInstallInfo
+{
+	ArchivePkgInstallData *pkg_data;
+	std::string path;
+};
+
 namespace INSTALLER
 {
 	int Init(void)
@@ -325,7 +331,9 @@ namespace INSTALLER
 				{
 					ret = sceAppInstUtilAppUnInstall(cid.c_str());
 					if (ret != 0)
+					{
 						goto err;
+					}
 					goto retry;
 				}
 			}
@@ -338,8 +346,9 @@ namespace INSTALLER
 			}
 		}
 		else if (ret > 0)
+		{
 			goto err;
-
+		}
 		ret = sceBgftServiceDownloadStartTask(task_id);
 		if (ret)
 		{
@@ -859,5 +868,23 @@ namespace INSTALLER
 		RemoveArchivePkgInstallData(hash);
 		return ret;
 
+	}
+
+	void *InstallArchivePkgThread(void *argp)
+	{
+		BackgroundArchiveInstallInfo *bg_install_info = (BackgroundArchiveInstallInfo*) argp;
+		InstallArchivePkg(bg_install_info->path , bg_install_info->pkg_data);
+		free(bg_install_info);
+
+		return NULL;
+	}
+
+	void StartInstallArchivePkg(const std::string &path, ArchivePkgInstallData* pkg_data)
+	{
+		BackgroundArchiveInstallInfo *bg_install_info = (BackgroundArchiveInstallInfo*) malloc(sizeof(BackgroundArchiveInstallInfo));
+		memset(bg_install_info, 0, sizeof(BackgroundArchiveInstallInfo));
+		bg_install_info->pkg_data = pkg_data;
+		bg_install_info->path = path;
+		int res = pthread_create(&bk_install_thid, NULL, InstallArchivePkgThread, bg_install_info);
 	}
 }
