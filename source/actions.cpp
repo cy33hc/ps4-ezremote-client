@@ -786,7 +786,7 @@ namespace Actions
     void *ExtractArchivePkg(void *argp)
     {
         ssize_t len;
-        char buffer[ARCHIVE_TRANSFER_SIZE];
+        char *buffer = (char*) malloc(ARCHIVE_TRANSFER_SIZE);
 
         ArchivePkgInstallData *install_data = (ArchivePkgInstallData*) argp;
         SplitFile *sp = install_data->split_file;
@@ -795,7 +795,7 @@ namespace Actions
         sp->Open();
         while (!install_data->stop_write_thread)
         {
-            len = archive_read_data(install_data->archive_entry->archive, buffer, sizeof buffer);
+            len = archive_read_data(install_data->archive_entry->archive, buffer, ARCHIVE_TRANSFER_SIZE);
 
             if (len == 0)
                 break;
@@ -814,7 +814,7 @@ namespace Actions
         }
 
         sp->Close();
-
+        free(buffer);
         return NULL;
     }
 

@@ -1193,10 +1193,16 @@ namespace HttpServer
                     install_data->split_file = sp;
                     install_data->stop_write_thread = false;
 
-                    int res = pthread_create(&install_data->thread, NULL, Actions::ExtractArchivePkg, install_data);
+                    int ret = pthread_create(&install_data->thread, NULL, Actions::ExtractArchivePkg, install_data);
 
-                    INSTALLER::InstallArchivePkg(entry->filename, install_data);
+                    ret = INSTALLER::InstallArchivePkg(entry->filename, install_data);
                     free(entry);
+
+                    if (ret == 0)
+                    {
+                        failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
+                        return;
+                    }
                 }
                 else
                 {

@@ -288,29 +288,35 @@ namespace ZipUtil
     static int extract2fd(struct archive *a, const std::string &pathname, int fd)
     {
         ssize_t len;
-        unsigned char buffer[ARCHIVE_TRANSFER_SIZE];
+        unsigned char *buffer = (unsigned char *) malloc(ARCHIVE_TRANSFER_SIZE);
 
         /* loop over file contents and write to fd */
         for (int n = 0;; n++)
         {
-            len = archive_read_data(a, buffer, sizeof buffer);
+            len = archive_read_data(a, buffer, ARCHIVE_TRANSFER_SIZE);
 
             if (len == 0)
+            {
+                free(buffer);
                 return 1;
+            }
 
             if (len < 0)
             {
                 sprintf(status_message, "error archive_read_data('%s')", pathname.c_str());
+                free(buffer);
                 return 0;
             }
 
             if (write(fd, buffer, len) != len)
             {
                 sprintf(status_message, "error write('%s')", pathname.c_str());
+                free(buffer);
                 return 0;
             }
         }
 
+        free(buffer);
         return 1;
     }
 
