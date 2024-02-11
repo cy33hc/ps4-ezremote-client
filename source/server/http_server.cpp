@@ -1111,15 +1111,18 @@ namespace HttpServer
         {
             std::string url;
             const char *url_param;
-            bool use_alldebrid;
+            bool use_alldebrid = false;
+            bool use_realdebrid = false;
+
             json_object *jobj = json_tokener_parse(req.body.c_str());
             if (jobj != nullptr)
             {
                 url_param = json_object_get_string(json_object_object_get(jobj, "url"));
                 use_alldebrid  = json_object_get_boolean(json_object_object_get(jobj, "use_alldebrid"));
+                use_realdebrid = json_object_get_boolean(json_object_object_get(jobj, "use_realdebrid"));
                 if (url_param == nullptr)
                 {
-                    bad_request(res, "Required url_param, use_alldebrid parameter missing");
+                    bad_request(res, "Required url_param parameter missing");
                     return;
                 }
             }
@@ -1129,14 +1132,14 @@ namespace HttpServer
                 return;
             }
 
-            if (use_alldebrid && strlen(alldebrid_api_key) == 0)
+            if ((use_alldebrid && strlen(alldebrid_api_key) == 0) || (use_realdebrid && strlen(realdebrid_api_key) == 0))
             {
                 failed(res, 200, lang_strings[STR_ALLDEBRID_API_KEY_MISSING_MSG]);
                 return;
             }
 
             url = std::string(url_param);
-            FileHost *filehost = FileHost::getFileHost(url, use_alldebrid);
+            FileHost *filehost = FileHost::getFileHost(url, use_alldebrid, use_realdebrid);
 
             if (!filehost->IsValidUrl())
             {
@@ -1195,8 +1198,7 @@ namespace HttpServer
 
                     int ret = pthread_create(&install_data->thread, NULL, Actions::ExtractArchivePkg, install_data);
 
-                    ret = INSTALLER::InstallArchivePkg(entry->filename, install_data);
-                    free(entry);
+                    ret = INSTALLER::InstallArchivePkg(entry->filename, install_data, true);
 
                     if (ret == 0)
                     {

@@ -27,6 +27,13 @@
 
 #define BGFT_HEAP_SIZE (1 * 1024 * 1024)
 
+struct BgProgressCheck
+{
+	ArchivePkgInstallData* pkg_data;
+	int task_id;
+	std::string hash;
+};
+
 static OrbisBgftInitParams s_bgft_init_params;
 
 static bool s_bgft_initialized = false;
@@ -722,7 +729,39 @@ namespace INSTALLER
 		archive_pkg_install_data_list.erase(hash);
 	}
 
-	bool InstallArchivePkg(const std::string &path, ArchivePkgInstallData* pkg_data)
+	void *CheckBgInstallTaskThread(void *argp)
+	{
+		bool completed = false;
+		OrbisBgftTaskProgress progress_info;
+		BgProgressCheck *bg_check_data = (BgProgressCheck*) argp;
+		int ret;
+
+		while (!completed)
+		{
+			memset(&progress_info, 0, sizeof(progress_info));
+			ret = sceBgftServiceDownloadGetProgress(bg_check_data->task_id, &progress_info);
+			if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
+			{
+				goto finish;
+			}
+			if (progress_info.length > 0)
+			{
+				completed = progress_info.transferred == progress_info.length;
+			}
+			sceSystemServicePowerTick();
+			sceKernelUsleep(500000);
+		}
+	finish:
+		bg_check_data->pkg_data->stop_write_thread = true;
+		pthread_join(bg_check_data->pkg_data->thread, NULL);
+		delete(bg_check_data->pkg_data->split_file);
+		free(bg_check_data->pkg_data);
+		RemoveArchivePkgInstallData(bg_check_data->hash);
+		free(bg_check_data);
+		return nullptr;
+	}
+
+	bool InstallArchivePkg(const std::string &path, ArchivePkgInstallData* pkg_data, bool bg)
 	{
 		pkg_header header;
 		pkg_data->split_file->Read((char*)&header, sizeof(pkg_header), 0);
@@ -796,18 +835,31 @@ namespace INSTALLER
 			ret = sceBgftServiceIntDebugDownloadRegisterPkg(&params, &task_id);
 		if (ret == 0x80990088 || ret == 0x80990015)
 		{
-			sprintf(confirm_message, "%s - %s?", display_title.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
-			confirm_state = CONFIRM_WAIT;
-			action_to_take = selected_action;
-			activity_inprogess = false;
-			while (confirm_state == CONFIRM_WAIT)
+			if (!bg)
 			{
-				sceKernelUsleep(100000);
-			}
-			activity_inprogess = true;
-			selected_action = action_to_take;
+				sprintf(confirm_message, "%s - %s?", display_title.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
+				confirm_state = CONFIRM_WAIT;
+				action_to_take = selected_action;
+				activity_inprogess = false;
+				while (confirm_state == CONFIRM_WAIT)
+				{
+					sceKernelUsleep(100000);
+				}
+				activity_inprogess = true;
+				selected_action = action_to_take;
 
-			if (confirm_state == CONFIRM_YES)
+				if (confirm_state == CONFIRM_YES)
+				{
+					ret = sceAppInstUtilAppUnInstall(cid.c_str());
+					if (ret != 0)
+					{
+						ret = 0;
+						goto finish;
+					}
+					goto retry;
+				}
+			}
+			else
 			{
 				ret = sceAppInstUtilAppUnInstall(cid.c_str());
 				if (ret != 0)
@@ -815,7 +867,6 @@ namespace INSTALLER
 					ret = 0;
 					goto finish;
 				}
-				goto retry;
 			}
 		}
 		else if (ret > 0)
@@ -833,26 +884,38 @@ namespace INSTALLER
 
 		Util::Notify("%s queued", display_title.c_str());
 
-		file_transfering = true;
-		bytes_to_download = 100;
-		bytes_transfered = 0;
-		while (!completed)
+		if (!bg)
 		{
-			memset(&progress_info, 0, sizeof(progress_info));
-			ret = sceBgftServiceDownloadGetProgress(task_id, &progress_info);
-			if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
+			file_transfering = true;
+			bytes_to_download = 100;
+			bytes_transfered = 0;
+			while (!completed)
 			{
-				ret = 0;
-				goto finish;
+				memset(&progress_info, 0, sizeof(progress_info));
+				ret = sceBgftServiceDownloadGetProgress(task_id, &progress_info);
+				if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
+				{
+					ret = 0;
+					goto finish;
+				}
+				bytes_transfered = (uint32_t)(((float)progress_info.transferred / progress_info.length) * 100.f);
+				if (progress_info.length > 0)
+				{
+					completed = progress_info.transferred == progress_info.length;
+				}
+				sceSystemServicePowerTick();
 			}
-			bytes_transfered = (uint32_t)(((float)progress_info.transferred / progress_info.length) * 100.f);
-			if (progress_info.length > 0)
-			{
-				completed = progress_info.transferred == progress_info.length;
-			}
-			sceSystemServicePowerTick();
 		}
-
+		else
+		{
+			BgProgressCheck *bg_check_data = (BgProgressCheck*) malloc(sizeof(BgProgressCheck));
+			memset(bg_check_data, 0, sizeof(BgProgressCheck));
+			bg_check_data->pkg_data = pkg_data;
+			bg_check_data->task_id = task_id;
+			bg_check_data->hash = hash;
+			ret = pthread_create(&bk_install_thid, NULL, CheckBgInstallTaskThread, bg_check_data);
+			return 1;
+		}
 		ret = 1;
 	finish:
 		pkg_data->stop_write_thread = true;

@@ -148,5 +148,5 @@ namespace INSTALLER
     ArchivePkgInstallData *GetArchivePkgInstallData(const std::string &hash);
     void AddArchivePkgInstallData(const std::string &hash, ArchivePkgInstallData *pkg_data);
     void RemoveArchivePkgInstallData(const std::string &hash);
-    bool InstallArchivePkg(const std::string &path, ArchivePkgInstallData* pkg_data);
+    bool InstallArchivePkg(const std::string &path, ArchivePkgInstallData* pkg_data, bool bg = false);
 }

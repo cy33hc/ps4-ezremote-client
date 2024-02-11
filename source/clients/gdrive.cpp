@@ -226,7 +226,7 @@ int GDriveClient::Rename(const std::string &src, const std::string &dst)
     if (!src_drive_id.empty())
         url += "?supportsAllDrives=true";
     std::string filename = dst.substr(dst.find_last_of("/") + 1);
-    std::string body = "{'name' : '" + filename + "'}";
+    std::string body = "{\"name\" : \"" + filename + "\"}";
     if (auto res = client->Patch(url, body.c_str(), body.length(), "application/json; charset=UTF-8"))
     {
         sprintf(response, "%d", res->status);
@@ -492,9 +492,9 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
     if (!drive_id.empty())
         url += "&supportsAllDrives=true";
 
-    std::string post_data = std::string("{'name': '") + filename + "'," +
-                                        (drive_id.empty() ? "" : "'driveId' : '" + drive_id + "',") +
-                                        "'parents': ['" + parent_id + "']}";
+    std::string post_data = std::string("{\"name\": \"") + filename + "\"," +
+                                        (drive_id.empty() ? "" : "\"driveId\" : \"" + drive_id + "\",") +
+                                        "\"parents\": [\"" + parent_id + "\"]}";
     Headers headers;
     headers.insert(std::make_pair("X-Upload-Content-Type", "application/octet-stream"));
     headers.insert(std::make_pair("X-Upload-Content-Length", std::to_string(bytes_to_download)));
@@ -605,10 +605,10 @@ int GDriveClient::Mkdir(const std::string &path)
     std::string url = std::string("/drive/v3/files?fields=id");
     if (!drive_id.empty())
         url += "&supportsAllDrives=true";
-    std::string folder_metadata = "{'name' : '" + folder_name + "'," +
-                                  "'parents' : ['" + parent_id + "']," +
-                                  (drive_id.empty() ? "" : "'driveId' : '" + drive_id + "',") + 
-                                  "'mimeType' : 'application/vnd.google-apps.folder'}";
+    std::string folder_metadata = "{\"name\" : \"" + folder_name + "\"," +
+                                  "\"parents\" : [\"" + parent_id + "\"]," +
+                                  (drive_id.empty() ? "" : "\"driveId\" : \"" + drive_id + "\",") + 
+                                  "\"mimeType\" : \"application/vnd.google-apps.folder\"}";
 
     if (auto res = client->Post(url, folder_metadata.c_str(), folder_metadata.length(), "application/json; charset=UTF-8"))
     {

@@ -1735,7 +1735,6 @@ namespace Windows
                 ImGui::PopStyleVar();
                 ImGui::Separator();
 
-                // Google settings
                 ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_ALLDEBRID]);
                 ImGui::Separator();
 
@@ -1750,14 +1749,41 @@ namespace Windows
                 if (strlen(alldebrid_api_key) > 0)
                     sprintf(id, "%s", "*********************************************##alldebrid_api_key");
                 else
-                    sprintf(id, "%s", "##client_secret_input");
+                    sprintf(id, "%s", "##alldebrid_api_key");
                 if (ImGui::Button(id, ImVec2(835-width, 0)))
                 {
                     ResetImeCallbacks();
                     ime_single_field = alldebrid_api_key;
-                    ime_field_size = 31;
+                    ime_field_size = 63;
                     ime_callback = SingleValueImeCallback;
-                    Dialog::initImeDialog(lang_strings[STR_API_KEY], alldebrid_api_key, 31, ORBIS_TYPE_BASIC_LATIN, 1050, 80);
+                    Dialog::initImeDialog(lang_strings[STR_API_KEY], alldebrid_api_key, 63, ORBIS_TYPE_BASIC_LATIN, 1050, 80);
+                    gui_mode = GUI_MODE_IME;
+                }
+                ImGui::PopStyleVar();
+                ImGui::Separator();
+
+                ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_REALDEBRID]);
+                ImGui::Separator();
+
+                field_size = ImGui::CalcTextSize(lang_strings[STR_API_KEY]);
+                width = field_size.x + 45;
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                ImGui::Text("%s", lang_strings[STR_API_KEY]);
+                ImGui::SameLine();
+                ImGui::SetCursorPosX(width);
+                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 1.0f));
+
+                if (strlen(realdebrid_api_key) > 0)
+                    sprintf(id, "%s", "*********************************************##realdebrid_api_key");
+                else
+                    sprintf(id, "%s", "##realdebrid_api_key");
+                if (ImGui::Button(id, ImVec2(835-width, 0)))
+                {
+                    ResetImeCallbacks();
+                    ime_single_field = realdebrid_api_key;
+                    ime_field_size = 63;
+                    ime_callback = SingleValueImeCallback;
+                    Dialog::initImeDialog(lang_strings[STR_API_KEY], realdebrid_api_key, 63, ORBIS_TYPE_BASIC_LATIN, 1050, 80);
                     gui_mode = GUI_MODE_IME;
                 }
                 ImGui::PopStyleVar();

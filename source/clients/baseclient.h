@@ -16,6 +16,7 @@ public:
     BaseClient();
     ~BaseClient();
     int Connect(const std::string &url, const std::string &username, const std::string &password);
+    int Connect(const std::string &url, const std::string &api_key);
     int Mkdir(const std::string &path);
     int Rmdir(const std::string &path, bool recursive);
     int Size(const std::string &path, int64_t *size);

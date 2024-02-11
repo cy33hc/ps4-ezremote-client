@@ -42,6 +42,30 @@ int BaseClient::Connect(const std::string &url, const std::string &username, con
     return 1;
 }
 
+int BaseClient::Connect(const std::string &url, const std::string &api_key)
+{
+    std::string scheme_host_port = url;
+    size_t scheme_pos = url.find("://");
+    size_t root_pos = url.find("/", scheme_pos + 3);
+    if (root_pos != std::string::npos)
+    {
+        scheme_host_port = url.substr(0, root_pos);
+        this->base_path = url.substr(root_pos);
+    }
+
+    client = new httplib::Client(scheme_host_port);
+    if (api_key.length() > 0)
+        client->set_bearer_token_auth(api_key);
+    client->set_keep_alive(true);
+    client->set_follow_location(true);
+    client->set_connection_timeout(30);
+    client->set_read_timeout(30);
+    client->enable_server_certificate_verification(false);
+    if (Ping())
+        this->connected = true;
+    return 1;
+}
+
 int BaseClient::Mkdir(const std::string &path)
 {
     sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);

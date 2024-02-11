@@ -42,6 +42,7 @@ add_executable(ezremote_client
   source/clients/sftpclient.cpp
   source/clients/rclone.cpp
   source/filehost/alldebrid.cpp
+  source/filehost/realdebrid.cpp
   source/filehost/directhost.cpp
   source/filehost/gdrive.cpp
   source/filehost/filehost.cpp
@@ -71,7 +72,7 @@ add_executable(ezremote_client
 
 add_self(ezremote_client)
 
-add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.15" 32 0)
+add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.16" 32 0)
 
 target_link_libraries(ezremote_client
   c
