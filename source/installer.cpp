@@ -867,6 +867,7 @@ namespace INSTALLER
 					ret = 0;
 					goto finish;
 				}
+				goto retry;
 			}
 		}
 		else if (ret > 0)
