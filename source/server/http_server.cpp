@@ -1024,9 +1024,9 @@ namespace HttpServer
                 size_t range_len = (req.ranges[0].second - req.ranges[0].first) + 1;
                 if (req.ranges[0].second >= 18000000000000000000ul)
                 {
-                    range_len = 65536ul - req.ranges[0].first;
+                    range_len = 524288ul - req.ranges[0].first;
                     res.set_header("Content-Length", std::to_string(range_len));
-                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-65535/"+std::to_string(range_len));
+                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-524288/"+std::to_string(range_len));
                 }
                 std::pair<ssize_t, ssize_t> range = req.ranges[0];
                 res.set_content_provider(
@@ -1087,9 +1087,9 @@ namespace HttpServer
                 size_t range_len = (req.ranges[0].second - req.ranges[0].first) + 1;
                 if (req.ranges[0].second >= 18000000000000000000ul)
                 {
-                    range_len = 65536ul - req.ranges[0].first;
+                    range_len = 524288ul - req.ranges[0].first;
                     res.set_header("Content-Length", std::to_string(range_len));
-                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-65535/"+std::to_string(range_len));
+                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-524288/"+std::to_string(range_len));
                 }
                 std::pair<ssize_t, ssize_t> range = req.ranges[0];
                 res.set_content_provider(
