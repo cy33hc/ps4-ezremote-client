@@ -114,7 +114,7 @@ Remote Package Installation with all Remote Server, even if they are password pr
  - Upload files to the PS4
  - Download files from the PS4
  - Install packages on the PS4
- - Install packages from shared links from mediafire, google and pixeldrain. For other filehost, they can installed via AllDebrid (See AllDebrid website for supported filehost).
+ - Install packages from shared links from mediafire, google and pixeldrain. For other filehost, they can installed via AllDebrid/RealDebrid (See respective websites for supported filehost).
 
 ## How to access the Web Interface ##
 You need to launch the "ezRemote Client" app on the PS4. Then on any device(laptop, tablet, phone etc..) with web browser goto to http://<ip_address_of_ps4>:8080 . That's all.
