@@ -289,6 +289,7 @@ namespace ZipUtil
     {
         ssize_t len;
         unsigned char *buffer = (unsigned char *) malloc(ARCHIVE_TRANSFER_SIZE);
+        bytes_transfered = 0;
 
         /* loop over file contents and write to fd */
         for (int n = 0;; n++)
@@ -307,7 +308,8 @@ namespace ZipUtil
                 free(buffer);
                 return 0;
             }
-
+            bytes_transfered += len;
+            
             if (write(fd, buffer, len) != len)
             {
                 sprintf(status_message, "error write('%s')", pathname.c_str());
@@ -350,6 +352,7 @@ namespace ZipUtil
             return;
         }
 
+        bytes_to_download = archive_entry_size(e);
         if ((fd = open(path.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0777)) < 0)
         {
             sprintf(status_message, "error open('%s')", path.c_str());

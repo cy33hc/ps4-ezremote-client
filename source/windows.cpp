@@ -2087,7 +2087,7 @@ namespace Windows
             activity_inprogess = true;
             sprintf(activity_message, "%s", "");
             stop_activity = false;
-            file_transfering = false;
+            file_transfering = true;
             selected_action = ACTION_NONE;
             Actions::ExtractLocalZips();
             break;
@@ -2096,7 +2096,7 @@ namespace Windows
             activity_inprogess = true;
             sprintf(activity_message, "%s", "");
             stop_activity = false;
-            file_transfering = false;
+            file_transfering = true;
             selected_action = ACTION_NONE;
             Actions::ExtractRemoteZips();
             break;
@@ -2182,6 +2182,7 @@ namespace Windows
         case ACTION_INSTALL_REMOTE_PKG:
             sprintf(status_message, "%s", "");
             activity_inprogess = true;
+            file_transfering = true;
             sprintf(activity_message, "%s", "");
             stop_activity = false;
             Actions::InstallRemotePkgs();

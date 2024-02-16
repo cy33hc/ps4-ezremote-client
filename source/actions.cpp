@@ -778,6 +778,7 @@ namespace Actions
         if (res != 0)
         {
             activity_inprogess = false;
+            file_transfering = false;
             multi_selected_remote_files.clear();
             Windows::SetModalMode(false);
         }

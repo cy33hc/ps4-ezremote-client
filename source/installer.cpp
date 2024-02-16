@@ -261,6 +261,7 @@ namespace INSTALLER
 		uint32_t content_type = BE32(header->pkg_content_type);
 		uint32_t flags = BE32(header->pkg_content_flags);
 		bool is_patch = false;
+		bool completed = false;
 
 		switch (content_type)
 		{
@@ -363,13 +364,19 @@ namespace INSTALLER
 			file_transfering = true;
 			bytes_to_download = 100;
 			bytes_transfered = 0;
-			while (bytes_transfered < 99)
+			while (!completed)
 			{
 				memset(&progress_info, 0, sizeof(progress_info));
 				ret = sceBgftServiceDownloadGetProgress(task_id, &progress_info);
 				if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
 					return 0;
-				bytes_transfered = (uint32_t)(((float)progress_info.transferred / progress_info.length) * 100.f);
+				
+				if (progress_info.length > 0)
+				{
+					completed = progress_info.transferred == progress_info.length;
+					bytes_to_download = progress_info.length;
+					bytes_transfered = progress_info.transferred;
+				}
 				sceSystemServicePowerTick();
 			}
 		}
@@ -383,6 +390,8 @@ namespace INSTALLER
 	{
 		int ret;
 		pkg_header header;
+		bool completed = false;
+
 		memset(&header, 0, sizeof(header));
 		if (FS::Head(path.c_str(), (void *)&header, sizeof(header)) == 0)
 			return 0;
@@ -444,13 +453,19 @@ namespace INSTALLER
 		file_transfering = true;
 		bytes_to_download = 100;
 		bytes_transfered = 0;
-		while (bytes_transfered < 99)
+		while (!completed)
 		{
 			memset(&progress_info, 0, sizeof(progress_info));
 			ret = sceBgftServiceDownloadGetProgress(task_id, &progress_info);
 			if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
 				return 0;
-			bytes_transfered = (uint32_t)(((float)progress_info.transferred / progress_info.length) * 100.f);
+
+			if (progress_info.length > 0)
+			{
+				completed = progress_info.transferred == progress_info.length;
+				bytes_to_download = progress_info.length;
+				bytes_transfered = progress_info.transferred;
+			}
 			sceSystemServicePowerTick();
 		}
 		return 1;
@@ -462,6 +477,8 @@ namespace INSTALLER
 	int InstallLocalPkg(const std::string &path, pkg_header *header, bool remove_after_install)
 	{
 		int ret;
+		bool completed = false;
+		
 		if (strncmp(path.c_str(), "/data/", 6) != 0 &&
 			strncmp(path.c_str(), "/user/data/", 11) != 0 &&
 			strncmp(path.c_str(), "/mnt/usb", 8) != 0)
@@ -547,15 +564,20 @@ namespace INSTALLER
 		sprintf(activity_message, "%s", lang_strings[STR_WAIT_FOR_INSTALL_MSG]);
 		bytes_to_download = 1;
 		bytes_transfered = 0;
-		while (prog < 99)
+		while (!completed)
 		{
 			memset(&progress_info, 0, sizeof(progress_info));
 			ret = sceBgftServiceDownloadGetProgress(task_id, &progress_info);
 			if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
 				return -3;
-			prog = (uint32_t)(((float)progress_info.transferred / progress_info.length) * 100.f);
-			bytes_to_download = progress_info.length;
-			bytes_transfered = progress_info.transferred;
+
+			if (progress_info.length > 0)
+			{
+				completed = progress_info.transferred == progress_info.length;
+				bytes_to_download = progress_info.length;
+				bytes_transfered = progress_info.transferred;
+			}
+			sceSystemServicePowerTick();
 		}
 		if (auto_delete_tmp_pkg)
 			FS::Rm(path);
@@ -747,6 +769,8 @@ namespace INSTALLER
 			if (progress_info.length > 0)
 			{
 				completed = progress_info.transferred == progress_info.length;
+				bytes_to_download = progress_info.length;
+				bytes_transfered = progress_info.transferred;
 			}
 			sceSystemServicePowerTick();
 			sceKernelUsleep(500000);
@@ -903,6 +927,8 @@ namespace INSTALLER
 				if (progress_info.length > 0)
 				{
 					completed = progress_info.transferred == progress_info.length;
+					bytes_to_download = progress_info.length;
+					bytes_transfered = progress_info.transferred;
 				}
 				sceSystemServicePowerTick();
 			}

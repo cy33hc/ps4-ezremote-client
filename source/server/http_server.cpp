@@ -1148,6 +1148,12 @@ namespace HttpServer
             }
 
             std::string hash = Util::UrlHash(filehost->GetUrl());
+            snprintf(activity_message, 1023, "%s %s", lang_strings[STR_INSTALLING], filehost->GetUrl().c_str());
+            activity_inprogess = true;
+            file_transfering = true;
+            bytes_to_download = 100;
+            bytes_transfered = 0;
+            
             std::string download_url = filehost->GetDownloadUrl();
             if (download_url.empty())
             {
@@ -1174,7 +1180,7 @@ namespace HttpServer
                 delete(baseclient);
 
                 std::string remote_install_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst/Site%2099/" + hash;
-                int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header, title);
+                int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header, title, true);
                 if (rc == 0)
                 {
                     failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
@@ -1198,20 +1204,26 @@ namespace HttpServer
 
                     int ret = pthread_create(&install_data->thread, NULL, Actions::ExtractArchivePkg, install_data);
 
-                    ret = INSTALLER::InstallArchivePkg(entry->filename, install_data, true);
+                    ret = INSTALLER::InstallArchivePkg(entry->filename, install_data);
 
                     if (ret == 0)
                     {
                         failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
+                        activity_inprogess = false;
+                        file_transfering = false;
                         return;
                     }
                 }
                 else
                 {
                     failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
+                    activity_inprogess = false;
+                    file_transfering = false;
                     return;
                 }
             }
+            activity_inprogess = false;
+            file_transfering = false;
             success(res);
         });
 
