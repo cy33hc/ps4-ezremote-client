@@ -1159,6 +1159,9 @@ namespace HttpServer
             if (download_url.empty())
             {
                 failed(res, 200, lang_strings[STR_CANT_EXTRACT_URL_MSG]);
+                activity_inprogess = false;
+                file_transfering = false;
+                Windows::SetModalMode(true);
                 return;
             }
 
@@ -1185,6 +1188,9 @@ namespace HttpServer
                 if (rc == 0)
                 {
                     failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
+                    activity_inprogess = false;
+                    file_transfering = false;
+                    Windows::SetModalMode(true);
                     return;
                 }
             }
