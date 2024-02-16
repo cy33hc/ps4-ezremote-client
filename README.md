@@ -1,6 +1,6 @@
 # ezRemote Client
 
-ezRemote Client is an application that allows you to connect the PS4 to remote FTP/SFTP, SMB, NFS, WebDAV, HTTP servers and Google Drive to transfer files. The interface is inspired by Filezilla client which provides a commander like GUI.
+ezRemote Client is an application that allows you to connect the PS4 to remote FTP/SFTP, SMB(Windows Share), NFS, WebDAV, HTTP servers and Google Drive to transfer files. The interface is inspired by Filezilla client which provides a commander like GUI.
 
 **New:** As of version 1.0.8, ezRemote Client has a Web Interface that can be access from any modern browser to manage the PS4 files.
 
@@ -27,7 +27,7 @@ To distinguish between FTP, SMB, NFS, WebDAV or HTTP, the URL must be prefix wit
    then in the password field enter file:///data/ezremote-client
    ```
 
- - The url format for SMB is
+ - The url format for SMB(Windows Share) is
    ```
    smb://hostname[:port]/sharename
 
