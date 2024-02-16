@@ -1153,7 +1153,8 @@ namespace HttpServer
             file_transfering = true;
             bytes_to_download = 100;
             bytes_transfered = 0;
-            
+            Windows::SetModalMode(true);
+
             std::string download_url = filehost->GetDownloadUrl();
             if (download_url.empty())
             {
@@ -1211,6 +1212,7 @@ namespace HttpServer
                         failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
                         activity_inprogess = false;
                         file_transfering = false;
+                        Windows::SetModalMode(false);
                         return;
                     }
                 }
@@ -1219,11 +1221,13 @@ namespace HttpServer
                     failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
                     activity_inprogess = false;
                     file_transfering = false;
+                    Windows::SetModalMode(false);
                     return;
                 }
             }
             activity_inprogess = false;
             file_transfering = false;
+            Windows::SetModalMode(false);
             success(res);
         });
 
