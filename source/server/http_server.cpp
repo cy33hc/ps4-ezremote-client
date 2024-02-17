@@ -1184,7 +1184,7 @@ namespace HttpServer
                 delete(baseclient);
 
                 std::string remote_install_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst/Site%2099/" + hash;
-                int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header, title, true);
+                int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header, title, false);
                 if (rc == 0)
                 {
                     failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
@@ -1211,7 +1211,7 @@ namespace HttpServer
 
                     int ret = pthread_create(&install_data->thread, NULL, Actions::ExtractArchivePkg, install_data);
 
-                    ret = INSTALLER::InstallArchivePkg(entry->filename, install_data);
+                    ret = INSTALLER::InstallArchivePkg(entry->filename, install_data, true);
 
                     if (ret == 0)
                     {
@@ -1231,9 +1231,6 @@ namespace HttpServer
                     return;
                 }
             }
-            activity_inprogess = false;
-            file_transfering = false;
-            Windows::SetModalMode(false);
             success(res);
         });
 

@@ -241,6 +241,46 @@ namespace INSTALLER
 		return "";
 	}
 
+	void *CheckBgInstallTaskThread(void *argp)
+	{
+		bool completed = false;
+		OrbisBgftTaskProgress progress_info;
+		BgProgressCheck *bg_check_data = (BgProgressCheck*) argp;
+		int ret;
+
+		while (!completed)
+		{
+			memset(&progress_info, 0, sizeof(progress_info));
+			ret = sceBgftServiceDownloadGetProgress(bg_check_data->task_id, &progress_info);
+			if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
+			{
+				goto finish;
+			}
+			if (progress_info.length > 0)
+			{
+				completed = progress_info.transferred == progress_info.length;
+				bytes_to_download = progress_info.length;
+				bytes_transfered = progress_info.transferred;
+			}
+			sceSystemServicePowerTick();
+			sceKernelUsleep(500000);
+		}
+	finish:
+		if (bg_check_data->pkg_data != nullptr)
+		{
+			bg_check_data->pkg_data->stop_write_thread = true;
+			pthread_join(bg_check_data->pkg_data->thread, NULL);
+			delete(bg_check_data->pkg_data->split_file);
+			free(bg_check_data->pkg_data);
+			RemoveArchivePkgInstallData(bg_check_data->hash);
+			free(bg_check_data);
+		}
+		activity_inprogess = false;
+		file_transfering = false;
+		Windows::SetModalMode(false);
+		return nullptr;
+	}
+
 	bool canInstallRemotePkg(const std::string &url)
 	{
 		return true;
@@ -379,6 +419,16 @@ namespace INSTALLER
 				}
 				sceSystemServicePowerTick();
 			}
+		}
+		else
+		{
+			BgProgressCheck *bg_check_data = (BgProgressCheck*) malloc(sizeof(BgProgressCheck));
+			memset(bg_check_data, 0, sizeof(BgProgressCheck));
+			bg_check_data->pkg_data = nullptr;
+			bg_check_data->task_id = task_id;
+			bg_check_data->hash = "";
+			ret = pthread_create(&bk_install_thid, NULL, CheckBgInstallTaskThread, bg_check_data);
+			return 1;
 		}
 
 		return 1;
@@ -749,40 +799,6 @@ namespace INSTALLER
 	void RemoveArchivePkgInstallData(const std::string &hash)
 	{
 		archive_pkg_install_data_list.erase(hash);
-	}
-
-	void *CheckBgInstallTaskThread(void *argp)
-	{
-		bool completed = false;
-		OrbisBgftTaskProgress progress_info;
-		BgProgressCheck *bg_check_data = (BgProgressCheck*) argp;
-		int ret;
-
-		while (!completed)
-		{
-			memset(&progress_info, 0, sizeof(progress_info));
-			ret = sceBgftServiceDownloadGetProgress(bg_check_data->task_id, &progress_info);
-			if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
-			{
-				goto finish;
-			}
-			if (progress_info.length > 0)
-			{
-				completed = progress_info.transferred == progress_info.length;
-				bytes_to_download = progress_info.length;
-				bytes_transfered = progress_info.transferred;
-			}
-			sceSystemServicePowerTick();
-			sceKernelUsleep(500000);
-		}
-	finish:
-		bg_check_data->pkg_data->stop_write_thread = true;
-		pthread_join(bg_check_data->pkg_data->thread, NULL);
-		delete(bg_check_data->pkg_data->split_file);
-		free(bg_check_data->pkg_data);
-		RemoveArchivePkgInstallData(bg_check_data->hash);
-		free(bg_check_data);
-		return nullptr;
 	}
 
 	bool InstallArchivePkg(const std::string &path, ArchivePkgInstallData* pkg_data, bool bg)
