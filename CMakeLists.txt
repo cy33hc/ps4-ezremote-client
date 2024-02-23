@@ -22,12 +22,6 @@ add_executable(ezremote_client
   source/imgui/imgui_widgets.cpp
   source/imgui/imgui.cpp
   source/pugixml/pugixml.cpp
-  source/web/callback.cpp
-  source/web/fsinfo.cpp
-  source/web/header.cpp
-  source/web/request.cpp
-  source/web/urn.cpp
-  source/webdav/client.cpp
   source/http/httplib.cpp
   source/clients/baseclient.cpp
   source/clients/apache.cpp
@@ -38,9 +32,9 @@ add_executable(ezremote_client
   source/clients/npxserve.cpp
   source/clients/nfsclient.cpp
   source/clients/smbclient.cpp
-  source/clients/webdavclient.cpp
   source/clients/sftpclient.cpp
   source/clients/rclone.cpp
+  source/clients/webdav.cpp
   source/filehost/alldebrid.cpp
   source/filehost/realdebrid.cpp
   source/filehost/directhost.cpp
@@ -72,7 +66,7 @@ add_executable(ezremote_client
 
 add_self(ezremote_client)
 
-add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.19" 32 0)
+add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.20" 32 0)
 
 target_link_libraries(ezremote_client
   c
@@ -88,7 +82,6 @@ target_link_libraries(ezremote_client
   jbc
   crypto
   ssl
-  curl
   lexbor
   smb2
   nfs

@@ -562,7 +562,7 @@ private:
   size_t read_buff_off_ = 0;
   size_t read_buff_content_size_ = 0;
 
-  static const size_t read_buff_size_ = 1024 * 16;
+  static const size_t read_buff_size_ = 1024 * 512;
 };
 
 #ifdef CPPHTTPLIB_OPENSSL_SUPPORT

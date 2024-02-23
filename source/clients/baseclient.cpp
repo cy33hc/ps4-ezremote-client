@@ -10,6 +10,7 @@
 using httplib::Client;
 using httplib::Headers;
 using httplib::Result;
+using httplib::DataSink;
 
 BaseClient::BaseClient(){};
 
@@ -21,15 +22,15 @@ BaseClient::~BaseClient()
 
 int BaseClient::Connect(const std::string &url, const std::string &username, const std::string &password)
 {
-    std::string scheme_host_port = url;
+    this->host_url = url;
     size_t scheme_pos = url.find("://");
     size_t root_pos = url.find("/", scheme_pos + 3);
     if (root_pos != std::string::npos)
     {
-        scheme_host_port = url.substr(0, root_pos);
+        this->host_url = url.substr(0, root_pos);
         this->base_path = url.substr(root_pos);
     }
-    client = new httplib::Client(scheme_host_port);
+    client = new httplib::Client(this->host_url);
     if (username.length() > 0)
         client->set_basic_auth(username, password);
     client->set_keep_alive(true);
@@ -82,10 +83,13 @@ int BaseClient::Size(const std::string &path, int64_t *size)
 {
     if (auto res = client->Head(GetFullPath(path)))
     {
-        std::string content_length = res->get_header_value("Content-Length");
-        if (content_length.length() > 0)
-            *size = atoll(content_length.c_str());
-        return 1;
+        if (HTTP_SUCCESS(res->status))
+        {
+            std::string content_length = res->get_header_value("Content-Length");
+            if (content_length.length() > 0)
+                *size = atoll(content_length.c_str());
+            return 1;
+        }
     }
     else
     {
@@ -309,35 +313,10 @@ uint32_t BaseClient::SupportedActions()
 
 std::string BaseClient::EncodeUrl(const std::string &url)
 {
-    CURL *curl = curl_easy_init();
-    if (curl)
-    {
-        char *output = curl_easy_escape(curl, url.c_str(), url.length());
-        if (output)
-        {
-            std::string encoded_url = std::string(output);
-            curl_free(output);
-            return encoded_url;
-        }
-        curl_easy_cleanup(curl);
-    }
-    return "";
+    return httplib::detail::encode_url(url);
 }
 
 std::string BaseClient::DecodeUrl(const std::string &url)
 {
-    CURL *curl = curl_easy_init();
-    if (curl)
-    {
-        int decode_len;
-        char *output = curl_easy_unescape(curl, url.c_str(), url.length(), &decode_len);
-        if (output)
-        {
-            std::string decoded_url = std::string(output, decode_len);
-            curl_free(output);
-            return decoded_url;
-        }
-        curl_easy_cleanup(curl);
-    }
-    return "";
+    return httplib::detail::decode_url(url, true);
 }

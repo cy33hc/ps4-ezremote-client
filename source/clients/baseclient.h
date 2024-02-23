@@ -45,6 +45,7 @@ public:
 protected:
     httplib::Client *client;
     std::string base_path;
+    std::string host_url;
     char response[512];
     bool connected = false;
 };

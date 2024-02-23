@@ -8,7 +8,7 @@
 #include "clients/gdrive.h"
 #include "clients/ftpclient.h"
 #include "clients/smbclient.h"
-#include "clients/webdavclient.h"
+#include "clients/webdav.h"
 #include "clients/apache.h"
 #include "clients/nginx.h"
 #include "clients/npxserve.h"
@@ -25,8 +25,6 @@
 #include "lang.h"
 #include "actions.h"
 #include "installer.h"
-#include "web/request.hpp"
-#include "web/urn.hpp"
 #include "system.h"
 #include "sfo.h"
 #include "zip_util.h"
@@ -1102,14 +1100,14 @@ namespace Actions
         std::string host = full_url.substr(0, path_pos);
         std::string path = full_url.substr(path_pos);
 
-        WebDAV::WebDavClient tmp_client;
-        tmp_client.Connect(host.c_str(), install_pkg_url.username, install_pkg_url.password, false);
+        WebDAVClient tmp_client;
+        tmp_client.Connect(host.c_str(), install_pkg_url.username, install_pkg_url.password);
 
         sprintf(activity_message, "%s URL to %s", lang_strings[STR_DOWNLOADING], filename);
         int s = sizeof(pkg_header);
         memset(&header, 0, s);
-        WebDAV::dict_t response_headers{};
-        int ret = tmp_client.GetHeaders(path.c_str(), &response_headers);
+
+        int ret = tmp_client.Size(path, &bytes_to_download);
         if (!ret)
         {
             sprintf(status_message, "%s - %s", lang_strings[STR_FAILED], lang_strings[STR_CANNOT_READ_PKG_HDR_MSG]);
@@ -1119,13 +1117,8 @@ namespace Actions
             return NULL;
         }
 
-        auto content_length = WebDAV::get(response_headers, "content-length");
-        if (content_length.length() > 0)
-            bytes_to_download = std::stol(content_length);
-        else
-            bytes_to_download = 1;
         file_transfering = 1;
-        int is_performed = tmp_client.Get(filename, path.c_str());
+        int is_performed = tmp_client.Get(path, filename);
 
         if (is_performed == 0)
         {
@@ -1213,7 +1206,7 @@ namespace Actions
         }
         else if (strncmp(remote_settings->server, "webdavs://", 10) == 0 || strncmp(remote_settings->server, "webdav://", 9) == 0)
         {
-            remoteclient = new WebDAV::WebDavClient();
+            remoteclient = new WebDAVClient();
         }
         else if (strncmp(remote_settings->server, "smb://", 6) == 0)
         {

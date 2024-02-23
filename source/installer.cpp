@@ -10,9 +10,8 @@
 #include <orbis/AppInstUtil.h>
 #include <orbis/UserService.h>
 #include <orbis/SystemService.h>
-#include <curl/curl.h>
-#include <web/request.hpp>
-#include <web/urn.hpp>
+#include "clients/webdav.h"
+#include "clients/remote_client.h"
 #include "server/http_server.h"
 #include "installer.h"
 #include "util.h"
@@ -22,8 +21,6 @@
 #include "system.h"
 #include "fs.h"
 #include "sfo.h"
-#include "clients/webdavclient.h"
-#include "clients/remote_client.h"
 
 #define BGFT_HEAP_SIZE (1 * 1024 * 1024)
 
@@ -205,7 +202,7 @@ namespace INSTALLER
 		if (strlen(remote_settings->username) == 0 && strlen(remote_settings->password) == 0 &&
 			(remoteclient->clientType() == CLIENT_TYPE_WEBDAV || remoteclient->clientType() == CLIENT_TYPE_HTTP_SERVER))
 		{
-			std::string full_url = WebDAV::GetHttpUrl(remote_settings->server + path);
+			std::string full_url = WebDAVClient::GetHttpUrl(remote_settings->server + path);
 			size_t scheme_pos = full_url.find("://");
 			if (scheme_pos == std::string::npos)
 				return "";
@@ -215,24 +212,15 @@ namespace INSTALLER
 
 			if (encodeUrl)
 			{
-				Web::Urn::Path uri(path);
-				CURL *curl = curl_easy_init();
-				path = uri.quote(curl);
-				curl_easy_cleanup(curl);
+				path = httplib::detail::encode_url(path);
 			}
 
 			return host + path;
 		}
 		else
 		{
-			std::string encoded_path = path;
-			std::string encoded_site_name = remote_settings->site_name;
-			Web::Urn::Path uri(encoded_path);
-			Web::Urn::Path site_name(encoded_site_name);
-			CURL *curl = curl_easy_init();
-			encoded_path = uri.quote(curl);
-			encoded_site_name = site_name.quote(curl);
-			curl_easy_cleanup(curl);
+			std::string encoded_path =  httplib::detail::encode_url(path);
+			std::string encoded_site_name =  httplib::detail::encode_url(remote_settings->site_name);
 			std::string full_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst" + encoded_site_name + encoded_path;
 
 			return full_url;
