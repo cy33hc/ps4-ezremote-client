@@ -8,9 +8,9 @@
 #include "windows.h"
 
 using httplib::Client;
+using httplib::DataSink;
 using httplib::Headers;
 using httplib::Result;
-using httplib::DataSink;
 
 BaseClient::BaseClient(){};
 
@@ -123,7 +123,7 @@ int BaseClient::Get(const std::string &outputfile, const std::string &path, uint
 int BaseClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset)
 {
     char range_header[64];
-    sprintf(range_header, "bytes=%lu-%lu", offset, offset+size-1);
+    sprintf(range_header, "bytes=%lu-%lu", offset, offset + size - 1);
     Headers headers = {{"Range", range_header}};
     size_t bytes_read = 0;
     if (auto res = client->Get(GetFullPath(path), headers,
@@ -146,7 +146,7 @@ int BaseClient::GetRange(const std::string &path, DataSink &sink, uint64_t size,
 int BaseClient::GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset)
 {
     char range_header[64];
-    sprintf(range_header, "bytes=%lu-%lu", offset, offset+size-1);
+    sprintf(range_header, "bytes=%lu-%lu", offset, offset + size - 1);
     Headers headers = {{"Range", range_header}};
     size_t bytes_read = 0;
     std::vector<char> body;
@@ -311,12 +311,37 @@ uint32_t BaseClient::SupportedActions()
     return REMOTE_ACTION_DOWNLOAD | REMOTE_ACTION_INSTALL | REMOTE_ACTION_EXTRACT;
 }
 
-std::string BaseClient::EncodeUrl(const std::string &url)
+std::string BaseClient::Escape(const std::string &url)
 {
-    return httplib::detail::encode_url(url);
+    CURL *curl = curl_easy_init();
+    if (curl)
+    {
+        char *output = curl_easy_escape(curl, url.c_str(), url.length());
+        if (output)
+        {
+            std::string encoded_url = std::string(output);
+            curl_free(output);
+            return encoded_url;
+        }
+        curl_easy_cleanup(curl);
+    }
+    return "";
 }
 
-std::string BaseClient::DecodeUrl(const std::string &url)
+std::string BaseClient::UnEscape(const std::string &url)
 {
-    return httplib::detail::decode_url(url, true);
+    CURL *curl = curl_easy_init();
+    if (curl)
+    {
+        int decode_len;
+        char *output = curl_easy_unescape(curl, url.c_str(), url.length(), &decode_len);
+        if (output)
+        {
+            std::string decoded_url = std::string(output, decode_len);
+            curl_free(output);
+            return decoded_url;
+        }
+        curl_easy_cleanup(curl);
+    }
+    return "";
 }

@@ -141,7 +141,7 @@ std::vector<DirEntry> RCloneClient::ListDir(const std::string &path)
             tmp_string = std::string((const char *)value, value_len);
             if (tmp_string[tmp_string.length()-1] == '/')
                 tmp_string = tmp_string.substr(0, tmp_string.length()-1);
-            tmp_string = BaseClient::DecodeUrl(tmp_string);
+            tmp_string = BaseClient::UnEscape(tmp_string);
             sprintf(entry.name, "%s", tmp_string.c_str());
             sprintf(entry.directory, "%s", path.c_str());
             if (path.length() > 0 && path[path.length() - 1] == '/')

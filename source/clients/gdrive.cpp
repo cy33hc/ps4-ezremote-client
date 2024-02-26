@@ -111,7 +111,7 @@ int GDriveClient::RequestAuthorization()
 
     std::string auth_url = std::string(GOOGLE_AUTH_URL "?client_id=") + gg_app.client_id + "&redirect_uri=" + GetRedirectUrl() +
                            "&response_type=code&access_type=offline&scope=" + GetScopes() + "&include_granted_scopes=true";
-    auth_url = EncodeUrl(auth_url);
+    auth_url = Escape(auth_url);
     std::string launch_uri = std::string("pswebbrowser:search?url=") + auth_url;
     int ret = sceShellUIUtilLaunchByUri(launch_uri.c_str(), &param);
 
@@ -222,7 +222,7 @@ int GDriveClient::Rename(const std::string &src, const std::string &dst)
     if (src_id.compare("root") == 0 || dst_id.compare("root") == 0 || src_id.compare(src_drive_id) == 0 || dst_id.compare(dst_drive_id) == 0)
         return 0;
 
-    std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(src_id);
+    std::string url = std::string("/drive/v3/files/") + BaseClient::Escape(src_id);
     if (!src_drive_id.empty())
         url += "?supportsAllDrives=true";
     std::string filename = dst.substr(dst.find_last_of("/") + 1);
@@ -276,7 +276,7 @@ int GDriveClient::Head(const std::string &path, void *buffer, uint64_t len)
     std::string id = GetValue(path_id_map, path);
     std::string drive_id = GetDriveId(path);
 
-    std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id) + "?alt=media";
+    std::string url = std::string("/drive/v3/files/") + BaseClient::Escape(id) + "?alt=media";
     if (!drive_id.empty())
         url += "&supportsAllDrives=true";
     Headers headers;
@@ -310,7 +310,7 @@ int GDriveClient::Get(const std::string &outputfile, const std::string &path, ui
 
     std::string id = GetValue(path_id_map, path);
     std::string drive_id = GetDriveId(path);
-    std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id) + "?alt=media";
+    std::string url = std::string("/drive/v3/files/") + BaseClient::Escape(id) + "?alt=media";
     if (!drive_id.empty())
         url += "&supportsAllDrives=true";
     if (auto res = client->Get(url,
@@ -337,7 +337,7 @@ int GDriveClient::GetRange(const std::string &path, DataSink &sink, uint64_t siz
     std::string id = GetValue(path_id_map, path);
     std::string drive_id = GetDriveId(path);
 
-    std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id) + "?alt=media";
+    std::string url = std::string("/drive/v3/files/") + BaseClient::Escape(id) + "?alt=media";
     if (!drive_id.empty())
         url += "&supportsAllDrives=true";
     Headers headers;
@@ -367,7 +367,7 @@ int GDriveClient::GetRange(const std::string &path, void *buffer, uint64_t size,
     std::string id = GetValue(path_id_map, path);
     std::string drive_id = GetDriveId(path);
 
-    std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id) + "?alt=media";
+    std::string url = std::string("/drive/v3/files/") + BaseClient::Escape(id) + "?alt=media";
     if (!drive_id.empty())
         url += "&supportsAllDrives=true";
     Headers headers;
@@ -406,7 +406,7 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
     std::string id = GetValue(path_id_map, path);
     std::string drive_id = GetDriveId(path);
 
-    std::string url = "/upload/drive/v3/files/" + BaseClient::EncodeUrl(id) + "?uploadType=resumable";
+    std::string url = "/upload/drive/v3/files/" + BaseClient::Escape(id) + "?uploadType=resumable";
     if (!drive_id.empty())
         url += "&supportsAllDrives=true";
     Headers headers;
@@ -553,7 +553,7 @@ int GDriveClient::Size(const std::string &path, int64_t *size)
 {
     std::string id = GetValue(path_id_map, path);
     std::string drive_id = GetDriveId(path);
-    std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id) + "?fields=size";
+    std::string url = std::string("/drive/v3/files/") + BaseClient::Escape(id) + "?fields=size";
     if (!drive_id.empty())
         url += "&supportsAllDrives=true";
     if (auto res = client->Get(url))
@@ -669,7 +669,7 @@ int GDriveClient::Delete(const std::string &path)
     if (strcmp(id.c_str(), "root") == 0)
         return 0;
 
-    std::string url = std::string("/drive/v3/files/") + BaseClient::EncodeUrl(id);
+    std::string url = std::string("/drive/v3/files/") + BaseClient::Escape(id);
     if (!drive_id.empty())
         url += "?supportsAllDrives=true";
     if (auto res = client->Delete(url))
@@ -779,8 +779,8 @@ std::vector<DirEntry> GDriveClient::ListDir(const std::string &path)
     }
 
     std::string drive_id = GetDriveId(path);
-    std::string base_url = std::string("/drive/v3/files?q=") + BaseClient::EncodeUrl("\"" + id + "\" in parents") +
-                           "&pageSize=1000&fields=" + BaseClient::EncodeUrl("files(id,mimeType,name,modifiedTime,size),nextPageToken");
+    std::string base_url = std::string("/drive/v3/files?q=") + BaseClient::Escape("\"" + id + "\" in parents") +
+                           "&pageSize=1000&fields=" + BaseClient::Escape("files(id,mimeType,name,modifiedTime,size),nextPageToken");
     if (!drive_id.empty())
     {
         base_url += "&driveId=" + drive_id + "&corpora=drive&includeItemsFromAllDrives=true&supportsAllDrives=true";
@@ -789,7 +789,7 @@ std::vector<DirEntry> GDriveClient::ListDir(const std::string &path)
     bool find_no_parent = false;
     if (id.compare(shared_with_me) == 0)
     {
-        base_url = std::string("/drive/v3/files?q=sharedWithMe&pageSize=1000&fields=") + BaseClient::EncodeUrl("files(id,mimeType,name,modifiedTime,size),nextPageToken");
+        base_url = std::string("/drive/v3/files?q=sharedWithMe&pageSize=1000&fields=") + BaseClient::Escape("files(id,mimeType,name,modifiedTime,size),nextPageToken");
     }
 
     std::string next_page_url = base_url;
@@ -867,7 +867,7 @@ std::vector<DirEntry> GDriveClient::ListDir(const std::string &path)
                     }
                 }
                 if (next_page_token != nullptr)
-                    next_page_url = base_url + "&pageToken=" + BaseClient::EncodeUrl(json_object_get_string(next_page_token));
+                    next_page_url = base_url + "&pageToken=" + BaseClient::Escape(json_object_get_string(next_page_token));
                 else
                     break;
             }

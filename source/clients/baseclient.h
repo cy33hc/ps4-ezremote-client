@@ -39,8 +39,8 @@ public:
     int Quit();
     ClientType clientType();
     uint32_t SupportedActions();
-    static std::string EncodeUrl(const std::string &url);
-    static std::string DecodeUrl(const std::string &url);
+    static std::string Escape(const std::string &url);
+    static std::string UnEscape(const std::string &url);
 
 protected:
     httplib::Client *client;

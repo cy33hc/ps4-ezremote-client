@@ -66,7 +66,7 @@ add_executable(ezremote_client
 
 add_self(ezremote_client)
 
-add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.20" 32 0)
+add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.21" 32 0)
 
 target_link_libraries(ezremote_client
   c
@@ -82,6 +82,7 @@ target_link_libraries(ezremote_client
   jbc
   crypto
   ssl
+  curl
   lexbor
   smb2
   nfs
