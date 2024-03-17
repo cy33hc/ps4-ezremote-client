@@ -221,8 +221,7 @@ namespace INSTALLER
 		{
 			std::string encoded_path =  httplib::detail::encode_url(path);
 			std::string encoded_site_name =  httplib::detail::encode_url(remote_settings->site_name);
-			std::string full_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst" + encoded_site_name + encoded_path;
-
+			std::string full_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst/" + encoded_site_name + encoded_path;
 			return full_url;
 		}
 
