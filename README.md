@@ -2,6 +2,8 @@
 
 ezRemote Client is an application that allows you to connect the PS4 to remote FTP/SFTP, SMB(Windows Share), NFS, WebDAV, HTTP servers and Google Drive to transfer files. The interface is inspired by Filezilla client which provides a commander like GUI.
 
+**New:** - As of version 1.19, ezRemote Client can install PKG inside Zip files from both local hdd and remote servers.
+         - Extact zip files directly from remote servers.
 **New:** As of version 1.0.8, ezRemote Client has a Web Interface that can be access from any modern browser to manage the PS4 files.
 
 **New:** As of version 1.0.9. Remote Package Installation does not require you to host an external Http Server. The embedded Web Server built into ezRemote Client acts as a Proxy Server between the PS4 and remote server (FTP, SFTP, SMB, NFS, WebDav, HttpServer(IIS/Nginx/Apache/Serve) and GoogleDrive). There's no data written to the PS4 hard drive in the process, rather everything is streamed via embedded Web Server directly to the PS4 installer.
