@@ -721,7 +721,7 @@ namespace Actions
                             skipped++;
                     }
                 }
-                else if (Util::EndsWith(path,".zip") || Util::EndsWith(path,".rar") ||
+                else if (Util::EndsWith(path,".zip") || Util::EndsWith(path,".rar") || Util::EndsWith(path,".7z") ||
                         Util::EndsWith(path,".tar.xz") || Util::EndsWith(path,".tar.gz"))
                 {
                     ArchiveEntry *entry = ZipUtil::GetPackageEntry(it->path, remoteclient);

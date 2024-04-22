@@ -483,6 +483,37 @@ namespace ZipUtil
         return 0;
     }
 
+    int64_t SeekRemoteArchive(struct archive *, void *client_data, int64_t offset, int whence)
+    {
+        RemoteArchiveData *data = (RemoteArchiveData *)client_data;
+
+        if (whence == SEEK_SET)
+        {
+            data->offset = offset;
+        }
+        else if (whence == SEEK_CUR)
+        {
+            data->offset = data->offset + offset - 1;
+        }
+        else if (whence == SEEK_END)
+        {
+            data->offset = data->size - 1;
+        }
+        else
+            return ARCHIVE_FATAL;
+
+        return data->offset;
+    }
+
+    int64_t	SkipRemoteArchive(struct archive *, void *client_data, int64_t request)
+    {
+        RemoteArchiveData *data = (RemoteArchiveData *)client_data;
+
+        data->offset = data->offset + request - 1;
+
+        return request;
+    }
+    
     /*
      * Main loop: open the zipfile, iterate over its contents and decide what
      * to do with each entry.
@@ -520,7 +551,14 @@ namespace ZipUtil
                 return 0;
             }
 
-            ret = archive_read_open(a, client_data, NULL, ReadRemoteArchive, CloseRemoteArchive);
+            ret = archive_read_set_seek_callback(a, SeekRemoteArchive);
+            if (ret < ARCHIVE_OK)
+            {
+                sprintf(status_message, "archive_read_set_seek_callback failed - %s", archive_error_string(a));
+                return 0;
+            }
+
+            ret = archive_read_open2(a, client_data, NULL, ReadRemoteArchive, SkipRemoteArchive, CloseRemoteArchive);
             if (ret < ARCHIVE_OK)
             {
                 if (client_data != nullptr)
@@ -592,7 +630,14 @@ namespace ZipUtil
                 return nullptr;
             }
 
-            ret = archive_read_open(a, client_data, NULL, ReadRemoteArchive, CloseRemoteArchive);
+            ret = archive_read_set_seek_callback(a, SeekRemoteArchive);
+            if (ret < ARCHIVE_OK)
+            {
+                sprintf(status_message, "archive_read_set_seek_callback failed - %s", archive_error_string(a));
+                return 0;
+            }
+
+            ret = archive_read_open2(a, client_data, NULL, ReadRemoteArchive, SkipRemoteArchive, CloseRemoteArchive);
             if (ret < ARCHIVE_OK)
             {
                 if (client_data != nullptr)
