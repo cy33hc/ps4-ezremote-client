@@ -228,6 +228,14 @@ namespace HttpServer
         {
             tmp_client = new WebDAVClient();
         }
+        else if (tmp_settings->type == CLIENT_TYPE_GOOGLE)
+        {
+            if (remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_GOOGLE)
+                tmp_client = remoteclient;
+            else
+                tmp_client = new GDriveClient();
+                tmp_client->Connect("", "", "");
+        }
         else if (tmp_settings->type == CLIENT_TYPE_HTTP_SERVER)
         {
             if (strcmp(remote_settings->http_server_type, HTTP_SERVER_APACHE) == 0)
@@ -241,7 +249,9 @@ namespace HttpServer
             else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_RCLONE) == 0)
                 tmp_client = new RCloneClient();
         }
-        tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
+
+        if (tmp_client->clientType() != CLIENT_TYPE_GOOGLE)
+            tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
 
         if (!new_client && tmp_client->clientType() != CLIENT_TYPE_FTP)
         {
@@ -253,7 +263,7 @@ namespace HttpServer
 
     static void DeleteRemoteClient(RemoteClient *tmp_client, int site_idx)
     {
-        if (tmp_client != nullptr)
+        if (tmp_client != nullptr && tmp_client->clientType() != CLIENT_TYPE_GOOGLE)
         {
             tmp_client->Quit();
             delete tmp_client;
