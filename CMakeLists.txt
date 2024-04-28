@@ -62,11 +62,12 @@ add_executable(ezremote_client
   source/windows.cpp
   source/zip_util.cpp
   source/split_file.cpp
+  source/mem_file.cpp
 )
 
 add_self(ezremote_client)
 
-add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.23" 32 0)
+add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.24" 32 0)
 
 target_link_libraries(ezremote_client
   c

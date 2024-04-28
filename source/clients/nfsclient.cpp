@@ -553,6 +553,23 @@ int NfsClient::Head(const std::string &ppath, void *buffer, uint64_t len)
 	return 1;
 }
 
+void *NfsClient::Open(const std::string &path, int flags)
+{
+	struct nfsfh *nfsfh = nullptr;
+    nfs_open(nfs, path.c_str(), 0400, &nfsfh);;
+	return nfsfh;
+}
+
+int NfsClient::Read(void **fp, void *buf, uint64_t size)
+{
+    return nfs_read(nfs, (struct nfsfh*)*fp, size, buf);
+}
+
+void NfsClient::Close(void **fp)
+{
+    nfs_close(nfs, (struct nfsfh*)*fp);
+}
+
 ClientType NfsClient::clientType()
 {
 	return CLIENT_TYPE_NFS;

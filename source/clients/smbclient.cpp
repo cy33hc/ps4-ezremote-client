@@ -567,6 +567,22 @@ int SmbClient::Head(const std::string &ppath, void *buffer, uint64_t len)
 	return 1;
 }
 
+void *SmbClient::Open(const std::string &path, int flags)
+{
+    struct smb2fh* in = smb2_open(smb2, path.c_str(), flags);
+    return in;
+}
+
+int SmbClient::Read(void **fp, void *buf, uint64_t size)
+{
+    return smb2_read(smb2, (struct smb2fh*) *fp, (uint8_t*)buf, size);
+}
+
+void SmbClient::Close(void **fp)
+{
+    smb2_close(smb2, (struct smb2fh*)*fp);
+}
+
 ClientType SmbClient::clientType()
 {
 	return CLIENT_TYPE_SMB;

@@ -642,6 +642,23 @@ int SFTPClient::Quit()
     return 1;
 }
 
+void *SFTPClient::Open(const std::string &path, int flags)
+{
+    sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+    return nullptr;
+}
+
+int SFTPClient::Read(void **fp, void *buf, uint64_t size)
+{
+    sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+    return -1;
+}
+
+void SFTPClient::Close(void **fp)
+{
+    sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+}
+
 ClientType SFTPClient::clientType()
 {
     return CLIENT_TYPE_SFTP;

@@ -32,6 +32,9 @@ public:
     bool FileExists(const std::string &path);
     void SetAccessToken(const std::string &token);
     std::vector<DirEntry> ListDir(const std::string &path);
+    void *Open(const std::string &path, int flags);
+    int Read(void **fp, void *buf, uint64_t size);
+    void Close(void **fp);
     static void *RefreshTokenThread(void *argp);
     static void StartRefreshToken();
     static void StopRefreshToken();

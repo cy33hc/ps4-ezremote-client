@@ -30,6 +30,9 @@ public:
     int Head(const std::string &path, void *buffer, uint64_t len);
     bool FileExists(const std::string &path);
     std::vector<DirEntry> ListDir(const std::string &path);
+    void *Open(const std::string &path, int flags);
+    int Read(void **fp, void *buf, uint64_t size);
+    void Close(void **fp);
     std::string GetPath(std::string path1, std::string path2);
     bool IsConnected();
     bool Ping();

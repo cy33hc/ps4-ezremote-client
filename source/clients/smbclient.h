@@ -34,6 +34,9 @@ public:
     int Move(const std::string &from, const std::string &to);
 	int CopyToSocket(const std::string &path, int socket_fd);
 	std::vector<DirEntry> ListDir(const std::string &path);
+    void *Open(const std::string &path, int flags);
+    int Read(void **fp, void *buf, uint64_t size);
+    void Close(void **fp);
 	bool IsConnected();
 	bool Ping();
 	const char *LastResponse();

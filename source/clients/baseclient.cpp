@@ -345,3 +345,20 @@ std::string BaseClient::UnEscape(const std::string &url)
     }
     return "";
 }
+
+void *BaseClient::Open(const std::string &path, int flags)
+{
+    sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+    return nullptr;
+}
+
+int BaseClient::Read(void **fp, void *buf, uint64_t size)
+{
+    sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+    return -1;
+}
+
+void BaseClient::Close(void **fp)
+{
+    sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+}

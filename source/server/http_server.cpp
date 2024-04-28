@@ -8,6 +8,12 @@
 #include "clients/smbclient.h"
 #include "clients/ftpclient.h"
 #include "clients/nfsclient.h"
+#include "clients/webdav.h"
+#include "clients/apache.h"
+#include "clients/iis.h"
+#include "clients/nginx.h"
+#include "clients/npxserve.h"
+#include "clients/rclone.h"
 #include "filehost/filehost.h"
 #include "config.h"
 #include "fs.h"
@@ -26,6 +32,14 @@
 #define SUCCESS_MSG_LEN 48
 
 using namespace httplib;
+
+struct RemoteDownloadData
+{
+    RemoteClient *client = nullptr;
+    std::map<std::string, void **> fp_handles;
+};
+
+static RemoteDownloadData remote_data[100];
 
 Server *svr;
 int http_server_port = 8080;
@@ -91,22 +105,22 @@ namespace HttpServer
         return s;
     }
 
-    void failed(Response & res, int status, const std::string &msg)
+    void failed(Response &res, int status, const std::string &msg)
     {
         res.status = status;
-        char response_msg[msg.length()+strlen(FAILURE_MSG)+2];
+        char response_msg[msg.length() + strlen(FAILURE_MSG) + 2];
         snprintf(response_msg, sizeof(response_msg), "{ \"result\": { \"success\": false, \"error\": \"%s\" } }", msg.c_str());
         res.set_content(response_msg, strlen(response_msg), "application/json");
         return;
     }
 
-    void bad_request(Response & res, const std::string &msg)
+    void bad_request(Response &res, const std::string &msg)
     {
         failed(res, 200, msg);
         return;
     }
 
-    void success(Response & res)
+    void success(Response &res)
     {
         res.status = 200;
         res.set_content(SUCCESS_MSG, SUCCESS_MSG_LEN, "application/json");
@@ -182,15 +196,77 @@ namespace HttpServer
         return 1;
     }
 
+    static RemoteClient *GetRemoteClient(int site_idx, bool new_client)
+    {
+        RemoteClient *tmp_client;
+        RemoteSettings *tmp_settings = &site_settings[sites[site_idx]];
+
+        if (!new_client)
+        {
+            tmp_client = remote_data[site_idx].client;
+            if (tmp_client != nullptr)
+                return tmp_client;
+        }
+
+        if (tmp_settings->type == CLIENT_TYPE_SFTP)
+        {
+            tmp_client = new SFTPClient();
+        }
+        else if (tmp_settings->type == CLIENT_TYPE_SMB)
+        {
+            tmp_client = new SmbClient();
+        }
+        else if (tmp_settings->type == CLIENT_TYPE_FTP)
+        {
+            tmp_client = new FtpClient();
+        }
+        else if (tmp_settings->type == CLIENT_TYPE_NFS)
+        {
+            tmp_client = new NfsClient();
+        }
+        else if (tmp_settings->type == CLIENT_TYPE_WEBDAV)
+        {
+            tmp_client = new WebDAVClient();
+        }
+        else if (tmp_settings->type == CLIENT_TYPE_HTTP_SERVER)
+        {
+            if (strcmp(remote_settings->http_server_type, HTTP_SERVER_APACHE) == 0)
+                tmp_client = new ApacheClient();
+            else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_MS_IIS) == 0)
+                tmp_client = new IISClient();
+            else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_NGINX) == 0)
+                tmp_client = new NginxClient();
+            else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_NPX_SERVE) == 0)
+                tmp_client = new NpxServeClient();
+            else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_RCLONE) == 0)
+                tmp_client = new RCloneClient();
+        }
+        tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
+
+        if (!new_client && tmp_client->clientType() != CLIENT_TYPE_FTP)
+        {
+            remote_data[site_idx].client = tmp_client;
+        }
+
+        return tmp_client;
+    }
+
+    static void DeleteRemoteClient(RemoteClient *tmp_client, int site_idx)
+    {
+        if (tmp_client != nullptr)
+        {
+            tmp_client->Quit();
+            delete tmp_client;
+        }
+    }
+    
     void *ServerThread(void *argp)
     {
-        svr->Get("/", [&](const Request & req, Response & res)
-        {
-            res.set_redirect("/index.html");
-        });
+        svr->Get("/", [&](const Request &req, Response &res)
+                 { res.set_redirect("/index.html"); });
 
-        svr->Get("/index.html", [&](const Request & req, Response & res)
-        {
+        svr->Get("/index.html", [&](const Request &req, Response &res)
+                 {
             FILE *in = FS::OpenRead("/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/index.html");
             size_t size = FS::GetSize("/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/index.html");
             res.set_content_provider(
@@ -206,11 +282,10 @@ namespace HttpServer
                 },
                 [in](bool success) {
                     FS::Close(in);
-                });
-        });
+                }); });
 
-        svr->Get("/favicon.ico", [&](const Request & req, Response & res)
-        {
+        svr->Get("/favicon.ico", [&](const Request &req, Response &res)
+                 {
             FILE *in = FS::OpenRead("/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/favicon.ico");
             size_t size = FS::GetSize("/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/favicon.ico");
             res.set_content_provider(
@@ -226,11 +301,10 @@ namespace HttpServer
                 },
                 [in](bool success) {
                     FS::Close(in);
-                });
-        });
+                }); });
 
-        svr->Post("/__local__/list", [&](const Request & req, Response & res)
-        {
+        svr->Post("/__local__/list", [&](const Request &req, Response &res)
+                  {
             const char *path;
             bool onlyFolders = false;
             json_object *jobj = json_tokener_parse(req.body.c_str());
@@ -276,11 +350,10 @@ namespace HttpServer
             json_object_object_add(results, "result", json_files);
             const char *results_str = json_object_to_json_string(results);
             res.status = 200;
-            res.set_content(results_str, strlen(results_str), "application/json");
-        });
+            res.set_content(results_str, strlen(results_str), "application/json"); });
 
-        svr->Post("/__local__/rename", [&](const Request & req, Response & res)
-        {
+        svr->Post("/__local__/rename", [&](const Request &req, Response &res)
+                  {
             const char *item;
             const char *newItemPath;
             json_object *jobj = json_tokener_parse(req.body.c_str());
@@ -302,11 +375,10 @@ namespace HttpServer
 
             FS::Rename(item, newItemPath);
             success(res);
-            return;
-        });
+            return; });
 
-        svr->Post("/__local__/move", [&](const Request & req, Response & res)
-        {
+        svr->Post("/__local__/move", [&](const Request &req, Response &res)
+                  {
             const json_object *items;
             const char *newPath;
             json_object *jobj = json_tokener_parse(req.body.c_str());
@@ -357,11 +429,10 @@ namespace HttpServer
                 failed(res, 200, error_msg);
             }
             else
-                success(res);
-        });
+                success(res); });
 
-        svr->Post("/__local__/copy", [&](const Request & req, Response & res)
-        {
+        svr->Post("/__local__/copy", [&](const Request &req, Response &res)
+                  {
             const json_object *items;
             const char *newPath;
             const char *singleFilename;
@@ -432,11 +503,10 @@ namespace HttpServer
                 failed(res, 200, error_msg);
             }
             else
-                success(res);
-        });
+                success(res); });
 
-        svr->Post("/__local__/remove", [&](const Request & req, Response & res)
-        {
+        svr->Post("/__local__/remove", [&](const Request &req, Response &res)
+                  {
             json_object *items;
             json_object *jobj = json_tokener_parse(req.body.c_str());
             if (jobj != nullptr)
@@ -472,11 +542,10 @@ namespace HttpServer
                 failed(res, 200, error_msg);
             }
             else
-                success(res);
-        });
+                success(res); });
 
-        svr->Post("/__local__/install", [&](const Request & req, Response & res)
-        {
+        svr->Post("/__local__/install", [&](const Request &req, Response &res)
+                  {
             json_object *items;
             json_object *jobj = json_tokener_parse(req.body.c_str());
             if (jobj != nullptr)
@@ -509,11 +578,10 @@ namespace HttpServer
                 failed(res, 200, error_msg);
             }
             else
-                success(res);
-        });
+                success(res); });
 
-        svr->Post("/__local__/edit", [&](const Request & req, Response & res)
-        {
+        svr->Post("/__local__/edit", [&](const Request &req, Response &res)
+                  {
             const char *item;
             const char *content;
             size_t content_len;
@@ -543,11 +611,10 @@ namespace HttpServer
                 return;
             }
 
-            success(res);
-        });
+            success(res); });
 
-        svr->Post("/__local__/getContent", [&](const Request & req, Response & res)
-        {
+        svr->Post("/__local__/getContent", [&](const Request &req, Response &res)
+                  {
             const char *item;
             json_object *jobj = json_tokener_parse(req.body.c_str());
             if (jobj != nullptr)
@@ -570,11 +637,10 @@ namespace HttpServer
             json_object_object_add(result, "result", json_object_new_string(content.data()));
             const char *result_str = json_object_to_json_string(result);
             res.status = 200;
-            res.set_content(result_str, strlen(result_str), "application/json");
-        });
+            res.set_content(result_str, strlen(result_str), "application/json"); });
 
-        svr->Post("/__local__/createFolder", [&](const Request & req, Response & res)
-        {
+        svr->Post("/__local__/createFolder", [&](const Request &req, Response &res)
+                  {
             const char *newPath;
             json_object *jobj = json_tokener_parse(req.body.c_str());
             if (jobj != nullptr)
@@ -593,16 +659,13 @@ namespace HttpServer
             }
 
             FS::MkDirs(newPath);
-            success(res);
-        });
+            success(res); });
 
-        svr->Post("/__local__/permission", [&](const Request & req, Response & res)
-        {
-            failed(res, 200, "Operation not supported");
-        });
+        svr->Post("/__local__/permission", [&](const Request &req, Response &res)
+                  { failed(res, 200, "Operation not supported"); });
 
-        svr->Post("/__local__/compress", [&](const Request & req, Response & res)
-        {
+        svr->Post("/__local__/compress", [&](const Request &req, Response &res)
+                  {
             json_object *items;
             const char* destination;
             const char* compressedFilename;
@@ -652,11 +715,10 @@ namespace HttpServer
             else
             {
                 failed(res, 200, "Failed to create zip");
-            }
-        });
+            } });
 
-        svr->Post("/__local__/extract", [&](const Request & req, Response & res)
-        {
+        svr->Post("/__local__/extract", [&](const Request &req, Response &res)
+                  {
             const char* item;
             const char* destination;
             const char* folderName;
@@ -692,11 +754,10 @@ namespace HttpServer
             else if (ret == -1)
                 failed(res, 200, "Unsupported compressed file format");
             else
-                success(res);
-        });
+                success(res); });
 
         svr->Get("/__local__/uploadResumeSize", [&](const Request &req, Response &res)
-        {
+                 {
             std::string destination = req.get_param_value("destination");
             std::string filename = req.get_param_value("filename");
             std::string file_path = destination + "/" + filename;
@@ -705,11 +766,10 @@ namespace HttpServer
                 size = FS::GetSize(file_path);
             std::string result_str = "{\"size\":" + std::to_string(size) + "}";
             res.status = 200;
-            res.set_content(result_str.c_str(), result_str.length(), "application/json");
-        });
+            res.set_content(result_str.c_str(), result_str.length(), "application/json"); });
 
         svr->Post("/__local__/upload", [&](const Request &req, Response &res, const ContentReader &content_reader)
-        {
+                  {
             MultipartFormDataItems items;
             std::string destination;
             size_t chunk_size = 0;
@@ -775,12 +835,11 @@ namespace HttpServer
             {
                 FS::Close(out);
             }
-            success(res);
-        });
+            success(res); });
 
         // Download multiple files as ZIP
-        svr->Get("/__local__/downloadMultiple", [&](const Request & req, Response & res)
-        {
+        svr->Get("/__local__/downloadMultiple", [&](const Request &req, Response &res)
+                 {
             if (req.get_param_value_count("items") == 0 || req.get_param_value_count("toFilename") == 0)
             {
                 failed(res, 200, "Required items and toFilename parameter missing");
@@ -834,12 +893,11 @@ namespace HttpServer
             else
             {
                 failed(res, 200, "Failed to create zip");
-            }
-        });
+            } });
 
         // Download single file
-        svr->Get("/__local__/downloadFile", [&](const Request & req, Response & res)
-        {
+        svr->Get("/__local__/downloadFile", [&](const Request &req, Response &res)
+                 {
             std::string path = req.get_param_value("path", 0);
             if (path.empty())
             {
@@ -869,11 +927,10 @@ namespace HttpServer
                 },
                 [in](bool success) {
                     FS::Close(in);
-                });
-        });
+                }); });
 
         svr->Get("/google_auth", [](const Request &req, Response &res)
-        {
+                 {
             std::string auth_code = req.get_param_value("code");
             Client client(GOOGLE_OAUTH_HOST);
             client.set_follow_location(true);
@@ -919,12 +976,11 @@ namespace HttpServer
             }
             login_state = -1;
             std::string str = std::string(lang_strings[STR_FAIL_GET_TOKEN_MSG]) + " Google";
-            res.set_content(str.c_str(), "text/plain");
-        });
+            res.set_content(str.c_str(), "text/plain"); });
 
-        svr->Get("/rmt_inst/Site (\\d+)(/)(.*)", [&](const Request & req, Response & res)
-        {
-            RemoteClient *tmp_client;
+        svr->Get("/rmt_inst/Site (\\d+)(/)(.*)", [&](const Request &req, Response &res)
+                 {
+            RemoteClient *tmp_client = nullptr;
             RemoteSettings *tmp_settings;
             auto site_idx = std::stoi(req.matches[1])-1;
             std::string path;
@@ -932,33 +988,6 @@ namespace HttpServer
             if (site_idx != 98)
             {
                 path = std::string("/") + std::string(req.matches[3]);
-
-                tmp_settings = &site_settings[sites[site_idx]];
-
-                if (tmp_settings->type == CLIENT_TYPE_SFTP)
-                {
-                    tmp_client = new SFTPClient();
-                    tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
-                }
-                else if (tmp_settings->type == CLIENT_TYPE_SMB)
-                {
-                    tmp_client = new SmbClient();
-                    tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
-                }
-                else if (tmp_settings->type == CLIENT_TYPE_FTP)
-                {
-                    tmp_client = new FtpClient();
-                    tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
-                }
-                else if (tmp_settings->type == CLIENT_TYPE_NFS)
-                {
-                    tmp_client = new NfsClient();
-                    tmp_client->Connect(tmp_settings->server, tmp_settings->username, tmp_settings->password);
-                }
-                else
-                {
-                    tmp_client = remoteclient;
-                }
             }
             else
             {
@@ -973,33 +1002,34 @@ namespace HttpServer
                 tmp_client->Connect(host, "", "");
             }
 
-            if (tmp_client == nullptr || !tmp_client->IsConnected())
-            {
-                res.status = 404;
-                return;
-            }
-
-
             if (req.method == "HEAD")
             {
                 int64_t file_size;
                 int ret;
+                if (site_idx != 98)
+                    tmp_client = GetRemoteClient(site_idx, true);
+
                 ret = tmp_client->Size(path, &file_size);
                 if (!ret)
                 {
                     res.status = 500;
+                    DeleteRemoteClient(tmp_client, site_idx);
                     return;
                 }
 
                 res.status = 204;
                 res.set_header("Content-Length", std::to_string(file_size));
                 res.set_header("Accept-Ranges", "bytes");
+                DeleteRemoteClient(tmp_client, site_idx);
                 return;
             }
 
             if (req.ranges.empty())
             {
                 res.status = 200;
+                if (site_idx != 98)
+                    tmp_client = GetRemoteClient(site_idx, true);
+
                 res.set_content_provider(
                     (1024*128), "application/octet-stream",
                     [tmp_client, path](size_t offset, size_t length, DataSink &sink) {
@@ -1007,15 +1037,7 @@ namespace HttpServer
                         return (ret == 1);
                     },
                     [tmp_client, path, site_idx](bool success) {
-                        if (tmp_client != nullptr && (tmp_client->clientType() == CLIENT_TYPE_SFTP
-                            || tmp_client->clientType() == CLIENT_TYPE_SMB
-                            || tmp_client->clientType() == CLIENT_TYPE_FTP
-                            || tmp_client->clientType() == CLIENT_TYPE_NFS
-                            || (tmp_client->clientType() == CLIENT_TYPE_HTTP_SERVER && site_idx == 98)))
-                        {
-                            tmp_client->Quit();
-                            delete tmp_client;
-                        }
+                        DeleteRemoteClient(tmp_client, site_idx);
                     });
             }
             else
@@ -1027,6 +1049,11 @@ namespace HttpServer
                     range_len = 524288ul;
                     res.set_header("Content-Length", std::to_string(range_len));
                     res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+524288ul-1) + "/"+std::to_string(range_len));
+                    tmp_client = GetRemoteClient(site_idx, true);
+                }
+                else
+                {
+                    tmp_client = GetRemoteClient(site_idx, false);
                 }
                 std::pair<ssize_t, ssize_t> range = req.ranges[0];
                 res.set_content_provider(
@@ -1035,22 +1062,18 @@ namespace HttpServer
                         int ret = tmp_client->GetRange(path, sink, range_len, range.first);
                         return (ret == 1);
                     },
-                    [tmp_client, site_idx, path, range, range_len](bool success) {
-                        if (tmp_client != nullptr && (tmp_client->clientType() == CLIENT_TYPE_SFTP 
-                            || tmp_client->clientType() == CLIENT_TYPE_SMB
-                            || tmp_client->clientType() == CLIENT_TYPE_FTP
-                            || tmp_client->clientType() == CLIENT_TYPE_NFS
-                            || (tmp_client->clientType() == CLIENT_TYPE_HTTP_SERVER && site_idx == 98)))
+                    [tmp_client, path, range, site_idx](bool success) {
+                        if (range.second >= 18000000000000000000ul ||
+                            (tmp_client->clientType() == CLIENT_TYPE_HTTP_SERVER && site_idx == 98) ||
+                            tmp_client->clientType() == CLIENT_TYPE_FTP)
                         {
-                            tmp_client->Quit();
-                            delete tmp_client;
+                            DeleteRemoteClient(tmp_client, site_idx);
                         }
                     });
-            }
-        });
+            } });
 
-        svr->Get("/archive_inst/(.*)", [&](const Request & req, Response & res)
-        {
+        svr->Get("/archive_inst/(.*)", [&](const Request &req, Response &res)
+                 {
             RemoteClient *tmp_client;
             RemoteSettings *tmp_settings;
             std::string hash = req.matches[1];
@@ -1104,11 +1127,10 @@ namespace HttpServer
                     [](bool success) {
                         return true;
                     });
-            }
-        });
+            } });
 
-        svr->Post("/__local__/install_url", [&](const Request & req, Response & res)
-        {
+        svr->Post("/__local__/install_url", [&](const Request &req, Response &res)
+                  {
             std::string url;
             const char *url_param;
             bool use_alldebrid = false;
@@ -1231,21 +1253,17 @@ namespace HttpServer
                     return;
                 }
             }
-            success(res);
-        });
+            success(res); });
 
         svr->Get("/stop", [&](const Request & /*req*/, Response & /*res*/)
-        {
-            svr->stop();
-        });
+                 { svr->stop(); });
 
         svr->set_error_handler([](const Request & /*req*/, Response &res)
-        {
+                               {
             const char *fmt = "<p>Error Status: <span style='color:red;'>%d</span></p>";
             char buf[BUFSIZ];
             snprintf(buf, sizeof(buf), fmt, res.status);
-            res.set_content(buf, "text/html");
-        });
+            res.set_content(buf, "text/html"); });
 
         /*
         svr->set_logger([](const Request &req, const Response &res)
@@ -1253,11 +1271,11 @@ namespace HttpServer
             dbglogger_log("%s", log(req, res).c_str());
         });
         */
-       
+
         svr->set_payload_max_length(1024 * 1024 * 12);
         svr->set_tcp_nodelay(true);
         svr->set_mount_point("/", "/");
-        
+
         if (web_server_enabled)
             svr->listen("0.0.0.0", http_server_port);
         else

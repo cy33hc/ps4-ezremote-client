@@ -887,7 +887,7 @@ ClientType GDriveClient::clientType()
 
 uint32_t GDriveClient::SupportedActions()
 {
-    return REMOTE_ACTION_ALL ^ REMOTE_ACTION_CUT ^ REMOTE_ACTION_COPY ^ REMOTE_ACTION_PASTE;
+    return REMOTE_ACTION_ALL ^ REMOTE_ACTION_CUT ^ REMOTE_ACTION_COPY ^ REMOTE_ACTION_PASTE ^ REMOTE_ACTION_RAW_READ;
 }
 
 void *GDriveClient::RefreshTokenThread(void *argp)
@@ -941,4 +941,21 @@ void GDriveClient::SetAccessToken(const std::string &token)
 {
     if (this->client != nullptr)
         this->client->set_bearer_token_auth(token);
+}
+
+void *GDriveClient::Open(const std::string &path, int flags)
+{
+    sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+    return nullptr;
+}
+
+int GDriveClient::Read(void **fp, void *buf, uint64_t size)
+{
+    sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+    return -1;
+}
+
+void GDriveClient::Close(void **fp)
+{
+    sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
 }

@@ -1744,7 +1744,7 @@ ClientType FtpClient::clientType()
 
 uint32_t FtpClient::SupportedActions()
 {
-	return REMOTE_ACTION_ALL ^ REMOTE_ACTION_CUT ^ REMOTE_ACTION_COPY ^ REMOTE_ACTION_PASTE;
+	return REMOTE_ACTION_ALL ^ REMOTE_ACTION_CUT ^ REMOTE_ACTION_COPY ^ REMOTE_ACTION_PASTE ^ REMOTE_ACTION_RAW_READ;
 }
 
 std::string FtpClient::GetPath(std::string ppath1, std::string ppath2)
@@ -1783,4 +1783,18 @@ int FtpClient::Head(const std::string &path, void *buffer, uint64_t len)
 	if (l != len)
 		return 0;
 	return 1;
+}
+
+void *FtpClient::Open(const std::string &path, int flags)
+{
+    return nullptr;
+}
+
+int FtpClient::Read(void **fp, void *buf, uint64_t size)
+{
+    return -1;
+}
+
+void FtpClient::Close(void **fp)
+{
 }
