@@ -22,6 +22,7 @@ public:
     int Get(const std::string &outputfile, const std::string &path, uint64_t offset=0);
     int GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset);
     int GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset);
+    int GetRange(void *fp, DataSink &sink, uint64_t size, uint64_t offset);
     int Put(const std::string &inputfile, const std::string &path, uint64_t offset=0);
     int Rename(const std::string &src, const std::string &dst);
     int Delete(const std::string &path);
@@ -31,8 +32,7 @@ public:
     bool FileExists(const std::string &path);
     std::vector<DirEntry> ListDir(const std::string &path);
     void *Open(const std::string &path, int flags);
-    int Read(void **fp, void *buf, uint64_t size);
-    void Close(void **fp);
+    void Close(void *fp);
     std::string GetPath(std::string path1, std::string path2);
     bool IsConnected();
     bool Ping();

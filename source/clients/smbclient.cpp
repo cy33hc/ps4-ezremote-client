@@ -243,6 +243,16 @@ int SmbClient::GetRange(const std::string &ppath, DataSink &sink, uint64_t size,
 		return 0;
 	}
 
+	int ret = this->GetRange((void *)in, sink, size, offset);
+	smb2_close(smb2, in);
+
+	return ret;
+}
+
+int SmbClient::GetRange(void *fp, DataSink &sink, uint64_t size, uint64_t offset)
+{
+	struct smb2fh* in = (struct smb2fh*)fp;
+
     smb2_lseek(smb2, in, offset, SEEK_SET, NULL);
 
 	uint8_t *buff = (uint8_t*)malloc(max_read_size);
@@ -259,7 +269,6 @@ int SmbClient::GetRange(const std::string &ppath, DataSink &sink, uint64_t size,
 			if (!ok)
 			{
 				free((uint8_t *)buff);
-				smb2_close(smb2, in);
 				return 0;
 			}
         }
@@ -270,7 +279,6 @@ int SmbClient::GetRange(const std::string &ppath, DataSink &sink, uint64_t size,
     } while (1);
 
     free((char *)buff);
-    smb2_close(smb2, in);
 
 	return 1;
 }
@@ -567,20 +575,18 @@ int SmbClient::Head(const std::string &ppath, void *buffer, uint64_t len)
 	return 1;
 }
 
-void *SmbClient::Open(const std::string &path, int flags)
+void *SmbClient::Open(const std::string &ppath, int flags)
 {
+	std::string path = std::string(ppath);
+	path = Util::Trim(path, "/");
+
     struct smb2fh* in = smb2_open(smb2, path.c_str(), flags);
     return in;
 }
 
-int SmbClient::Read(void **fp, void *buf, uint64_t size)
+void SmbClient::Close(void *fp)
 {
-    return smb2_read(smb2, (struct smb2fh*) *fp, (uint8_t*)buf, size);
-}
-
-void SmbClient::Close(void **fp)
-{
-    smb2_close(smb2, (struct smb2fh*)*fp);
+    smb2_close(smb2, (struct smb2fh*)fp);
 }
 
 ClientType SmbClient::clientType()

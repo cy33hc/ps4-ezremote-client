@@ -1356,8 +1356,10 @@ namespace Windows
                 if (file_transfering)
                 {
                     static float progress = 0.0f;
+                    static char progress_text[32];
                     progress = bytes_transfered * 1.0f / (float)bytes_to_download;
-                    ImGui::ProgressBar(progress, ImVec2(625, 0));
+                    sprintf(progress_text, "%.2f%%", progress*100.0f);
+                    ImGui::ProgressBar(progress, ImVec2(625, 0), progress_text);
                 }
 
                 ImGui::Separator();

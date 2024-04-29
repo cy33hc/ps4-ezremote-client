@@ -36,7 +36,7 @@ using namespace httplib;
 struct RemoteDownloadData
 {
     RemoteClient *client = nullptr;
-    std::map<std::string, void **> fp_handles;
+    std::map<std::string, void *> fp_handles;
 };
 
 static RemoteDownloadData remote_data[100];
@@ -1068,9 +1068,32 @@ namespace HttpServer
                 std::pair<ssize_t, ssize_t> range = req.ranges[0];
                 res.set_content_provider(
                     range_len, "application/octet-stream",
-                    [tmp_client, path, range, range_len](size_t offset, size_t length, DataSink &sink) {
-                        int ret = tmp_client->GetRange(path, sink, range_len, range.first);
-                        return (ret == 1);
+                    [tmp_client, path, range, range_len, site_idx](size_t offset, size_t length, DataSink &sink) {
+                        int ret;
+                        if (range_len == 524288ul)
+                        {
+                            ret = tmp_client->GetRange(path, sink, range_len, range.first);
+                        }
+                        else if ((tmp_client->SupportedActions() & REMOTE_ACTION_RAW_READ) == 0)
+                        {
+                            ret = tmp_client->GetRange(path, sink, range_len, range.first);
+                        }
+                        else
+                        {
+                            std::map<std::string, void *>::iterator it = remote_data[site_idx].fp_handles.find(path);
+                            void *fp;
+                            if (it == remote_data[site_idx].fp_handles.end())
+                            {
+                                fp = tmp_client->Open(path, O_RDONLY);
+                                remote_data[site_idx].fp_handles[path] = fp;
+                            }
+                            else
+                            {
+                                fp = it->second;
+                            }
+                            ret = tmp_client->GetRange(fp, sink, range_len, range.first);
+                        }
+                        return (ret==1);
                     },
                     [tmp_client, path, range, site_idx](bool success) {
                         if (range.second >= 18000000000000000000ul ||

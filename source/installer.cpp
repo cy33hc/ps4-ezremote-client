@@ -385,7 +385,6 @@ namespace INSTALLER
 		}
 
 		Util::Notify("%s queued", display_title.c_str());
-
 		if (prompt)
 		{
 			file_transfering = true;

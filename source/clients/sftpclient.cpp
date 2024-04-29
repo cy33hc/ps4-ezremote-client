@@ -313,6 +313,16 @@ int SFTPClient::GetRange(const std::string &path, DataSink &sink, uint64_t size,
         return 0;
     }
 
+    int ret = this->GetRange((void *)sftp_handle, sink, size, offset);
+    libssh2_sftp_close(sftp_handle);
+
+    return ret;
+}
+
+int SFTPClient::GetRange(void *fp, DataSink &sink, uint64_t size, uint64_t offset)
+{
+    LIBSSH2_SFTP_HANDLE *sftp_handle = (LIBSSH2_SFTP_HANDLE *) fp;
+    
     libssh2_sftp_seek64(sftp_handle, offset);
 
     char *buff = (char *)malloc(FTP_CLIENT_BUFSIZ);
@@ -329,7 +339,6 @@ int SFTPClient::GetRange(const std::string &path, DataSink &sink, uint64_t size,
             if (!ok)
             {
                 free((char *)buff);
-                libssh2_sftp_close(sftp_handle);
                 return 0;
             }
         }
@@ -340,7 +349,6 @@ int SFTPClient::GetRange(const std::string &path, DataSink &sink, uint64_t size,
     } while (1);
 
     free((char *)buff);
-    libssh2_sftp_close(sftp_handle);
 
 	return 1;
 }
@@ -644,19 +652,12 @@ int SFTPClient::Quit()
 
 void *SFTPClient::Open(const std::string &path, int flags)
 {
-    sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
-    return nullptr;
+    return libssh2_sftp_open(sftp_session, path.c_str(), LIBSSH2_FXF_READ, 0);
 }
 
-int SFTPClient::Read(void **fp, void *buf, uint64_t size)
+void SFTPClient::Close(void *fp)
 {
-    sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
-    return -1;
-}
-
-void SFTPClient::Close(void **fp)
-{
-    sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+    libssh2_sftp_close((LIBSSH2_SFTP_HANDLE *)fp);
 }
 
 ClientType SFTPClient::clientType()

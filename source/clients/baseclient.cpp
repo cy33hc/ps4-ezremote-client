@@ -352,13 +352,13 @@ void *BaseClient::Open(const std::string &path, int flags)
     return nullptr;
 }
 
-int BaseClient::Read(void **fp, void *buf, uint64_t size)
+void BaseClient::Close(void *fp)
+{
+    sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+}
+
+int BaseClient::GetRange(void *fp, DataSink &sink, uint64_t size, uint64_t offset)
 {
     sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
     return -1;
-}
-
-void BaseClient::Close(void **fp)
-{
-    sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
 }

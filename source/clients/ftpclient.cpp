@@ -1790,11 +1790,11 @@ void *FtpClient::Open(const std::string &path, int flags)
     return nullptr;
 }
 
-int FtpClient::Read(void **fp, void *buf, uint64_t size)
+void FtpClient::Close(void *fp)
 {
-    return -1;
 }
 
-void FtpClient::Close(void **fp)
+int FtpClient::GetRange(void *fp, DataSink &sink, uint64_t size, uint64_t offset)
 {
+    return -1;
 }

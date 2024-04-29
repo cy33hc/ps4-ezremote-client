@@ -949,13 +949,13 @@ void *GDriveClient::Open(const std::string &path, int flags)
     return nullptr;
 }
 
-int GDriveClient::Read(void **fp, void *buf, uint64_t size)
+void GDriveClient::Close(void *fp)
+{
+    sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+}
+
+int GDriveClient::GetRange(void *fp, DataSink &sink, uint64_t size, uint64_t offset)
 {
     sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
     return -1;
-}
-
-void GDriveClient::Close(void **fp)
-{
-    sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
 }

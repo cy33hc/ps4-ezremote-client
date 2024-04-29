@@ -242,7 +242,17 @@ int NfsClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, 
 		return 0;
 	}
 
-	ret = nfs_lseek(nfs, nfsfh, offset, SEEK_SET, NULL);
+	ret = this->GetRange((void *)nfsfh, sink, size, offset);
+	nfs_close(nfs, nfsfh);
+
+	return ret;
+}
+
+int NfsClient::GetRange(void *fp, DataSink &sink, uint64_t size, uint64_t offset)
+{
+	struct nfsfh *nfsfh = (struct nfsfh *)fp;
+
+	int ret = nfs_lseek(nfs, nfsfh, offset, SEEK_SET, NULL);
 	if (ret != 0)
 	{
 		return 0;
@@ -262,7 +272,6 @@ int NfsClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, 
 			if (!ok)
 			{
 				free((void *)buff);
-				nfs_close(nfs, nfsfh);
 				return 0;
 			}
         }
@@ -273,8 +282,6 @@ int NfsClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, 
     } while (1);
 
     free((void *)buff);
-    nfs_close(nfs, nfsfh);
-
 	return 1;
 }
 
@@ -560,14 +567,9 @@ void *NfsClient::Open(const std::string &path, int flags)
 	return nfsfh;
 }
 
-int NfsClient::Read(void **fp, void *buf, uint64_t size)
+void NfsClient::Close(void *fp)
 {
-    return nfs_read(nfs, (struct nfsfh*)*fp, size, buf);
-}
-
-void NfsClient::Close(void **fp)
-{
-    nfs_close(nfs, (struct nfsfh*)*fp);
+    nfs_close(nfs, (struct nfsfh*)fp);
 }
 
 ClientType NfsClient::clientType()
