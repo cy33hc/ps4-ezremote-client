@@ -1059,12 +1059,15 @@ namespace HttpServer
                     range_len = 524288ul;
                     res.set_header("Content-Length", std::to_string(range_len));
                     res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+524288ul-1) + "/"+std::to_string(range_len));
-                    tmp_client = GetRemoteClient(site_idx, true);
+                    if (site_idx != 98)
+                        tmp_client = GetRemoteClient(site_idx, true);
                 }
                 else
                 {
-                    tmp_client = GetRemoteClient(site_idx, false);
+                    if (site_idx != 98)
+                        tmp_client = GetRemoteClient(site_idx, false);
                 }
+
                 std::pair<ssize_t, ssize_t> range = req.ranges[0];
                 res.set_content_provider(
                     range_len, "application/octet-stream",
@@ -1304,7 +1307,7 @@ namespace HttpServer
             dbglogger_log("%s", log(req, res).c_str());
         });
         */
-
+       
         svr->set_payload_max_length(1024 * 1024 * 12);
         svr->set_tcp_nodelay(true);
         svr->set_mount_point("/", "/");
