@@ -1798,3 +1798,8 @@ int FtpClient::GetRange(void *fp, DataSink &sink, uint64_t size, uint64_t offset
 {
     return -1;
 }
+
+int FtpClient::GetRange(void *fp, void *buffer, uint64_t size, uint64_t offset)
+{
+    return -1;
+}

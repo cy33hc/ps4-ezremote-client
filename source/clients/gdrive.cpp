@@ -959,3 +959,9 @@ int GDriveClient::GetRange(void *fp, DataSink &sink, uint64_t size, uint64_t off
     sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
     return -1;
 }
+
+int GDriveClient::GetRange(void *fp, void *buffer, uint64_t size, uint64_t offset)
+{
+    sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+    return -1;
+}

@@ -299,10 +299,19 @@ int SmbClient::GetRange(const std::string &ppath, void *buffer, uint64_t size, u
 		return 0;
 	}
 
+	int ret = this->GetRange(in, buffer, size, offset);
+	smb2_close(smb2, in);
+
+	return ret;
+}
+
+int SmbClient::GetRange(void *fp, void *buffer, uint64_t size, uint64_t offset)
+{
+	struct smb2fh* in = (struct smb2fh*) fp;
+
 	smb2_lseek(smb2, in, offset, SEEK_SET, NULL);
 
 	int count = smb2_read(smb2, in, (uint8_t*)buffer, size);
-	smb2_close(smb2, in);
 	if (count != size)
 		return 0;
 

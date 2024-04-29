@@ -451,6 +451,10 @@ namespace ZipUtil
         client->Size(file, &data->size);
         data->client = client;
         data->path = file;
+        if (client->SupportedActions() & REMOTE_ACTION_RAW_READ)
+        {
+            data->fp = client->Open(file, O_RDONLY);
+        }
         return data;
     }
 
@@ -468,7 +472,11 @@ namespace ZipUtil
             return 0;
 
         to_read = MIN(to_read, ARCHIVE_TRANSFER_SIZE);
-        ret = data->client->GetRange(data->path, data->buf, to_read, data->offset);
+        if (data->client->SupportedActions() & REMOTE_ACTION_RAW_READ)
+            ret = data->client->GetRange((data->fp), data->buf, to_read, data->offset);
+        else
+            ret = data->client->GetRange(data->path, data->buf, to_read, data->offset);
+        
         if (ret == 0)
             return -1;
         data->offset = data->offset + to_read;
@@ -479,7 +487,12 @@ namespace ZipUtil
     static int CloseRemoteArchive(struct archive *a, void *client_data)
     {
         if (client_data != nullptr)
+        {
+            RemoteArchiveData *data = (RemoteArchiveData *)client_data;
+            if (data->client->SupportedActions() & REMOTE_ACTION_RAW_READ)
+                data->client->Close(data->fp);
             free(client_data);
+        }
         return 0;
     }
 

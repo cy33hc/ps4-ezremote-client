@@ -367,9 +367,18 @@ int SFTPClient::GetRange(const std::string &path, void *buffer, uint64_t size, u
         return 0;
     }
 
+    int ret = this->GetRange(sftp_handle, buffer, size, offset);
+    libssh2_sftp_close(sftp_handle);
+
+    return ret;
+}
+
+int SFTPClient::GetRange(void *fp, void *buffer, uint64_t size, uint64_t offset)
+{
+    LIBSSH2_SFTP_HANDLE *sftp_handle = (LIBSSH2_SFTP_HANDLE *) fp;
+
     libssh2_sftp_seek64(sftp_handle, offset);
     int count = libssh2_sftp_read(sftp_handle, (char *)buffer, size);
-    libssh2_sftp_close(sftp_handle);
     if (count != size)
         return 0;
 
