@@ -30,6 +30,9 @@ extern "C"
 bool paused = false;
 int view_mode;
 static float scroll_direction = 0.0f;
+static int selected_local_position = -1;
+static int selected_remote_position = -1;
+
 static ime_callback_t ime_callback = nullptr;
 static ime_callback_t ime_after_update = nullptr;
 static ime_callback_t ime_before_update = nullptr;
@@ -614,6 +617,22 @@ namespace Windows
                     ImGui::Text("%s", item.name);
                     ImGui::EndTooltip();
                 }
+                if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadUp) && !paused)
+                {
+                    if (j == 0)
+                    {
+                        selected_local_position = local_files.size()-1;
+                        scroll_direction = 0.0f;
+                    }
+                }
+                else if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadDown) && !paused)
+                {
+                    if (j == local_files.size()-1)
+                    {
+                        selected_local_position = 0;
+                        scroll_direction = 1.0f;
+                    }
+                }
             }
             if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
             {
@@ -622,6 +641,12 @@ namespace Windows
                     SetNavFocusHere();
                     ImGui::SetScrollHereY(0.5f);
                     sprintf(local_file_to_select, "");
+                }
+                if (selected_local_position == j && !paused)
+                {
+                    SetNavFocusHere();
+                    ImGui::SetScrollHereY(scroll_direction);
+                    selected_local_position = -1;
                 }
                 selected_browser |= LOCAL_BROWSER;
             }
@@ -779,6 +804,22 @@ namespace Windows
                     ImGui::Text("%s", item.name);
                     ImGui::EndTooltip();
                 }
+                if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadUp) && !paused)
+                {
+                    if (j == 0)
+                    {
+                        selected_remote_position = remote_files.size()-1;
+                        scroll_direction = 0.0f;
+                    }
+                }
+                else if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadDown) && !paused)
+                {
+                    if (j == remote_files.size()-1)
+                    {
+                        selected_remote_position = 0;
+                        scroll_direction = 1.0f;
+                    }
+                }
             }
             ImGui::PopID();
             if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
@@ -788,6 +829,12 @@ namespace Windows
                     SetNavFocusHere();
                     ImGui::SetScrollHereY(0.5f);
                     sprintf(remote_file_to_select, "");
+                }
+                if (selected_remote_position == j && !paused)
+                {
+                    SetNavFocusHere();
+                    ImGui::SetScrollHereY(scroll_direction);
+                    selected_remote_position = -1;
                 }
                 selected_browser |= REMOTE_BROWSER;
             }

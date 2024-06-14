@@ -23,6 +23,7 @@
 #include "zip_util.h"
 #include "util.h"
 #include "installer.h"
+// #include "dbglogger.h"
 
 #define SERVER_CERT_FILE "/app0/assets/certs/domain.crt"
 #define SERVER_PRIVATE_KEY_FILE "/app0/assets/certs/domain.key"
@@ -30,6 +31,7 @@
 #define SUCCESS_MSG "{ \"result\": { \"success\": true, \"error\": null } }"
 #define FAILURE_MSG "{ \"result\": { \"success\": false, \"error\": \"%s\" } }"
 #define SUCCESS_MSG_LEN 48
+#define PKG_INITIAL_REQUEST_SIZE 8388608ul
 
 using namespace httplib;
 
@@ -1056,9 +1058,9 @@ namespace HttpServer
                 size_t range_len = (req.ranges[0].second - req.ranges[0].first) + 1;
                 if (req.ranges[0].second >= 18000000000000000000ul)
                 {
-                    range_len = 524288ul;
+                    range_len = PKG_INITIAL_REQUEST_SIZE;
                     res.set_header("Content-Length", std::to_string(range_len));
-                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+524288ul-1) + "/"+std::to_string(range_len));
+                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+PKG_INITIAL_REQUEST_SIZE-1) + "/"+std::to_string(range_len));
                     if (site_idx != 98)
                         tmp_client = GetRemoteClient(site_idx, true);
                 }
@@ -1073,7 +1075,7 @@ namespace HttpServer
                     range_len, "application/octet-stream",
                     [tmp_client, path, range, range_len, site_idx](size_t offset, size_t length, DataSink &sink) {
                         int ret;
-                        if (range_len == 524288ul)
+                        if (range_len == PKG_INITIAL_REQUEST_SIZE)
                         {
                             ret = tmp_client->GetRange(path, sink, range_len, range.first);
                         }
@@ -1146,9 +1148,9 @@ namespace HttpServer
                 size_t range_len = (req.ranges[0].second - req.ranges[0].first) + 1;
                 if (req.ranges[0].second >= 18000000000000000000ul)
                 {
-                    range_len = 524288ul;
+                    range_len = PKG_INITIAL_REQUEST_SIZE;
                     res.set_header("Content-Length", std::to_string(range_len));
-                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+524288ul-1) + "/"+std::to_string(range_len));
+                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+PKG_INITIAL_REQUEST_SIZE-1) + "/"+std::to_string(range_len));
                 }
                 std::pair<ssize_t, ssize_t> range = req.ranges[0];
                 res.set_content_provider(
