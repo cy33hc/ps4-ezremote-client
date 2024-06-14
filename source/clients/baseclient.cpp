@@ -102,6 +102,8 @@ int BaseClient::Get(const std::string &outputfile, const std::string &path, uint
 {
     std::ofstream file_stream(outputfile, std::ios::binary);
     bytes_transfered = 0;
+    sceRtcGetCurrentTick(&prev_tick);
+
     if (auto res = client->Get(GetFullPath(path),
                                [&](const char *data, size_t data_length)
                                {

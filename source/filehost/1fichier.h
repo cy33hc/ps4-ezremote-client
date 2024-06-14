@@ -1,5 +1,5 @@
-#ifndef FICHIER_HOST_H
-#define FICHIER_HOST_H
+#ifndef EZ_FICHIER_HOST_H
+#define EZ_FICHIER_HOST_H
 
 #include "filehost.h"
 

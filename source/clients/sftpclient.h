@@ -1,5 +1,5 @@
-#ifndef SFTPCLIENT_H
-#define SFTPCLIENT_H
+#ifndef EZ_SFTPCLIENT_H
+#define EZ_SFTPCLIENT_H
 
 #include <libssh2.h>
 #include <libssh2_sftp.h>

@@ -1,5 +1,5 @@
-#ifndef GDRIVE_H
-#define GDRIVE_H
+#ifndef EZ_GDRIVE_H
+#define EZ_GDRIVE_H
 
 #include <string>
 #include <vector>

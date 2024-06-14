@@ -1,5 +1,5 @@
-#ifndef LAUNCHER_FS_H
-#define LAUNCHER_FS_H
+#ifndef EZ_FS_H
+#define EZ_FS_H
 
 #pragma once
 #include <string.h>

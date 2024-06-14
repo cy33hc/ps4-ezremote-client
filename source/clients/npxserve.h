@@ -1,5 +1,5 @@
-#ifndef NPXSERVE_H
-#define NPXSERVE_H
+#ifndef EZ_NPXSERVE_H
+#define EZ_NPXSERVE_H
 
 #include <string>
 #include <vector>

@@ -390,6 +390,8 @@ namespace INSTALLER
 			file_transfering = true;
 			bytes_to_download = 100;
 			bytes_transfered = 0;
+			sceRtcGetCurrentTick(&prev_tick);
+
 			while (!completed)
 			{
 				memset(&progress_info, 0, sizeof(progress_info));
@@ -489,6 +491,7 @@ namespace INSTALLER
 		file_transfering = true;
 		bytes_to_download = 100;
 		bytes_transfered = 0;
+
 		while (!completed)
 		{
 			memset(&progress_info, 0, sizeof(progress_info));
@@ -600,6 +603,8 @@ namespace INSTALLER
 		sprintf(activity_message, "%s", lang_strings[STR_WAIT_FOR_INSTALL_MSG]);
 		bytes_to_download = 1;
 		bytes_transfered = 0;
+		sceRtcGetCurrentTick(&prev_tick);
+
 		while (!completed)
 		{
 			memset(&progress_info, 0, sizeof(progress_info));
@@ -916,6 +921,8 @@ namespace INSTALLER
 			file_transfering = true;
 			bytes_to_download = 100;
 			bytes_transfered = 0;
+			sceRtcGetCurrentTick(&prev_tick);
+
 			while (!completed)
 			{
 				memset(&progress_info, 0, sizeof(progress_info));

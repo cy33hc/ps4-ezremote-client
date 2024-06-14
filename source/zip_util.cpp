@@ -72,6 +72,8 @@ namespace ZipUtil
         convertToZipTime(file_stat.st_mtim.tv_sec, &zi.tmz_date);
 
         bytes_transfered = 0;
+        sceRtcGetCurrentTick(&prev_tick);
+
         bytes_to_download = file_stat.st_size;
 
         // Large file?
@@ -290,6 +292,7 @@ namespace ZipUtil
         ssize_t len;
         unsigned char *buffer = (unsigned char *) malloc(ARCHIVE_TRANSFER_SIZE);
         bytes_transfered = 0;
+        sceRtcGetCurrentTick(&prev_tick);
 
         /* loop over file contents and write to fd */
         for (int n = 0;; n++)

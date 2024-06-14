@@ -14,10 +14,11 @@
 #include "util.h"
 #include "lang.h"
 #include "ime_dialog.h"
-#include "IconsFontAwesome6.h"
+#include "IconsFontAwesome6.h" 
 #include "OpenFontIcons.h"
 #include "textures.h"
 #include "sfo.h"
+#include "system.h"
 
 #define MAX_IMAGE_HEIGHT 980
 #define MAX_IMAGE_WIDTH 1820
@@ -46,6 +47,8 @@ static char txt_http_server_port[6];
 bool handle_updates = false;
 int64_t bytes_transfered;
 int64_t bytes_to_download;
+OrbisTick prev_tick;
+
 std::vector<DirEntry> local_files;
 std::vector<DirEntry> remote_files;
 std::set<DirEntry> multi_selected_local_files;
@@ -1403,9 +1406,18 @@ namespace Windows
                 if (file_transfering)
                 {
                     static float progress = 0.0f;
+                    static double transfer_speed = 0.0f;
                     static char progress_text[32];
+                    static OrbisTick cur_tick;
+                    static double tick_delta;
+                   
+                    sceRtcGetCurrentTick(&cur_tick);
+                    tick_delta = (cur_tick.mytick - prev_tick.mytick) * 1.0f / 1000000.0f;
+
                     progress = bytes_transfered * 1.0f / (float)bytes_to_download;
-                    sprintf(progress_text, "%.2f%%", progress*100.0f);
+                    transfer_speed = (bytes_transfered * 1.0f / tick_delta) / 1048576.0f;
+
+                    sprintf(progress_text, "%.2fMB/s", transfer_speed);
                     ImGui::ProgressBar(progress, ImVec2(625, 0), progress_text);
                 }
 

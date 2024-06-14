@@ -1,5 +1,5 @@
-#ifndef WEBDAV_H
-#define WEBDAV_H
+#ifndef EZ_WEBDAV_H
+#define EZ_WEBDAV_H
 
 #include <string>
 #include <vector>

@@ -1,5 +1,5 @@
-#ifndef NFSCLIENT_H
-#define NFSCLIENT_H
+#ifndef EZ_NFSCLIENT_H
+#define EZ_NFSCLIENT_H
 
 #include <sys/socket.h>
 #include <arpa/inet.h>

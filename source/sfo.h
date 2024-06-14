@@ -1,5 +1,5 @@
-#ifndef LAUNCHER_SFO_H
-#define LAUNCHER_SFO_H
+#ifndef EZ_SFO_H
+#define EZ_SFO_H
 
 #pragma once
 

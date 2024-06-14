@@ -1,5 +1,5 @@
-#ifndef ZIP_UTIL_H
-#define ZIP_UTIL_H
+#ifndef EZ_ZIP_UTIL_H
+#define EZ_ZIP_UTIL_H
 
 #include <string.h>
 #include <stdlib.h>

@@ -1,5 +1,5 @@
-#ifndef HTTP_SERVER_H
-#define HTTP_SERVER_H
+#ifndef EZ_HTTP_SERVER_H
+#define EZ_HTTP_SERVER_H
 
 #include "http/httplib.h"
 

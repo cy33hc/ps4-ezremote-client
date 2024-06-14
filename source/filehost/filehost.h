@@ -1,5 +1,5 @@
-#ifndef FILEHOST_H
-#define FILEHOST_H
+#ifndef EZ_FILEHOST_H
+#define EZ_FILEHOST_H
 
 #include <string>
 #include <vector>

@@ -1,5 +1,5 @@
-#ifndef LAUNCHER_WINDOWS_H
-#define LAUNCHER_WINDOWS_H
+#ifndef EZ_WINDOWS_H
+#define EZ_WINDOWS_H
 
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <set>
@@ -7,6 +7,7 @@
 #include "imgui_internal.h"
 #include "common.h"
 #include "actions.h"
+#include "system.h"
 #include "SDL2/SDL.h"
 
 #define LOCAL_BROWSER 1
@@ -16,6 +17,7 @@ extern int view_mode;
 extern bool handle_updates;
 extern int64_t bytes_transfered;
 extern int64_t bytes_to_download;
+extern OrbisTick prev_tick;
 extern std::vector<DirEntry> local_files;
 extern std::vector<DirEntry> remote_files;
 extern std::set<DirEntry> multi_selected_local_files;

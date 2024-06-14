@@ -1,5 +1,5 @@
-#ifndef ACTIONS_H
-#define ACTIONS_H
+#ifndef EZ_ACTIONS_H
+#define EZ_ACTIONS_H
 
 #include <pthread.h>
 #include "installer.h"

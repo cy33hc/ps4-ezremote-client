@@ -1,5 +1,5 @@
-#ifndef SPLIT_FILE_H
-#define SPLIT_FILE_H
+#ifndef EZ_SPLIT_FILE_H
+#define EZ_SPLIT_FILE_H
 
 #include <string>
 #include <vector>

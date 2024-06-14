@@ -307,6 +307,7 @@ int GDriveClient::Get(const std::string &outputfile, const std::string &path, ui
 {
     std::ofstream file_stream(outputfile, std::ios::binary);
     bytes_transfered = 0;
+    sceRtcGetCurrentTick(&prev_tick);
 
     std::string id = GetValue(path_id_map, path);
     std::string drive_id = GetDriveId(path);
@@ -399,9 +400,9 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
 {
     bytes_to_download = FS::GetSize(inputfile);
     bytes_transfered = 0;
+    sceRtcGetCurrentTick(&prev_tick);
 
     std::ifstream file_stream(inputfile, std::ios::binary);
-    bytes_transfered = 0;
 
     std::string id = GetValue(path_id_map, path);
     std::string drive_id = GetDriveId(path);
@@ -473,9 +474,9 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
 
     bytes_to_download = FS::GetSize(inputfile);
     bytes_transfered = 0;
+    sceRtcGetCurrentTick(&prev_tick);
 
     std::ifstream file_stream(inputfile, std::ios::binary);
-    bytes_transfered = 0;
 
     size_t path_pos = path.find_last_of("/");
     std::string parent_dir;

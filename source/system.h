@@ -1,3 +1,6 @@
+#ifndef EZ_SYSTEM_H
+#define EZ_SYSTEM_H
+
 #include <stdint.h>
 
 #ifdef __cplusplus 
@@ -41,4 +44,6 @@ void convertLocalTimeToUtc(const OrbisDateTime *local_time, OrbisDateTime *utc);
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif

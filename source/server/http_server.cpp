@@ -1061,6 +1061,7 @@ namespace HttpServer
                     range_len = PKG_INITIAL_REQUEST_SIZE;
                     res.set_header("Content-Length", std::to_string(range_len));
                     res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+PKG_INITIAL_REQUEST_SIZE-1) + "/"+std::to_string(range_len));
+                    sceRtcGetCurrentTick(&prev_tick);
                     if (site_idx != 98)
                         tmp_client = GetRemoteClient(site_idx, true);
                 }
@@ -1151,6 +1152,7 @@ namespace HttpServer
                     range_len = PKG_INITIAL_REQUEST_SIZE;
                     res.set_header("Content-Length", std::to_string(range_len));
                     res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+PKG_INITIAL_REQUEST_SIZE-1) + "/"+std::to_string(range_len));
+                    sceRtcGetCurrentTick(&prev_tick);
                 }
                 std::pair<ssize_t, ssize_t> range = req.ranges[0];
                 res.set_content_provider(
@@ -1213,6 +1215,8 @@ namespace HttpServer
             file_transfering = true;
             bytes_to_download = 100;
             bytes_transfered = 0;
+            sceRtcGetCurrentTick(&prev_tick);
+
             Windows::SetModalMode(true);
 
             std::string download_url = filehost->GetDownloadUrl();

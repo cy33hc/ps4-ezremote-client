@@ -1,5 +1,5 @@
-#ifndef NGINX_H
-#define NGINX_H
+#ifndef EZ_NGINX_H
+#define EZ_NGINX_H
 
 #include <string>
 #include <vector>

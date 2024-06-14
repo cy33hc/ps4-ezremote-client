@@ -1,5 +1,5 @@
-#ifndef MEM_FILE_H
-#define MEM_FILE_H
+#ifndef EZ_MEM_FILE_H
+#define EZ_MEM_FILE_H
 
 #include <string>
 #include <vector>

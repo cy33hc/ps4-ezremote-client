@@ -1,5 +1,5 @@
-#ifndef LAUNCHER_GUI_H
-#define LAUNCHER_GUI_H
+#ifndef EZ_GUI_H
+#define EZ_GUI_H
 
 #include <string>
 #include "SDL2/SDL.h"

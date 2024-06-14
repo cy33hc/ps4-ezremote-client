@@ -1,5 +1,5 @@
-#ifndef IIS_H
-#define IIS_H
+#ifndef EZ_IIS_H
+#define EZ_IIS_H
 
 #include <string>
 #include <vector>

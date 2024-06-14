@@ -16,8 +16,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __IME_DIALOG_H__
-#define __IME_DIALOG_H__
+#ifndef __EZ_IME_DIALOG_H__
+#define __EZ_IME_DIALOG_H__
 
 #define IME_DIALOG_RESULT_NONE 0
 #define IME_DIALOG_RESULT_RUNNING 1

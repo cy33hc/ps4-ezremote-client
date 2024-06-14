@@ -1,5 +1,5 @@
-#ifndef ALLDEBRID_HOST_H
-#define ALLDEBRID_HOST_H
+#ifndef EZ_ALLDEBRID_HOST_H
+#define EZ_ALLDEBRID_HOST_H
 
 #include "filehost.h"
 

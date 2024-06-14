@@ -1,5 +1,5 @@
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef EZ_COMMON_H
+#define EZ_COMMON_H
 
 #include <string>
 #include <vector>

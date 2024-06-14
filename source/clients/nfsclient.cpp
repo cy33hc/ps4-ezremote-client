@@ -213,6 +213,7 @@ int NfsClient::Get(const std::string &outputfile, const std::string &ppath, uint
 	void *buff = malloc(BUF_SIZE);
 	int count = 0;
 	bytes_transfered = 0;
+	sceRtcGetCurrentTick(&prev_tick);
 	while ((count = nfs_read(nfs, nfsfh, BUF_SIZE, buff)) > 0)
 	{
 		if (count < 0)
@@ -382,6 +383,7 @@ int NfsClient::Put(const std::string &inputfile, const std::string &ppath, uint6
 	void* buff = malloc(BUF_SIZE);
 	uint64_t count = 0;
 	bytes_transfered = 0;
+	sceRtcGetCurrentTick(&prev_tick);
 	while ((count = FS::Read(in, buff, BUF_SIZE)) > 0)
 	{
 		if (count < 0)

@@ -1,5 +1,5 @@
-#ifndef REALDEBRID_HOST_H
-#define REALDEBRID_HOST_H
+#ifndef EZ_REALDEBRID_HOST_H
+#define EZ_REALDEBRID_HOST_H
 
 #include "filehost.h"
 

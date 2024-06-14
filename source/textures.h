@@ -1,5 +1,5 @@
-#ifndef LAUNCHER_TEXTURES_H
-#define LAUNCHER_TEXTURES_H
+#ifndef EZ_TEXTURES_H
+#define EZ_TEXTURES_H
 
 #include <string>
 #include <SDL2/SDL.h>

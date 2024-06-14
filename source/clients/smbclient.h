@@ -1,5 +1,5 @@
-#ifndef SMBCLIENT_H
-#define SMBCLIENT_H
+#ifndef EZ_SMBCLIENT_H
+#define EZ_SMBCLIENT_H
 
 #include <sys/socket.h>
 #include <arpa/inet.h>

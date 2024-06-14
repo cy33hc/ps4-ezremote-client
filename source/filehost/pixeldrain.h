@@ -1,5 +1,5 @@
-#ifndef PIXELDRAIN_HOST_H
-#define PIXELDRAIN_HOST_H
+#ifndef EZ_PIXELDRAIN_HOST_H
+#define EZ_PIXELDRAIN_HOST_H
 
 #include "filehost.h"
 

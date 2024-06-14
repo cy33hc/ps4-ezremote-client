@@ -284,6 +284,8 @@ int SFTPClient::Get(const std::string &outputfile, const std::string &path, uint
     char *buff = (char *)malloc(FTP_CLIENT_BUFSIZ);
     int rc, count = 0;
     bytes_transfered = 0;
+    sceRtcGetCurrentTick(&prev_tick);
+
     do
     {
         rc = libssh2_sftp_read(sftp_handle, buff, FTP_CLIENT_BUFSIZ);
@@ -418,6 +420,8 @@ int SFTPClient::Put(const std::string &inputfile, const std::string &path, uint6
     buff = (char *)malloc(FTP_CLIENT_BUFSIZ);
     int nread, count = 0;
     bytes_transfered = 0;
+    sceRtcGetCurrentTick(&prev_tick);
+
     do
     {
         nread = FS::Read(in, buff, FTP_CLIENT_BUFSIZ);

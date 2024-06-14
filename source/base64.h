@@ -1,5 +1,5 @@
-#ifndef BASE64_H_
-#define BASE64_H_
+#ifndef EZ_BASE64_H_
+#define EZ_BASE64_H_
 
 #include <string>
 

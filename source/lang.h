@@ -1,5 +1,5 @@
-#ifndef __LANG_H__
-#define __LANG_H__
+#ifndef __EZ_LANG_H__
+#define __EZ_LANG_H__
 
 #include "config.h"
 

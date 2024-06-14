@@ -1,5 +1,5 @@
-#ifndef APACHE_H
-#define APACHE_H
+#ifndef EZ_APACHE_H
+#define EZ_APACHE_H
 
 #include <string>
 #include <vector>

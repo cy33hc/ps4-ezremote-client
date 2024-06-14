@@ -1,5 +1,5 @@
-#ifndef BASESERVER_H
-#define BASESERVER_H
+#ifndef EZ_BASESERVER_H
+#define EZ_BASESERVER_H
 
 #include <string>
 #include <vector>

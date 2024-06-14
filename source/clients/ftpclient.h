@@ -1,5 +1,5 @@
-#ifndef FTPCLIENT_H
-#define FTPCLIENT_H
+#ifndef EZ_FTPCLIENT_H
+#define EZ_FTPCLIENT_H
 
 #include <sys/socket.h>
 #include <arpa/inet.h>

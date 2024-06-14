@@ -1,5 +1,5 @@
-#ifndef LAUNCHER_CONFIG_H
-#define LAUNCHER_CONFIG_H
+#ifndef EZ_CONFIG_H
+#define EZ_CONFIG_H
 
 #include <string>
 #include <vector>

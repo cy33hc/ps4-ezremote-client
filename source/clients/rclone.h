@@ -1,5 +1,5 @@
-#ifndef RCLONE_H
-#define RCLONE_H
+#ifndef EZ_RCLONE_H
+#define EZ_RCLONE_H
 
 #include <string>
 #include <vector>

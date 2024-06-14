@@ -1,5 +1,5 @@
-#ifndef DIRECT_HOST_H
-#define DIRECT_HOST_H
+#ifndef EZ_DIRECT_HOST_H
+#define EZ_DIRECT_HOST_H
 
 #include "filehost.h"
 

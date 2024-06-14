@@ -510,6 +510,8 @@ namespace FS
 
         size_t bytes_read = 0;
         bytes_transfered = 0;
+        sceRtcGetCurrentTick(&prev_tick);
+
         const size_t buf_size = 0x10000;
         unsigned char *buf = new unsigned char[buf_size];
 

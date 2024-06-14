@@ -1,5 +1,5 @@
-#ifndef REMOTECLIENT_H
-#define REMOTECLIENT_H
+#ifndef EZ_REMOTECLIENT_H
+#define EZ_REMOTECLIENT_H
 
 #include <string>
 #include <vector>

@@ -409,6 +409,7 @@ namespace Actions
                     snprintf(activity_message, 1024, "%s %s", lang_strings[STR_UPLOADING], entries[i].path);
                     bytes_to_download = entries[i].file_size;
                     bytes_transfered = 0;
+                    sceRtcGetCurrentTick(&prev_tick);
                     ret = UploadFile(entries[i].path, new_path);
                     if (ret <= 0)
                     {
@@ -1067,6 +1068,7 @@ namespace Actions
     void *InstallUrlPkgThread(void *argp)
     {
         bytes_transfered = 0;
+        sceRtcGetCurrentTick(&prev_tick);
         sprintf(status_message, "%s", "");
         pkg_header header;
         char filename[2000];
@@ -1384,6 +1386,7 @@ namespace Actions
                     snprintf(activity_message, 1024, "%s %s", isCopy ? lang_strings[STR_COPYING] : lang_strings[STR_MOVING], entries[i].path);
                     bytes_to_download = entries[i].file_size;
                     bytes_transfered = 0;
+                    sceRtcGetCurrentTick(&prev_tick);
                     ret = CopyOrMoveLocalFile(entries[i].path, new_path, isCopy);
                     if (ret <= 0)
                     {
@@ -1633,6 +1636,7 @@ namespace Actions
                     snprintf(activity_message, 1024, "%s %s", lang_strings[STR_COPYING], entries[i].path);
                     bytes_to_download = entries[i].file_size;
                     bytes_transfered = 0;
+                    sceRtcGetCurrentTick(&prev_tick);
                     ret = CopyOrMoveRemoteFile(entries[i].path, new_path, true);
                     if (ret <= 0)
                     {
@@ -1726,6 +1730,7 @@ namespace Actions
         sprintf(activity_message, "%s %s to %s", lang_strings[STR_DOWNLOADING], filename.c_str(), local_file);
         remoteclient->Size(filename, &bytes_to_download);
         bytes_transfered = 0;
+        sceRtcGetCurrentTick(&prev_tick);
         file_transfering = true;
         int ret = remoteclient->Get(local_file, filename);
         if (ret == 0)

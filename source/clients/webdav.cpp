@@ -151,6 +151,7 @@ int WebDAVClient::Put(const std::string &inputfile, const std::string &path, uin
 {
     size_t bytes_remaining = FS::GetSize(inputfile);
     bytes_transfered = 0;
+    sceRtcGetCurrentTick(&prev_tick);
     
     FILE* in = FS::OpenRead(inputfile);
 
