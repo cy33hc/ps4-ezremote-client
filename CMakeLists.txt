@@ -67,7 +67,7 @@ add_executable(ezremote_client
 
 add_self(ezremote_client)
 
-add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.25" 32 0)
+add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.26" 32 0)
 
 target_link_libraries(ezremote_client
   c

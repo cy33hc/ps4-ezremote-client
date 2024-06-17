@@ -491,6 +491,7 @@ namespace INSTALLER
 		file_transfering = true;
 		bytes_to_download = 100;
 		bytes_transfered = 0;
+		sceRtcGetCurrentTick(&prev_tick);
 
 		while (!completed)
 		{

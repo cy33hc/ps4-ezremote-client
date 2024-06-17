@@ -1417,7 +1417,7 @@ namespace Windows
                     progress = bytes_transfered * 1.0f / (float)bytes_to_download;
                     transfer_speed = (bytes_transfered * 1.0f / tick_delta) / 1048576.0f;
 
-                    sprintf(progress_text, "%.2fMB/s", transfer_speed);
+                    sprintf(progress_text, "%.2f MB/s", transfer_speed);
                     ImGui::ProgressBar(progress, ImVec2(625, 0), progress_text);
                 }
 

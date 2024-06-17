@@ -364,6 +364,7 @@ namespace Actions
 
         if (confirm_state == CONFIRM_YES)
         {
+            sceRtcGetCurrentTick(&prev_tick);
             return remoteclient->Put(src, dest);
         }
 
@@ -487,6 +488,7 @@ namespace Actions
     int DownloadFile(const char *src, const char *dest)
     {
         bytes_transfered = 0;
+        sceRtcGetCurrentTick(&prev_tick);
         if (!remoteclient->Size(src, &bytes_to_download))
         {
             remoteclient->Quit();
@@ -518,6 +520,7 @@ namespace Actions
 
         if (confirm_state == CONFIRM_YES)
         {
+            sceRtcGetCurrentTick(&prev_tick);
             return remoteclient->Get(dest, src);
         }
 
@@ -1339,6 +1342,7 @@ namespace Actions
 
         if (confirm_state == CONFIRM_YES)
         {
+            sceRtcGetCurrentTick(&prev_tick);
             if (isCopy)
                 return FS::Copy(src, dest);
             else
@@ -1541,6 +1545,7 @@ namespace Actions
 
         if (confirm_state == CONFIRM_YES)
         {
+            sceRtcGetCurrentTick(&prev_tick);
             if (isCopy)
                 return remoteclient->Copy(src, dest);
             else
