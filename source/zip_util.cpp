@@ -667,10 +667,6 @@ namespace ZipUtil
             if (ret < ARCHIVE_OK)
             {
                 sprintf(status_message, "%s", "archive_read_next_header failed");
-                if (client_data != nullptr)
-                {
-                    free(client_data);
-                }
                 archive_read_free(a);
                 return nullptr;
             }
@@ -745,10 +741,6 @@ namespace ZipUtil
             if (ret < ARCHIVE_OK)
             {
                 sprintf(status_message, "%s", "archive_read_next_header failed");
-                if (client_data != nullptr)
-                {
-                    free(client_data);
-                }
                 archive_read_free(a);
                 return nullptr;
             }
