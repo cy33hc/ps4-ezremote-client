@@ -23,7 +23,6 @@
 #include "zip_util.h"
 #include "util.h"
 #include "installer.h"
-// #include "dbglogger.h"
 
 #define SERVER_CERT_FILE "/app0/assets/certs/domain.crt"
 #define SERVER_PRIVATE_KEY_FILE "/app0/assets/certs/domain.key"
@@ -1169,12 +1168,69 @@ namespace HttpServer
                     });
             } });
 
+        svr->Get("/split_inst/(.*)", [&](const Request &req, Response &res)
+        {
+            std::string hash = req.matches[1];
+
+            SplitPkgInstallData *pkg_data = INSTALLER::GetSplitPkgInstallData(hash);
+
+            if (req.method == "HEAD")
+            {
+                res.status = 204;
+                res.set_header("Content-Length", std::to_string(pkg_data->size));
+                res.set_header("Accept-Ranges", "bytes");
+                return;
+            }
+
+            if (req.ranges.empty())
+            {
+                res.status = 200;
+                res.set_content_provider(
+                    131072, "application/octet-stream",
+                    [pkg_data](size_t offset, size_t length, DataSink &sink) {
+                        char *buf = (char*) malloc(131072);
+                        size_t bytes_read = pkg_data->split_file->Read(buf, 131072, offset);
+                        sink.write(buf, bytes_read);
+                        free(buf);
+                        return true;
+                    },
+                    [](bool success) {
+                        return true;
+                    });
+            }
+            else
+            {
+                res.status = 206;
+                size_t range_len = (req.ranges[0].second - req.ranges[0].first) + 1;
+                if (req.ranges[0].second >= 18000000000000000000ul)
+                {
+                    range_len = PKG_INITIAL_REQUEST_SIZE;
+                    res.set_header("Content-Length", std::to_string(range_len));
+                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+PKG_INITIAL_REQUEST_SIZE-1) + "/"+std::to_string(range_len));
+                    sceRtcGetCurrentTick(&prev_tick);
+                }
+                std::pair<ssize_t, ssize_t> range = req.ranges[0];
+                res.set_content_provider(
+                    range_len, "application/octet-stream",
+                    [pkg_data, range, range_len](size_t offset, size_t length, DataSink &sink) {
+                        char *buf = (char*) malloc(range_len);
+                        size_t bytes_read = pkg_data->split_file->Read(buf, range_len, range.first);
+                        sink.write(buf, bytes_read);
+                        free(buf);
+                        return true;
+                    },
+                    [](bool success) {
+                        return true;
+                    });
+            } });
+
         svr->Post("/__local__/install_url", [&](const Request &req, Response &res)
                   {
             std::string url;
             const char *url_param;
             bool use_alldebrid = false;
             bool use_realdebrid = false;
+            bool use_disk_cache = false;
 
             json_object *jobj = json_tokener_parse(req.body.c_str());
             if (jobj != nullptr)
@@ -1182,6 +1238,8 @@ namespace HttpServer
                 url_param = json_object_get_string(json_object_object_get(jobj, "url"));
                 use_alldebrid  = json_object_get_boolean(json_object_object_get(jobj, "use_alldebrid"));
                 use_realdebrid = json_object_get_boolean(json_object_object_get(jobj, "use_realdebrid"));
+                use_disk_cache = json_object_get_boolean(json_object_object_get(jobj, "use_disk_cache"));
+
                 if (url_param == nullptr)
                 {
                     bad_request(res, "Required url_param parameter missing");
@@ -1228,7 +1286,6 @@ namespace HttpServer
                 Windows::SetModalMode(true);
                 return;
             }
-
             delete(filehost);
 
 			size_t scheme_pos = download_url.find("://");
@@ -1242,20 +1299,52 @@ namespace HttpServer
             baseclient->Head(path, &header, sizeof(pkg_header));
 
             if (BE32(header.pkg_magic) == 0x7F434E54)
-            {            
+            {
+                bytes_to_download = header.pkg_content_size;
                 FileHost::AddCacheDownloadUrl(hash, download_url);
                 std::string title = INSTALLER::GetRemotePkgTitle(baseclient, path, &header);
-                delete(baseclient);
 
-                std::string remote_install_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst/Site%2099/" + hash;
-                int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header, title, false);
-                if (rc == 0)
+                if (!use_disk_cache)
                 {
-                    failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
-                    activity_inprogess = false;
-                    file_transfering = false;
-                    Windows::SetModalMode(true);
-                    return;
+                    std::string remote_install_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst/Site%2099/" + hash;
+                    int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header, title, false);
+                    if (rc == 0)
+                    {
+                        failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
+                        activity_inprogess = false;
+                        file_transfering = false;
+                        Windows::SetModalMode(true);
+                        return;
+                    }
+                }
+                else
+                {
+                    SplitPkgInstallData *install_data = (SplitPkgInstallData*) malloc(sizeof(SplitPkgInstallData));
+                    memset(install_data, 0, sizeof(SplitPkgInstallData));
+
+                    Util::ReplaceAll(hash, "/", "");
+                    std::string install_pkg_path = std::string(temp_folder) + "/" + hash;
+                    SplitFile *sp = new SplitFile(install_pkg_path, INSTALL_ARCHIVE_PKG_SPLIT_SIZE/2);
+
+                    install_data->split_file = sp;
+                    install_data->remote_client = baseclient;
+                    install_data->path = path;
+                    baseclient->Size(path, &install_data->size);
+                    install_data->stop_write_thread = false;
+
+                    int ret = pthread_create(&install_data->thread, NULL, Actions::DownloadSplitPkg, install_data);
+
+                    ret = INSTALLER::InstallSplitPkg(download_url, install_data, true);
+
+                    if (ret == 0)
+                    {
+                        failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
+                        activity_inprogess = false;
+                        file_transfering = false;
+                        free(install_data);
+                        Windows::SetModalMode(false);
+                        return;
+                    }
                 }
             }
             else
@@ -1282,6 +1371,7 @@ namespace HttpServer
                         failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
                         activity_inprogess = false;
                         file_transfering = false;
+                        free(install_data);
                         Windows::SetModalMode(false);
                         return;
                     }

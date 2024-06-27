@@ -155,7 +155,7 @@ size_t SplitFile::Write(char *buf, size_t buf_size)
     size_t total_bytes_written = 0;
     size_t remaining_to_write = buf_size;
 
-    while (remaining_to_write > 0)
+    while (remaining_to_write > 0 && !this->complete)
     {
         block_space_remaining = this->block_size - block_in_progress->size;
         bytes_to_write = MIN(remaining_to_write, block_space_remaining);
@@ -192,6 +192,9 @@ size_t SplitFile::Write(char *buf, size_t buf_size)
 
 int SplitFile::Close()
 {
+    if (this->complete)
+        return 0;
+
     if (block_in_progress->fd != nullptr)
     {
         fflush(block_in_progress->fd);
@@ -205,6 +208,11 @@ int SplitFile::Close()
     sem_post(&this->block_ready);
 
     return 0;
+}
+
+bool SplitFile::IsClosed()
+{
+    return this->complete;
 }
 
 FileBlock *SplitFile::NewBlock()

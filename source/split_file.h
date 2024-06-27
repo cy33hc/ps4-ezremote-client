@@ -31,6 +31,7 @@ public:
     size_t Write(char* buf, size_t buf_size);
     int Open();
     int Close();
+    bool IsClosed();
 
 private:
     std::vector<FileBlock*> file_blocks;

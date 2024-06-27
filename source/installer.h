@@ -1,6 +1,6 @@
 #pragma once
 
-#include "clients/remote_client.h"
+#include "clients/baseclient.h"
 #include "zip_util.h"
 #include "split_file.h"
 #include "pthread.h"
@@ -129,6 +129,16 @@ struct ArchivePkgInstallData
     bool stop_write_thread;
 };
 
+struct SplitPkgInstallData
+{
+    SplitFile *split_file;
+    BaseClient *remote_client;
+    std::string path;
+    int64_t size;
+    pthread_t thread;
+    bool stop_write_thread;
+};
+
 static pthread_t bk_install_thid;
 
 namespace INSTALLER
@@ -149,4 +159,8 @@ namespace INSTALLER
     void AddArchivePkgInstallData(const std::string &hash, ArchivePkgInstallData *pkg_data);
     void RemoveArchivePkgInstallData(const std::string &hash);
     bool InstallArchivePkg(const std::string &path, ArchivePkgInstallData* pkg_data, bool bg = false);
+    SplitPkgInstallData *GetSplitPkgInstallData(const std::string &hash);
+    void AddSplitPkgInstallData(const std::string &hash, SplitPkgInstallData *pkg_data);
+    void RemoveSplitPkgInstallData(const std::string &hash);
+    bool InstallSplitPkg(const std::string &path, SplitPkgInstallData* pkg_data, bool bg = false);
 }

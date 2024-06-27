@@ -577,10 +577,6 @@ namespace ZipUtil
             ret = archive_read_open2(a, client_data, NULL, ReadRemoteArchive, SkipRemoteArchive, CloseRemoteArchive);
             if (ret < ARCHIVE_OK)
             {
-                if (client_data != nullptr)
-                {
-                    free(client_data);
-                }
                 sprintf(status_message, "%s", "archive_read_open failed");
                 return 0;
             }
@@ -622,7 +618,10 @@ namespace ZipUtil
         int ret;
 
         if ((a = archive_read_new()) == NULL)
+        {
             sprintf(status_message, "%s", "archive_read_new failed");
+            return nullptr;
+        }
 
         archive_read_support_format_all(a);
         archive_read_support_filter_all(a);
@@ -656,10 +655,6 @@ namespace ZipUtil
             ret = archive_read_open2(a, client_data, NULL, ReadRemoteArchive, SkipRemoteArchive, CloseRemoteArchive);
             if (ret < ARCHIVE_OK)
             {
-                if (client_data != nullptr)
-                {
-                    free(client_data);
-                }
                 sprintf(status_message, "%s", "archive_read_open_filename failed");
                 return nullptr;
             }

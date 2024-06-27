@@ -26,7 +26,8 @@
 
 struct BgProgressCheck
 {
-	ArchivePkgInstallData* pkg_data;
+	ArchivePkgInstallData* archive_pkg_data;
+	SplitPkgInstallData* split_pkg_data;
 	int task_id;
 	std::string hash;
 };
@@ -36,6 +37,7 @@ static OrbisBgftInitParams s_bgft_init_params;
 static bool s_bgft_initialized = false;
 
 static std::map<std::string, ArchivePkgInstallData *> archive_pkg_install_data_list;
+static std::map<std::string, SplitPkgInstallData *> split_pkg_install_data_list;
 
 namespace INSTALLER
 {
@@ -253,13 +255,24 @@ namespace INSTALLER
 			sceKernelUsleep(500000);
 		}
 	finish:
-		if (bg_check_data->pkg_data != nullptr)
+		if (bg_check_data->archive_pkg_data != nullptr)
 		{
-			bg_check_data->pkg_data->stop_write_thread = true;
-			pthread_join(bg_check_data->pkg_data->thread, NULL);
-			delete(bg_check_data->pkg_data->split_file);
-			free(bg_check_data->pkg_data);
+			bg_check_data->archive_pkg_data->stop_write_thread = true;
+			pthread_join(bg_check_data->archive_pkg_data->thread, NULL);
+			delete(bg_check_data->archive_pkg_data->split_file);
+			free(bg_check_data->archive_pkg_data);
 			RemoveArchivePkgInstallData(bg_check_data->hash);
+			free(bg_check_data);
+		}
+		else if (bg_check_data->split_pkg_data != nullptr)
+		{
+			bg_check_data->split_pkg_data->stop_write_thread = true;
+			bg_check_data->split_pkg_data->split_file->Close();
+			pthread_join(bg_check_data->split_pkg_data->thread, NULL);
+			delete(bg_check_data->split_pkg_data->split_file);
+			delete(bg_check_data->split_pkg_data->remote_client);
+			free(bg_check_data->split_pkg_data);
+			RemoveSplitPkgInstallData(bg_check_data->hash);
 			free(bg_check_data);
 		}
 		activity_inprogess = false;
@@ -388,7 +401,7 @@ namespace INSTALLER
 		if (prompt)
 		{
 			file_transfering = true;
-			bytes_to_download = 100;
+			bytes_to_download = header->pkg_content_size;
 			bytes_transfered = 0;
 			sceRtcGetCurrentTick(&prev_tick);
 
@@ -412,7 +425,8 @@ namespace INSTALLER
 		{
 			BgProgressCheck *bg_check_data = (BgProgressCheck*) malloc(sizeof(BgProgressCheck));
 			memset(bg_check_data, 0, sizeof(BgProgressCheck));
-			bg_check_data->pkg_data = nullptr;
+			bg_check_data->archive_pkg_data = nullptr;
+			bg_check_data->split_pkg_data = nullptr;
 			bg_check_data->task_id = task_id;
 			bg_check_data->hash = "";
 			ret = pthread_create(&bk_install_thid, NULL, CheckBgInstallTaskThread, bg_check_data);
@@ -489,7 +503,7 @@ namespace INSTALLER
 		Util::Notify("%s queued", display_title.c_str());
 
 		file_transfering = true;
-		bytes_to_download = 100;
+		bytes_to_download = header.pkg_content_size;
 		bytes_transfered = 0;
 		sceRtcGetCurrentTick(&prev_tick);
 
@@ -602,7 +616,7 @@ namespace INSTALLER
 		}
 
 		sprintf(activity_message, "%s", lang_strings[STR_WAIT_FOR_INSTALL_MSG]);
-		bytes_to_download = 1;
+		bytes_to_download = header->pkg_content_size;
 		bytes_transfered = 0;
 		sceRtcGetCurrentTick(&prev_tick);
 
@@ -920,7 +934,7 @@ namespace INSTALLER
 		if (!bg)
 		{
 			file_transfering = true;
-			bytes_to_download = 100;
+			bytes_to_download = header.pkg_content_size;
 			bytes_transfered = 0;
 			sceRtcGetCurrentTick(&prev_tick);
 
@@ -933,7 +947,6 @@ namespace INSTALLER
 					ret = 0;
 					goto finish;
 				}
-				bytes_transfered = (uint32_t)(((float)progress_info.transferred / progress_info.length) * 100.f);
 				if (progress_info.length > 0)
 				{
 					completed = progress_info.transferred == progress_info.length;
@@ -947,7 +960,8 @@ namespace INSTALLER
 		{
 			BgProgressCheck *bg_check_data = (BgProgressCheck*) malloc(sizeof(BgProgressCheck));
 			memset(bg_check_data, 0, sizeof(BgProgressCheck));
-			bg_check_data->pkg_data = pkg_data;
+			bg_check_data->archive_pkg_data = pkg_data;
+			bg_check_data->split_pkg_data = nullptr;
 			bg_check_data->task_id = task_id;
 			bg_check_data->hash = hash;
 			ret = pthread_create(&bk_install_thid, NULL, CheckBgInstallTaskThread, bg_check_data);
@@ -964,4 +978,196 @@ namespace INSTALLER
 
 	}
 
+	SplitPkgInstallData *GetSplitPkgInstallData(const std::string &hash)
+	{
+		return split_pkg_install_data_list[hash];
+	}
+
+	void AddSplitPkgInstallData(const std::string &hash, SplitPkgInstallData *pkg_data)
+	{
+		std::pair<std::string, SplitPkgInstallData*> pair = std::make_pair(hash, pkg_data);
+		split_pkg_install_data_list.erase(hash);
+		split_pkg_install_data_list.insert(pair);
+	}
+
+	void RemoveSplitPkgInstallData(const std::string &hash)
+	{
+		split_pkg_install_data_list.erase(hash);
+	}
+
+	bool InstallSplitPkg(const std::string &path, SplitPkgInstallData* pkg_data, bool bg)
+	{
+		pkg_header header;
+		pkg_data->split_file->Read((char*)&header, sizeof(pkg_header), 0);
+
+		int ret;
+		std::string cid = std::string((char *)header.pkg_content_id);
+		cid = cid.substr(cid.find_first_of("-") + 1, 9);
+		std::string display_title = cid;
+		int user_id;
+		ret = sceUserServiceGetForegroundUser(&user_id);
+		const char *package_type;
+		uint32_t content_type = BE32(header.pkg_content_type);
+		uint32_t flags = BE32(header.pkg_content_flags);
+		bool is_patch = false;
+		bool completed = false;
+
+		switch (content_type)
+		{
+		case PKG_CONTENT_TYPE_GD:
+			package_type = "PS4GD";
+			break;
+		case PKG_CONTENT_TYPE_AC:
+			package_type = "PS4AC";
+			break;
+		case PKG_CONTENT_TYPE_AL:
+			package_type = "PS4AL";
+			break;
+		case PKG_CONTENT_TYPE_DP:
+			package_type = "PS4DP";
+			break;
+		default:
+			package_type = NULL;
+			return 0;
+			break;
+		}
+
+		if (flags & PKG_CONTENT_FLAGS_FIRST_PATCH ||
+			flags & PKG_CONTENT_FLAGS_SUBSEQUENT_PATCH ||
+			flags & PKG_CONTENT_FLAGS_DELTA_PATCH ||
+			flags & PKG_CONTENT_FLAGS_CUMULATIVE_PATCH)
+		{
+			is_patch = true;
+		}
+
+		std::string hash = Util::UrlHash(path);
+		std::string full_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/split_inst/" + hash;
+		AddSplitPkgInstallData(hash, pkg_data);
+
+		OrbisBgftTaskProgress progress_info;
+		OrbisBgftDownloadParam params;
+		memset(&params, 0, sizeof(params));
+		{
+			params.userId = user_id;
+			params.entitlementType = 5;
+			params.id = (char *)header.pkg_content_id;
+			params.contentUrl = full_url.c_str();
+			params.contentName = display_title.c_str();
+			params.iconPath = "";
+			params.playgoScenarioId = "0";
+			params.option = ORBIS_BGFT_TASK_OPT_DISABLE_CDN_QUERY_PARAM;
+			params.packageType = package_type;
+			params.packageSubType = "";
+			params.packageSize = BE64(header.pkg_size);
+		}
+
+	retry:
+		int task_id = -1;
+		if (!is_patch)
+			ret = sceBgftServiceIntDownloadRegisterTask(&params, &task_id);
+		else
+			ret = sceBgftServiceIntDebugDownloadRegisterPkg(&params, &task_id);
+		if (ret == 0x80990088 || ret == 0x80990015)
+		{
+			if (!bg)
+			{
+				sprintf(confirm_message, "%s - %s?", display_title.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
+				confirm_state = CONFIRM_WAIT;
+				action_to_take = selected_action;
+				activity_inprogess = false;
+				while (confirm_state == CONFIRM_WAIT)
+				{
+					sceKernelUsleep(100000);
+				}
+				activity_inprogess = true;
+				selected_action = action_to_take;
+
+				if (confirm_state == CONFIRM_YES)
+				{
+					ret = sceAppInstUtilAppUnInstall(cid.c_str());
+					if (ret != 0)
+					{
+						ret = 0;
+						goto finish;
+					}
+					goto retry;
+				}
+			}
+			else
+			{
+				ret = sceAppInstUtilAppUnInstall(cid.c_str());
+				if (ret != 0)
+				{
+					ret = 0;
+					goto finish;
+				}
+				goto retry;
+			}
+		}
+		else if (ret > 0)
+		{
+			ret = 0;
+			goto finish;
+		}
+
+		ret = sceBgftServiceDownloadStartTask(task_id);
+		if (ret)
+		{
+			ret = 0;
+			goto finish;
+		}
+
+		Util::Notify("%s queued", display_title.c_str());
+
+		if (!bg)
+		{
+			file_transfering = true;
+			bytes_to_download = pkg_data->size;
+			bytes_transfered = 0;
+			sceRtcGetCurrentTick(&prev_tick);
+
+			while (!completed)
+			{
+				memset(&progress_info, 0, sizeof(progress_info));
+				ret = sceBgftServiceDownloadGetProgress(task_id, &progress_info);
+				if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
+				{
+					ret = 0;
+					goto finish;
+				}
+				if (progress_info.length > 0)
+				{
+					completed = progress_info.transferred == progress_info.length;
+					bytes_to_download = progress_info.length;
+					bytes_transfered = progress_info.transferred;
+				}
+				sceSystemServicePowerTick();
+			}
+		}
+		else
+		{
+			BgProgressCheck *bg_check_data = (BgProgressCheck*) malloc(sizeof(BgProgressCheck));
+			memset(bg_check_data, 0, sizeof(BgProgressCheck));
+			bg_check_data->split_pkg_data = pkg_data;
+			bg_check_data->archive_pkg_data = nullptr;
+			bg_check_data->task_id = task_id;
+			bg_check_data->hash = hash;
+			ret = pthread_create(&bk_install_thid, NULL, CheckBgInstallTaskThread, bg_check_data);
+			return 1;
+		}
+		ret = 1;
+	finish:
+		pkg_data->stop_write_thread = true;
+		pkg_data->split_file->Close();
+		pthread_join(pkg_data->thread, NULL);
+		delete(pkg_data->split_file);
+		delete(pkg_data->remote_client);
+		free(pkg_data);
+		RemoveSplitPkgInstallData(hash);
+		activity_inprogess = false;
+		file_transfering = false;
+		Windows::SetModalMode(false);
+		return ret;
+
+	}
 }

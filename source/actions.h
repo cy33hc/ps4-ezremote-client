@@ -120,6 +120,7 @@ namespace Actions
     void CreateLocalFile(char *filename);
     void CreateRemoteFile(char *filename);
     void *ExtractArchivePkg(void *argp);
+    void *DownloadSplitPkg(void *argp);
 }
 
 #endif

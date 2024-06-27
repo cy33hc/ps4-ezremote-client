@@ -122,6 +122,29 @@ int BaseClient::Get(const std::string &outputfile, const std::string &path, uint
     return 0;
 }
 
+int BaseClient::Get(SplitFile *split_file, const std::string &path, uint64_t offset)
+{
+    if (auto res = client->Get(GetFullPath(path),
+                               [&](const char *data, size_t data_length)
+                               {
+                                   if (!split_file->IsClosed())
+                                   {
+                                        split_file->Write((char*)data, data_length);
+                                        return true;
+                                   }
+                                   else
+                                        return false;
+                               }))
+    {
+        return 1;
+    }
+    else
+    {
+        sprintf(this->response, "%s", httplib::to_string(res.error()).c_str());
+    }
+    return 0;
+}
+
 int BaseClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset)
 {
     char range_header[64];

@@ -821,6 +821,18 @@ namespace Actions
         return NULL;
     }
 
+    void *DownloadSplitPkg(void *argp)
+    {
+        SplitPkgInstallData *install_data = (SplitPkgInstallData*) argp;
+        SplitFile *sp = install_data->split_file;
+
+        /* loop over file contents and write to fd */
+        sp->Open();
+        install_data->remote_client->Get(sp, install_data->path);
+        sp->Close();
+        return NULL;
+    }
+
     void *InstallLocalPkgsThread(void *argp)
     {
         int failed = 0;
