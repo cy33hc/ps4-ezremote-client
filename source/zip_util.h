@@ -10,7 +10,7 @@
 #include "common.h"
 #include "fs.h"
 
-#define ARCHIVE_TRANSFER_SIZE 5242880
+#define ARCHIVE_TRANSFER_SIZE 20971520
 
 static uint8_t MAGIC_ZIP_1[4] = {0x50, 0x4B, 0x03, 0x04};
 static uint8_t MAGIC_ZIP_2[4] = {0x50, 0x4B, 0x05, 0x06};
