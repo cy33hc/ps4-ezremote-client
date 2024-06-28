@@ -1322,8 +1322,9 @@ namespace HttpServer
                     SplitPkgInstallData *install_data = (SplitPkgInstallData*) malloc(sizeof(SplitPkgInstallData));
                     memset(install_data, 0, sizeof(SplitPkgInstallData));
 
-                    Util::ReplaceAll(hash, "/", "");
-                    std::string install_pkg_path = std::string(temp_folder) + "/" + hash;
+                    OrbisTick tick;
+                    sceRtcGetCurrentTick(&tick);
+                    std::string install_pkg_path = std::string(temp_folder) + "/" + std::to_string(tick.mytick) + ".pkg";
                     SplitFile *sp = new SplitFile(install_pkg_path, INSTALL_ARCHIVE_PKG_SPLIT_SIZE/2);
 
                     install_data->split_file = sp;
@@ -1331,6 +1332,7 @@ namespace HttpServer
                     install_data->path = path;
                     baseclient->Size(path, &install_data->size);
                     install_data->stop_write_thread = false;
+                    install_data->delete_client = true;
 
                     int ret = pthread_create(&install_data->thread, NULL, Actions::DownloadSplitPkg, install_data);
 

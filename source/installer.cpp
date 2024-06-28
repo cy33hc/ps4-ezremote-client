@@ -270,7 +270,8 @@ namespace INSTALLER
 			bg_check_data->split_pkg_data->split_file->Close();
 			pthread_join(bg_check_data->split_pkg_data->thread, NULL);
 			delete (bg_check_data->split_pkg_data->split_file);
-			delete (bg_check_data->split_pkg_data->remote_client);
+			if (bg_check_data->split_pkg_data->delete_client)
+				delete (bg_check_data->split_pkg_data->remote_client);
 			free(bg_check_data->split_pkg_data);
 			RemoveSplitPkgInstallData(bg_check_data->hash);
 			free(bg_check_data);
@@ -1160,7 +1161,8 @@ namespace INSTALLER
 		pkg_data->split_file->Close();
 		pthread_join(pkg_data->thread, NULL);
 		delete (pkg_data->split_file);
-		delete (pkg_data->remote_client);
+		if (pkg_data->delete_client)
+			delete (pkg_data->remote_client);
 		free(pkg_data);
 		RemoveSplitPkgInstallData(hash);
 		activity_inprogess = false;

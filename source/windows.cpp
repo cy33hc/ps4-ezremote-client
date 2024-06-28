@@ -455,6 +455,26 @@ namespace Windows
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
         }
+
+        ImGui::SameLine();
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
+        ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_ENABLE_DISK_CACHE]);
+        ImGui::SameLine();
+
+        if (ImGui::Checkbox("###enable_disk_cache", &remote_settings->enable_disk_cache))
+        {
+            CONFIG::SaveConfig();
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetNextWindowSize(ImVec2(450, 70));
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 440);
+            ImGui::Text("%s", lang_strings[STR_ENABLE_DISC_CACHE_MSG]);
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        }
+
         ImGui::PopStyleVar();
 
         ImGui::SameLine();

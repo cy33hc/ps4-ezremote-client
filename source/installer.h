@@ -137,6 +137,7 @@ struct SplitPkgInstallData
     int64_t size;
     pthread_t thread;
     bool stop_write_thread;
+    bool delete_client;
 };
 
 static pthread_t bk_install_thid;

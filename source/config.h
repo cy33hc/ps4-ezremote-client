@@ -57,6 +57,7 @@
 #define CONFIG_ENABLE_RPI "remote_server_enable_rpi"
 #define CONFIG_REMOTE_HTTP_SERVER_TYPE "remote_server_http_server_type"
 #define CONFIG_REMOTE_DEFAULT_DIRECTORY "remote_server_default_directory"
+#define CONFIG_REMOTE_ENABLE_DISK_CACHE "remote_server_enable_disk_cache"
 
 #define CONFIG_ALLDEBRID_API_KEY "alldebrid_api_key"
 #define CONFIG_REALDEBRID_API_KEY "realdebrid_api_key"
@@ -110,6 +111,7 @@ struct RemoteSettings
     char http_server_type[24];
     GoogleAccountInfo gg_account;
     char default_directory[256];
+    bool enable_disk_cache;
 };
 
 struct PackageUrlInfo

@@ -298,6 +298,9 @@ namespace CONFIG
             setting.enable_rpi = ReadBool(sites[i].c_str(), CONFIG_ENABLE_RPI, true);
             WriteBool(sites[i].c_str(), CONFIG_ENABLE_RPI, setting.enable_rpi);
 
+            setting.enable_disk_cache = ReadBool(sites[i].c_str(), CONFIG_REMOTE_ENABLE_DISK_CACHE, false);
+            WriteBool(sites[i].c_str(), CONFIG_REMOTE_ENABLE_DISK_CACHE, setting.enable_disk_cache);
+
             sprintf(setting.http_server_type, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_HTTP_SERVER_TYPE, HTTP_SERVER_APACHE));
             WriteString(sites[i].c_str(), CONFIG_REMOTE_HTTP_SERVER_TYPE, setting.http_server_type);
 
@@ -371,6 +374,7 @@ namespace CONFIG
         WriteString(last_site, CONFIG_REMOTE_SERVER_USER, remote_settings->username);
         WriteString(last_site, CONFIG_REMOTE_SERVER_PASSWORD, encrypted_text.c_str());
         WriteBool(last_site, CONFIG_ENABLE_RPI, remote_settings->enable_rpi);
+        WriteBool(last_site, CONFIG_REMOTE_ENABLE_DISK_CACHE, remote_settings->enable_disk_cache);
         WriteString(last_site, CONFIG_REMOTE_HTTP_SERVER_TYPE, remote_settings->http_server_type);
         WriteString(last_site, CONFIG_REMOTE_DEFAULT_DIRECTORY, remote_settings->default_directory);
         WriteString(CONFIG_GLOBAL, CONFIG_LAST_SITE, last_site);

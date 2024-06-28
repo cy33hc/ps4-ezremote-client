@@ -172,6 +172,8 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Temp Directory",																				  // STR_TEMP_DIRECTORY
 	"Real-Debrid",																					  // STR_REALDEBRID
 	"Package install is running in the background. Don't close the app while install is in progress", // STR_BACKGROUND_INSTALL_INPROGRESS
+	"Enable disk caching. Can improve package install speed in cases where connection to remote is slow",          // STR_ENABLE_DISC_CACHE_MSG
+	"DC",                                                                                             // STR_ENABLE_DISK_CACHE
 };
 
 bool needs_extended_font = false;
