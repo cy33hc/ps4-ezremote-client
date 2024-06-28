@@ -1,6 +1,6 @@
 #pragma once
 
-#include "clients/baseclient.h"
+#include "clients/remote_client.h"
 #include "zip_util.h"
 #include "split_file.h"
 #include "pthread.h"
@@ -132,7 +132,7 @@ struct ArchivePkgInstallData
 struct SplitPkgInstallData
 {
     SplitFile *split_file;
-    BaseClient *remote_client;
+    RemoteClient *remote_client;
     std::string path;
     int64_t size;
     pthread_t thread;

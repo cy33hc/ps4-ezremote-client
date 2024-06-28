@@ -332,6 +332,34 @@ int GDriveClient::Get(const std::string &outputfile, const std::string &path, ui
     return 0;
 }
 
+int GDriveClient::Get(SplitFile *split_file, const std::string &path, uint64_t offset)
+{
+    std::string id = GetValue(path_id_map, path);
+    std::string drive_id = GetDriveId(path);
+    std::string url = std::string("/drive/v3/files/") + BaseClient::Escape(id) + "?alt=media";
+    if (!drive_id.empty())
+        url += "&supportsAllDrives=true";
+    if (auto res = client->Get(url,
+                               [&](const char *data, size_t data_length)
+                               {
+                                   if (!split_file->IsClosed())
+                                   {
+                                        split_file->Write((char*)data, data_length);
+                                        return true;
+                                   }
+                                   else
+                                        return false;
+                               }))
+    {
+        return 1;
+    }
+    else
+    {
+        sprintf(this->response, "%s", httplib::to_string(res.error()).c_str());
+    }
+    return 0;
+}
+
 int GDriveClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset)
 {
     size_t bytes_read = 0;

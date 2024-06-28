@@ -881,6 +881,32 @@ int FtpClient::FtpXfer(const std::string &localfile, const std::string &path, ft
 }
 
 /*
+ * FtpXfer - issue a command and transfer data
+ *
+ * return 1 if successful, 0 otherwise
+ */
+int FtpClient::FtpXfer(SplitFile *split_file, const std::string &path, ftphandle *nControl, accesstype type, transfermode mode)
+{
+	int l, c;
+	char *dbuf;
+	ftphandle *nData;
+
+	if (!FtpAccess(path, type, mode, nControl, &nData))
+	{
+		return 0;
+	}
+
+	dbuf = static_cast<char *>(malloc(FTP_CLIENT_BUFSIZ));
+	while ((l = FtpRead(dbuf, FTP_CLIENT_BUFSIZ, nData)) > 0)
+	{
+		split_file->Write(dbuf, l);
+	}
+
+	free(dbuf);
+	return FtpClose(nData);
+}
+
+/*
  * FtpWrite - write to a data connection
  */
 int FtpClient::FtpWrite(void *buf, int len, ftphandle *nData)
@@ -1281,6 +1307,15 @@ int FtpClient::Get(const std::string &outputfile, const std::string &path, uint6
 		return FtpXfer(outputfile, path, mp_ftphandle, FtpClient::fileread, FtpClient::transfermode::image);
 	else
 		return FtpXfer(outputfile, path, mp_ftphandle, FtpClient::filereadappend, FtpClient::transfermode::image);
+}
+
+int FtpClient::Get(SplitFile *split_file, const std::string &path, uint64_t offset)
+{
+	mp_ftphandle->offset = offset;
+	if (offset == 0)
+		return FtpXfer(split_file, path, mp_ftphandle, FtpClient::fileread, FtpClient::transfermode::image);
+	else
+		return FtpXfer(split_file, path, mp_ftphandle, FtpClient::filereadappend, FtpClient::transfermode::image);
 }
 
 int FtpClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset)
@@ -1787,7 +1822,7 @@ int FtpClient::Head(const std::string &path, void *buffer, uint64_t len)
 
 void *FtpClient::Open(const std::string &path, int flags)
 {
-    return nullptr;
+	return nullptr;
 }
 
 void FtpClient::Close(void *fp)
@@ -1796,10 +1831,10 @@ void FtpClient::Close(void *fp)
 
 int FtpClient::GetRange(void *fp, DataSink &sink, uint64_t size, uint64_t offset)
 {
-    return -1;
+	return -1;
 }
 
 int FtpClient::GetRange(void *fp, void *buffer, uint64_t size, uint64_t offset)
 {
-    return -1;
+	return -1;
 }
