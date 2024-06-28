@@ -26,8 +26,8 @@
 
 struct BgProgressCheck
 {
-	ArchivePkgInstallData* archive_pkg_data;
-	SplitPkgInstallData* split_pkg_data;
+	ArchivePkgInstallData *archive_pkg_data;
+	SplitPkgInstallData *split_pkg_data;
 	int task_id;
 	std::string hash;
 };
@@ -109,22 +109,22 @@ namespace INSTALLER
 		s_bgft_initialized = false;
 	}
 
-    std::string GetRemotePkgTitle(RemoteClient *client, const std::string &path, pkg_header *header)
-    {
+	std::string GetRemotePkgTitle(RemoteClient *client, const std::string &path, pkg_header *header)
+	{
 		size_t entry_count = BE32(header->pkg_entry_count);
 		uint32_t entry_table_offset = BE32(header->pkg_table_offset);
 		uint64_t entry_table_size = entry_count * sizeof(pkg_table_entry);
 		void *entry_table_data = malloc(entry_table_size);
 
-        int ret = client->GetRange(path, entry_table_data, entry_table_size, entry_table_offset);
-        if (ret == 0)
-        {
-            free(entry_table_data);
-            return "";
-        }
+		int ret = client->GetRange(path, entry_table_data, entry_table_size, entry_table_offset);
+		if (ret == 0)
+		{
+			free(entry_table_data);
+			return "";
+		}
 
 		pkg_table_entry *entries = (pkg_table_entry *)entry_table_data;
-		void* param_sfo_data = nullptr;
+		void *param_sfo_data = nullptr;
 		uint32_t param_sfo_offset = 0;
 		uint32_t param_sfo_size = 0;
 		for (size_t i = 0; i < entry_count; ++i)
@@ -134,7 +134,7 @@ namespace INSTALLER
 				param_sfo_offset = BE32(entries[i].offset);
 				param_sfo_size = BE32(entries[i].size);
 				break;
-            }
+			}
 		}
 		free(entry_table_data);
 
@@ -142,10 +142,10 @@ namespace INSTALLER
 		if (param_sfo_offset > 0 && param_sfo_size > 0)
 		{
 			param_sfo_data = malloc(param_sfo_size);
-            int ret = client->GetRange(path, param_sfo_data, param_sfo_size, param_sfo_offset);
-            if (ret)
+			int ret = client->GetRange(path, param_sfo_data, param_sfo_size, param_sfo_offset);
+			if (ret)
 			{
-				const char* tmp_title = SFO::GetString((const char*)param_sfo_data, param_sfo_size, "TITLE");
+				const char *tmp_title = SFO::GetString((const char *)param_sfo_data, param_sfo_size, "TITLE");
 				if (tmp_title != nullptr)
 					title = std::string(tmp_title);
 			}
@@ -153,7 +153,7 @@ namespace INSTALLER
 		}
 
 		return title;
-    }
+	}
 
 	std::string GetLocalPkgTitle(const std::string &path, pkg_header *header)
 	{
@@ -167,7 +167,7 @@ namespace INSTALLER
 		FS::Read(fd, entry_table_data, entry_table_size);
 
 		pkg_table_entry *entries = (pkg_table_entry *)entry_table_data;
-		void* param_sfo_data = NULL;
+		void *param_sfo_data = NULL;
 		uint32_t param_sfo_offset = 0;
 		uint32_t param_sfo_size = 0;
 		void *icon0_png_data = NULL;
@@ -190,7 +190,7 @@ namespace INSTALLER
 			param_sfo_data = malloc(param_sfo_size);
 			FS::Seek(fd, param_sfo_offset);
 			FS::Read(fd, param_sfo_data, param_sfo_size);
-			const char* tmp_title = SFO::GetString((const char*)param_sfo_data, param_sfo_size, "TITLE");
+			const char *tmp_title = SFO::GetString((const char *)param_sfo_data, param_sfo_size, "TITLE");
 			if (tmp_title != nullptr)
 				title = std::string(tmp_title);
 			free(param_sfo_data);
@@ -221,8 +221,8 @@ namespace INSTALLER
 		}
 		else
 		{
-			std::string encoded_path =  httplib::detail::encode_url(path);
-			std::string encoded_site_name =  httplib::detail::encode_url(remote_settings->site_name);
+			std::string encoded_path = httplib::detail::encode_url(path);
+			std::string encoded_site_name = httplib::detail::encode_url(remote_settings->site_name);
 			std::string full_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst/" + encoded_site_name + encoded_path;
 			return full_url;
 		}
@@ -234,7 +234,7 @@ namespace INSTALLER
 	{
 		bool completed = false;
 		OrbisBgftTaskProgress progress_info;
-		BgProgressCheck *bg_check_data = (BgProgressCheck*) argp;
+		BgProgressCheck *bg_check_data = (BgProgressCheck *)argp;
 		int ret;
 
 		while (!completed)
@@ -259,7 +259,7 @@ namespace INSTALLER
 		{
 			bg_check_data->archive_pkg_data->stop_write_thread = true;
 			pthread_join(bg_check_data->archive_pkg_data->thread, NULL);
-			delete(bg_check_data->archive_pkg_data->split_file);
+			delete (bg_check_data->archive_pkg_data->split_file);
 			free(bg_check_data->archive_pkg_data);
 			RemoveArchivePkgInstallData(bg_check_data->hash);
 			free(bg_check_data);
@@ -269,8 +269,8 @@ namespace INSTALLER
 			bg_check_data->split_pkg_data->stop_write_thread = true;
 			bg_check_data->split_pkg_data->split_file->Close();
 			pthread_join(bg_check_data->split_pkg_data->thread, NULL);
-			delete(bg_check_data->split_pkg_data->split_file);
-			delete(bg_check_data->split_pkg_data->remote_client);
+			delete (bg_check_data->split_pkg_data->split_file);
+			delete (bg_check_data->split_pkg_data->remote_client);
 			free(bg_check_data->split_pkg_data);
 			RemoveSplitPkgInstallData(bg_check_data->hash);
 			free(bg_check_data);
@@ -411,7 +411,7 @@ namespace INSTALLER
 				ret = sceBgftServiceDownloadGetProgress(task_id, &progress_info);
 				if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
 					return 0;
-				
+
 				if (progress_info.length > 0)
 				{
 					completed = progress_info.transferred == progress_info.length;
@@ -423,7 +423,7 @@ namespace INSTALLER
 		}
 		else
 		{
-			BgProgressCheck *bg_check_data = (BgProgressCheck*) malloc(sizeof(BgProgressCheck));
+			BgProgressCheck *bg_check_data = (BgProgressCheck *)malloc(sizeof(BgProgressCheck));
 			memset(bg_check_data, 0, sizeof(BgProgressCheck));
 			bg_check_data->archive_pkg_data = nullptr;
 			bg_check_data->split_pkg_data = nullptr;
@@ -532,13 +532,13 @@ namespace INSTALLER
 	{
 		int ret;
 		bool completed = false;
-		
+
 		if (strncmp(path.c_str(), "/data/", 6) != 0 &&
 			strncmp(path.c_str(), "/user/data/", 11) != 0 &&
 			strncmp(path.c_str(), "/mnt/usb", 8) != 0)
 			return -1;
 
-		std::string filename = path.substr(path.find_last_of("/")+1);
+		std::string filename = path.substr(path.find_last_of("/") + 1);
 		char filepath[1024];
 		snprintf(filepath, 1023, "%s", path.c_str());
 		if (strncmp(path.c_str(), "/data/", 6) == 0)
@@ -658,7 +658,7 @@ namespace INSTALLER
 		FS::Read(fd, entry_table_data, entry_table_size);
 
 		pkg_table_entry *entries = (pkg_table_entry *)entry_table_data;
-		void* param_sfo_data = NULL;
+		void *param_sfo_data = NULL;
 		uint32_t param_sfo_offset = 0;
 		uint32_t param_sfo_size = 0;
 		void *icon0_png_data = NULL;
@@ -729,7 +729,7 @@ namespace INSTALLER
 			return false;
 
 		pkg_table_entry *entries = (pkg_table_entry *)entry_table_data;
-		void* param_sfo_data = NULL;
+		void *param_sfo_data = NULL;
 		uint32_t param_sfo_offset = 0;
 		uint32_t param_sfo_size = 0;
 		void *icon0_png_data = NULL;
@@ -797,7 +797,7 @@ namespace INSTALLER
 
 	void AddArchivePkgInstallData(const std::string &hash, ArchivePkgInstallData *pkg_data)
 	{
-		std::pair<std::string, ArchivePkgInstallData*> pair = std::make_pair(hash, pkg_data);
+		std::pair<std::string, ArchivePkgInstallData *> pair = std::make_pair(hash, pkg_data);
 		archive_pkg_install_data_list.erase(hash);
 		archive_pkg_install_data_list.insert(pair);
 	}
@@ -807,10 +807,10 @@ namespace INSTALLER
 		archive_pkg_install_data_list.erase(hash);
 	}
 
-	bool InstallArchivePkg(const std::string &path, ArchivePkgInstallData* pkg_data, bool bg)
+	bool InstallArchivePkg(const std::string &path, ArchivePkgInstallData *pkg_data, bool bg)
 	{
 		pkg_header header;
-		pkg_data->split_file->Read((char*)&header, sizeof(pkg_header), 0);
+		pkg_data->split_file->Read((char *)&header, sizeof(pkg_header), 0);
 
 		int ret;
 		std::string cid = std::string((char *)header.pkg_content_id);
@@ -958,7 +958,7 @@ namespace INSTALLER
 		}
 		else
 		{
-			BgProgressCheck *bg_check_data = (BgProgressCheck*) malloc(sizeof(BgProgressCheck));
+			BgProgressCheck *bg_check_data = (BgProgressCheck *)malloc(sizeof(BgProgressCheck));
 			memset(bg_check_data, 0, sizeof(BgProgressCheck));
 			bg_check_data->archive_pkg_data = pkg_data;
 			bg_check_data->split_pkg_data = nullptr;
@@ -971,11 +971,10 @@ namespace INSTALLER
 	finish:
 		pkg_data->stop_write_thread = true;
 		pthread_join(pkg_data->thread, NULL);
-		delete(pkg_data->split_file);
+		delete (pkg_data->split_file);
 		free(pkg_data);
 		RemoveArchivePkgInstallData(hash);
 		return ret;
-
 	}
 
 	SplitPkgInstallData *GetSplitPkgInstallData(const std::string &hash)
@@ -985,7 +984,7 @@ namespace INSTALLER
 
 	void AddSplitPkgInstallData(const std::string &hash, SplitPkgInstallData *pkg_data)
 	{
-		std::pair<std::string, SplitPkgInstallData*> pair = std::make_pair(hash, pkg_data);
+		std::pair<std::string, SplitPkgInstallData *> pair = std::make_pair(hash, pkg_data);
 		split_pkg_install_data_list.erase(hash);
 		split_pkg_install_data_list.insert(pair);
 	}
@@ -995,10 +994,10 @@ namespace INSTALLER
 		split_pkg_install_data_list.erase(hash);
 	}
 
-	bool InstallSplitPkg(const std::string &path, SplitPkgInstallData* pkg_data, bool bg)
+	bool InstallSplitPkg(const std::string &path, SplitPkgInstallData *pkg_data, bool bg)
 	{
 		pkg_header header;
-		pkg_data->split_file->Read((char*)&header, sizeof(pkg_header), 0);
+		pkg_data->split_file->Read((char *)&header, sizeof(pkg_header), 0);
 
 		int ret;
 		std::string cid = std::string((char *)header.pkg_content_id);
@@ -1146,7 +1145,7 @@ namespace INSTALLER
 		}
 		else
 		{
-			BgProgressCheck *bg_check_data = (BgProgressCheck*) malloc(sizeof(BgProgressCheck));
+			BgProgressCheck *bg_check_data = (BgProgressCheck *)malloc(sizeof(BgProgressCheck));
 			memset(bg_check_data, 0, sizeof(BgProgressCheck));
 			bg_check_data->split_pkg_data = pkg_data;
 			bg_check_data->archive_pkg_data = nullptr;
@@ -1160,14 +1159,13 @@ namespace INSTALLER
 		pkg_data->stop_write_thread = true;
 		pkg_data->split_file->Close();
 		pthread_join(pkg_data->thread, NULL);
-		delete(pkg_data->split_file);
-		delete(pkg_data->remote_client);
+		delete (pkg_data->split_file);
+		delete (pkg_data->remote_client);
 		free(pkg_data);
 		RemoveSplitPkgInstallData(hash);
 		activity_inprogess = false;
 		file_transfering = false;
 		Windows::SetModalMode(false);
 		return ret;
-
 	}
 }

@@ -19,6 +19,7 @@ public:
     int Copy(const std::string &from, const std::string &to);
     int Move(const std::string &from, const std::string &to);
     int Put(const std::string &inputfile, const std::string &path, uint64_t offset = 0);
+    int Size(const std::string &path, int64_t *size);
     std::vector<DirEntry> ListDir(const std::string &path);
     ClientType clientType();
     uint32_t SupportedActions();

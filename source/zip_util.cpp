@@ -290,7 +290,7 @@ namespace ZipUtil
     static int extract2fd(struct archive *a, const std::string &pathname, int fd)
     {
         ssize_t len;
-        unsigned char *buffer = (unsigned char *) malloc(ARCHIVE_TRANSFER_SIZE);
+        unsigned char *buffer = (unsigned char *)malloc(ARCHIVE_TRANSFER_SIZE);
         bytes_transfered = 0;
         sceRtcGetCurrentTick(&prev_tick);
 
@@ -312,7 +312,7 @@ namespace ZipUtil
                 return 0;
             }
             bytes_transfered += len;
-            
+
             if (write(fd, buffer, len) != len)
             {
                 sprintf(status_message, "error write('%s')", pathname.c_str());
@@ -479,7 +479,7 @@ namespace ZipUtil
             ret = data->client->GetRange((data->fp), data->buf, to_read, data->offset);
         else
             ret = data->client->GetRange(data->path, data->buf, to_read, data->offset);
-        
+
         if (ret == 0)
             return -1;
         data->offset = data->offset + to_read;
@@ -521,7 +521,7 @@ namespace ZipUtil
         return data->offset;
     }
 
-    int64_t	SkipRemoteArchive(struct archive *, void *client_data, int64_t request)
+    int64_t SkipRemoteArchive(struct archive *, void *client_data, int64_t request)
     {
         RemoteArchiveData *data = (RemoteArchiveData *)client_data;
 
@@ -529,7 +529,7 @@ namespace ZipUtil
 
         return request;
     }
-    
+
     /*
      * Main loop: open the zipfile, iterate over its contents and decide what
      * to do with each entry.
@@ -672,7 +672,9 @@ namespace ZipUtil
             }
 
             if (ret == ARCHIVE_EOF)
+            {
                 break;
+            }
 
             if ((pathname = pathdup(archive_entry_pathname(e))) == NULL)
             {

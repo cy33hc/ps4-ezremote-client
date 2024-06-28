@@ -10,10 +10,10 @@
 #include "windows.h"
 
 using httplib::Client;
+using httplib::ContentProvider;
 using httplib::Headers;
 using httplib::Progress;
 using httplib::Result;
-using httplib::ContentProvider;
 
 static const char *months[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
@@ -41,6 +41,50 @@ Result WebDAVClient::PropFind(const std::string &path, int depth)
     req.progress = Progress();
 
     return client->send(req);
+}
+
+int WebDAVClient::Size(const std::string &path, int64_t *size)
+{
+    std::string encoded_path = httplib::detail::encode_url(GetFullPath(path));
+    if (auto res = PropFind(encoded_path, 0))
+    {
+        if (HTTP_SUCCESS(res->status))
+        {
+            pugi::xml_document document;
+            document.load_buffer(res->body.c_str(), res->body.length());
+            auto multistatus = document.select_node("*[local-name()='multistatus']").node();
+            auto responses = multistatus.select_nodes("*[local-name()='response']");
+            for (auto response : responses)
+            {
+                pugi::xml_node href = response.node().select_node("*[local-name()='href']").node();
+                std::string resource_path = httplib::detail::decode_url(href.first_child().value(), true);
+
+                auto target_path_without_sep = GetFullPath(path);
+                if (!target_path_without_sep.empty() && target_path_without_sep.back() == '/')
+                    target_path_without_sep.resize(target_path_without_sep.length() - 1);
+                auto resource_path_without_sep = resource_path.erase(resource_path.find_last_not_of('/') + 1);
+                size_t pos = resource_path_without_sep.find(this->host_url);
+                if (pos != std::string::npos)
+                    resource_path_without_sep.erase(pos, this->host_url.length());
+
+                if (resource_path_without_sep != target_path_without_sep)
+                    continue;
+
+                auto propstat = response.node().select_node("*[local-name()='propstat']").node();
+                auto prop = propstat.select_node("*[local-name()='prop']").node();
+                std::string content_length = prop.select_node("*[local-name()='getcontentlength']").node().first_child().value();
+
+                *size = std::strtoll(content_length.c_str(), nullptr, 10);
+                return 1;
+            }
+        }
+    }
+    else
+    {
+        sprintf(this->response, "%s", httplib::to_string(res.error()).c_str());
+    }
+
+    return 0;
 }
 
 std::vector<DirEntry> WebDAVClient::ListDir(const std::string &path)
@@ -152,12 +196,11 @@ int WebDAVClient::Put(const std::string &inputfile, const std::string &path, uin
     size_t bytes_remaining = FS::GetSize(inputfile);
     bytes_transfered = 0;
     sceRtcGetCurrentTick(&prev_tick);
-    
-    FILE* in = FS::OpenRead(inputfile);
 
-    if (auto res = client->Put(GetFullPath(path),
-        [&](size_t offset, DataSink &sink)
-        {
+    FILE *in = FS::OpenRead(inputfile);
+
+    if (auto res = client->Put(GetFullPath(path), [&](size_t offset, DataSink &sink)
+                               {
             size_t buf_size = MIN(bytes_remaining, CPPHTTPLIB_RECV_BUFSIZ);
             char* buf = (char*) malloc(buf_size);
             FS::Seek(in, offset);
@@ -171,9 +214,7 @@ int WebDAVClient::Put(const std::string &inputfile, const std::string &path, uin
             }
             sink.done();
             free(buf);
-            return true;
-        },
-        "application/octet-stream"))
+            return true; }, "application/octet-stream"))
     {
         if (HTTP_SUCCESS(res->status))
         {
@@ -230,15 +271,14 @@ int WebDAVClient::Delete(const std::string &path)
         if (HTTP_SUCCESS(res->status))
             return 1;
     }
-    
-    return 0;
 
+    return 0;
 }
 
 int WebDAVClient::Copy(const std::string &from, const std::string &to)
 {
     Request req;
-    Headers header = {{"Accept", "*/*"}, {"Destination", httplib::detail::encode_url(GetFullPath(to)) }};
+    Headers header = {{"Accept", "*/*"}, {"Destination", httplib::detail::encode_url(GetFullPath(to))}};
 
     req.method = "COPY";
     req.path = httplib::detail::encode_url(GetFullPath(from));
@@ -257,7 +297,7 @@ int WebDAVClient::Copy(const std::string &from, const std::string &to)
 int WebDAVClient::Move(const std::string &from, const std::string &to)
 {
     Request req;
-    Headers header = {{"Accept", "*/*"}, {"Destination", httplib::detail::encode_url(GetFullPath(to)) }};
+    Headers header = {{"Accept", "*/*"}, {"Destination", httplib::detail::encode_url(GetFullPath(to))}};
 
     req.method = "MOVE";
     req.path = httplib::detail::encode_url(GetFullPath(from));
