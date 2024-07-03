@@ -1343,7 +1343,6 @@ namespace HttpServer
                         failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
                         activity_inprogess = false;
                         file_transfering = false;
-                        free(install_data);
                         Windows::SetModalMode(false);
                         return;
                     }
