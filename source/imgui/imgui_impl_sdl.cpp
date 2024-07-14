@@ -84,6 +84,8 @@
 #define BUTTON_RIGHT 0x00000020
 #define BUTTON_UP 0x00000040
 #define BUTTON_DOWN 0x00000080
+#define BUTTON_C 0x00000100
+#define BUTTON_D 0x00000200
 
 static uint32_t previous_down = 0;
 static int repeat_count = 0;
@@ -531,8 +533,15 @@ static void ImGui_ImplSDL2_UpdateGamepads()
         down |= BUTTON_DOWN;
     else if (SDL_GameControllerGetAxis(game_controller, SDL_CONTROLLER_AXIS_LEFTY)  < -ANALOG_THRESHOLD)
         down |= BUTTON_UP;
+    else if (SDL_GameControllerGetAxis(game_controller, SDL_CONTROLLER_AXIS_TRIGGERLEFT) > ANALOG_THRESHOLD)
+        down |= BUTTON_C;
+    else if (SDL_GameControllerGetAxis(game_controller, SDL_CONTROLLER_AXIS_TRIGGERRIGHT) > ANALOG_THRESHOLD)
+        down |= BUTTON_D;
 
     uint32_t pressed = down & ~previous_down;
+    io.AddKeyEvent(ImGuiKey_C, (pressed & BUTTON_C) != 0);
+    io.AddKeyEvent(ImGuiKey_D, (pressed & BUTTON_D) != 0);
+
     if (previous_down == down)
     {
         uint64_t delay = 300;

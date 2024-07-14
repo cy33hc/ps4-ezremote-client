@@ -467,9 +467,9 @@ namespace Windows
         }
         if (ImGui::IsItemHovered())
         {
-            ImGui::SetNextWindowSize(ImVec2(450, 70));
+            ImGui::SetNextWindowSize(ImVec2(550, 85));
             ImGui::BeginTooltip();
-            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 440);
+            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 540);
             ImGui::Text("%s", lang_strings[STR_ENABLE_DISC_CACHE_MSG]);
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
@@ -876,6 +876,23 @@ namespace Windows
         ImGui::Columns(1);
         ImGui::EndChild();
         EndGroupPanel();
+
+        if (ImGui::IsKeyPressed(ImGuiKey_C) && !paused)
+        {
+            if (selected_browser & LOCAL_BROWSER)
+            {
+                selected_local_file = local_files[0];
+                selected_action = ACTION_CHANGE_LOCAL_DIRECTORY;
+            }
+            else if (selected_browser & REMOTE_BROWSER)
+            {
+                if (remoteclient != nullptr && remote_files.size() > 0)
+                {
+                    selected_remote_file = remote_files[0];
+                    selected_action = ACTION_CHANGE_REMOTE_DIRECTORY;
+                }
+            }
+        }
     }
 
     void StatusPanel()
