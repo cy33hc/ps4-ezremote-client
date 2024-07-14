@@ -25,6 +25,7 @@ add_executable(ezremote_client
   source/http/httplib.cpp
   source/clients/baseclient.cpp
   source/clients/apache.cpp
+  source/clients/archiveorg.cpp
   source/clients/ftpclient.cpp
   source/clients/gdrive.cpp
   source/clients/iis.cpp

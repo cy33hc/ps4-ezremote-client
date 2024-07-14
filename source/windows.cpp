@@ -2593,6 +2593,10 @@ namespace Windows
         if (ime_result == IME_DIALOG_RESULT_FINISHED)
         {
             CONFIG::SetClientType(remote_settings);
+            if (strncasecmp(remote_settings->server, "https://archive.org/", 20) == 0)
+            {
+                sprintf(remote_settings->http_server_type, "%s", HTTP_SERVER_ARCHIVEORG);
+            }
         }
     }
 

@@ -10,6 +10,7 @@
 #include "clients/nfsclient.h"
 #include "clients/webdav.h"
 #include "clients/apache.h"
+#include "clients/archiveorg.h"
 #include "clients/iis.h"
 #include "clients/nginx.h"
 #include "clients/npxserve.h"
@@ -249,6 +250,8 @@ namespace HttpServer
                 tmp_client = new NpxServeClient();
             else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_RCLONE) == 0)
                 tmp_client = new RCloneClient();
+            else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_ARCHIVEORG) == 0)
+                tmp_client = new ArchiveOrgClient();
         }
 
         if (tmp_client->clientType() != CLIENT_TYPE_GOOGLE)
