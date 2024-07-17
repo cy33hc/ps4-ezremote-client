@@ -327,11 +327,13 @@ namespace Windows
         if (ImGui::BeginCombo("##Site", display_site, ImGuiComboFlags_PopupAlignLeft | ImGuiComboFlags_HeightLargest | ImGuiComboFlags_NoArrowButton))
         {
             static char site_id[64];
+            static char site_display[512];
             for (int n = 0; n < sites.size(); n++)
             {
                 const bool is_selected = strcmp(sites[n].c_str(), last_site) == 0;
                 sprintf(site_id, "%s %d", lang_strings[STR_SITE], n + 1);
-                if (ImGui::Selectable(site_id, is_selected))
+                sprintf(site_display, "%s %d - %s", lang_strings[STR_SITE], n + 1, site_settings[sites[n]].server);
+                if (ImGui::Selectable(site_display, is_selected))
                 {
                     sprintf(last_site, "%s", sites[n].c_str());
                     sprintf(display_site, "%s", site_id);
