@@ -332,7 +332,7 @@ namespace Windows
             {
                 const bool is_selected = strcmp(sites[n].c_str(), last_site) == 0;
                 sprintf(site_id, "%s %d", lang_strings[STR_SITE], n + 1);
-                sprintf(site_display, "%s %d - %s", lang_strings[STR_SITE], n + 1, site_settings[sites[n]].server);
+                sprintf(site_display, "%s %d    %s", lang_strings[STR_SITE], n + 1, site_settings[sites[n]].server);
                 if (ImGui::Selectable(site_display, is_selected))
                 {
                     sprintf(last_site, "%s", sites[n].c_str());
