@@ -2599,6 +2599,10 @@ namespace Windows
             {
                 sprintf(remote_settings->http_server_type, "%s", HTTP_SERVER_ARCHIVEORG);
             }
+            else if (strncasecmp(remote_settings->server, "https://myrient.erista.me/", 26) == 0)
+            {
+                sprintf(remote_settings->http_server_type, "%s", HTTP_SERVER_MYRIENT);
+            }
         }
     }
 

@@ -5,7 +5,7 @@
 #include <map>
 #include "common.h"
 #include "clients/remote_client.h"
-#include "clients/archiveorg.h"
+#include "clients/myrient.h"
 #include "lang.h"
 #include "util.h"
 #include "system.h"
@@ -17,7 +17,7 @@ using httplib::Result;
 
 static std::map<std::string, int> month_map = {{"Jan", 1}, {"Feb", 2}, {"Mar", 3}, {"Apr", 4}, {"May", 5}, {"Jun", 6}, {"Jul", 7}, {"Aug", 8}, {"Sep", 9}, {"Oct", 10}, {"Nov", 11}, {"Dec", 12}};
 
-std::vector<DirEntry> ArchiveOrgClient::ListDir(const std::string &path)
+std::vector<DirEntry> MyrientClient::ListDir(const std::string &path)
 {
     std::vector<DirEntry> out;
     DirEntry entry;
@@ -81,9 +81,9 @@ std::vector<DirEntry> ArchiveOrgClient::ListDir(const std::string &path)
         for (size_t i = 0; i < lxb_dom_collection_length(table_collection); i++)
         {
             table_element = lxb_dom_collection_element(table_collection, i);
-            value = lxb_dom_element_class(table_element, &value_len);
+            value = lxb_dom_element_id(table_element, &value_len);
             tmp_string = std::string((const char *)value, value_len);
-            if (tmp_string.compare("directory-listing-table") == 0)
+            if (tmp_string.compare("list") == 0)
                 break;
             table_element = nullptr;
         }
@@ -156,8 +156,50 @@ std::vector<DirEntry> ArchiveOrgClient::ListDir(const std::string &path)
                 sprintf(entry.path, "%s/%s", path.c_str(), entry.name);
             }
 
-            // next td contains the date
+            // next td contains file size, if fize size is "-", then it's a directory
             td_element = lxb_dom_collection_element(td_collection, 1);
+            value = lxb_dom_node_text_content(NextChildTextNode(td_element), &value_len);
+            tmp_string = std::string((const char *)value, value_len);
+
+            if (tmp_string.compare("-") == 0)
+            {
+                entry.isDir = true;
+                entry.selectable = true;
+                entry.file_size = 0;
+                sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
+            }
+            else
+            {
+                entry.isDir = false;
+                entry.selectable = true;
+                uint64_t multiplier = 1;
+                std::vector<std::string> fsize_parts = Util::Split(tmp_string, " ");
+
+                float fsize = std::stof(fsize_parts[0]);
+
+                if (fsize_parts.size() > 1)
+                {
+                    switch (fsize_parts[1][0])
+                    {
+                        case 'K':
+                            multiplier = 1024;
+                            break;
+                        case 'M':
+                            multiplier = 1048576;
+                            break;
+                        case 'G':
+                            multiplier = 1073741824;
+                            break;
+                        default:
+                            multiplier = 1;
+                    }
+                }
+                entry.file_size = fsize * multiplier;
+                DirEntry::SetDisplaySize(&entry);
+            }
+
+            // next td contains the date
+            td_element = lxb_dom_collection_element(td_collection, 2);
             value = lxb_dom_node_text_content(NextChildTextNode(td_element), &value_len);
             tmp_string = std::string((const char *)value, value_len);
             std::vector<std::string> date_time = Util::Split(tmp_string, " ");
@@ -178,46 +220,6 @@ std::vector<DirEntry> ArchiveOrgClient::ListDir(const std::string &path)
                     entry.modified.hours = atoi(atime[0].c_str());
                     entry.modified.minutes = atoi(atime[1].c_str());
                 }
-            }
-
-            // next td contains file size, if fize size is "-", then it's a directory
-            td_element = lxb_dom_collection_element(td_collection, 2);
-            value = lxb_dom_node_text_content(NextChildTextNode(td_element), &value_len);
-            tmp_string = std::string((const char *)value, value_len);
-
-            if (tmp_string.compare("-") == 0)
-            {
-                entry.isDir = true;
-                entry.selectable = true;
-                entry.file_size = 0;
-                sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
-            }
-            else
-            {
-                entry.isDir = false;
-                entry.selectable = true;
-                uint64_t multiplier = 0;
-                std::string size_formatted = tmp_string.substr(0, tmp_string.size()-1);
-                Util::ReplaceAll(size_formatted, ",", "");
-                float fsize = std::stof(size_formatted);
-                switch (tmp_string[tmp_string.size()-1]) {
-                    case 'B':
-                        multiplier = 1;
-                        break;
-                    case 'K':
-                        multiplier = 1024;
-                        break;
-                    case 'M':
-                        multiplier = 1048576;
-                        break;
-                    case 'G':
-                        multiplier = 1073741824;
-                        break;
-                    default:
-                        multiplier = 1;
-                }
-                entry.file_size = fsize * multiplier;
-                DirEntry::SetDisplaySize(&entry);
             }
 
             lxb_dom_collection_destroy(td_collection, true);

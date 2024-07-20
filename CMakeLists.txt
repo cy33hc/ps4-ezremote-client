@@ -28,6 +28,7 @@ add_executable(ezremote_client
   source/clients/archiveorg.cpp
   source/clients/ftpclient.cpp
   source/clients/gdrive.cpp
+  source/clients/myrient.cpp
   source/clients/iis.cpp
   source/clients/nginx.cpp
   source/clients/npxserve.cpp

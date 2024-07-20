@@ -90,6 +90,27 @@ int BaseClient::Size(const std::string &path, int64_t *size)
                 *size = atoll(content_length.c_str());
             return 1;
         }
+        else // Server doesn't support HEAD request. Try get range with 0 bytes and grab size from the response header 
+             // example: Content-Range: bytes 0-10/4372785
+        {
+            Headers headers = {{"Range", "bytes=0-1"}};
+            if (auto range_res = client->Get(GetFullPath(path), headers))
+            {
+                if (HTTP_SUCCESS(range_res->status))
+                {
+                    if (range_res->has_header("Content-Range"))
+                    {
+                        std::string range = range_res->get_header_value("Content-Range");
+                        std::vector<std::string> range_parts = Util::Split(range, "/");
+                        if (range_parts.size() == 2)
+                        {
+                            *size = atoll(range_parts[1].c_str());
+                            return 1;
+                        }
+                    }
+                }
+            }
+        }
     }
     else
     {

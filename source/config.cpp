@@ -159,7 +159,7 @@ namespace CONFIG
                   "Hungarian", "Indonesian", "Italiano", "Japanese", "Korean", "Polish", "Portuguese_BR", "Russian", "Romanian", "Ryukyuan", "Spanish", "Turkish",
                   "Simplified Chinese", "Traditional Chinese", "Thai", "Ukrainian"};
 
-        http_servers = {HTTP_SERVER_APACHE, HTTP_SERVER_MS_IIS, HTTP_SERVER_NGINX, HTTP_SERVER_NPX_SERVE, HTTP_SERVER_RCLONE, HTTP_SERVER_ARCHIVEORG};
+        http_servers = {HTTP_SERVER_APACHE, HTTP_SERVER_MS_IIS, HTTP_SERVER_NGINX, HTTP_SERVER_NPX_SERVE, HTTP_SERVER_RCLONE, HTTP_SERVER_ARCHIVEORG, HTTP_SERVER_MYRIENT};
         text_file_extensions = { ".txt", ".ini", ".log", ".json", ".xml", ".html", ".xhtml", ".conf", ".config" };
         image_file_extensions = { ".bmp", ".jpg", ".jpeg", ".png", ".webp" };
 
