@@ -172,8 +172,11 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Temp Directory",																				  // STR_TEMP_DIRECTORY
 	"Real-Debrid",																					  // STR_REALDEBRID
 	"Package install is running in the background. Don't close the app while install is in progress", // STR_BACKGROUND_INSTALL_INPROGRESS
-	"Enable disk caching. Can improve package install speed in cases where connection to remote is slow",          // STR_ENABLE_DISC_CACHE_MSG
+	"Enable disk caching. Can improve package install speed in cases where connection to remote is slow, but breaks resuming of install",          // STR_ENABLE_DISC_CACHE_MSG
 	"DC",                                                                                             // STR_ENABLE_DISK_CACHE
+	"Install Via AllDebrid",                                                                          // STR_ENABLE_ALLDEBRID_MSG
+	"Install Via RealDebrid",                                                                         // STR_ENABLE_REALDEBRID_MSG
+	"Enable Disk Cache",                                                                              // STR_ENABLE_DISKCACHE_DESC
 };
 
 bool needs_extended_font = false;

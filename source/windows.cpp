@@ -450,7 +450,7 @@ namespace Windows
         }
         if (ImGui::IsItemHovered())
         {
-            ImGui::SetNextWindowSize(ImVec2(450, 70));
+            ImGui::SetNextWindowSize(ImVec2(450, 110));
             ImGui::BeginTooltip();
             ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 440);
             ImGui::Text("%s", lang_strings[STR_ENABLE_RPI_FTP_SMB_MSG]);
@@ -469,7 +469,7 @@ namespace Windows
         }
         if (ImGui::IsItemHovered())
         {
-            ImGui::SetNextWindowSize(ImVec2(550, 85));
+            ImGui::SetNextWindowSize(ImVec2(550, 110));
             ImGui::BeginTooltip();
             ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 540);
             ImGui::Text("%s", lang_strings[STR_ENABLE_DISC_CACHE_MSG]);
@@ -1498,7 +1498,52 @@ namespace Windows
             {
                 ImVec2 cur_pos = ImGui::GetCursorPos();
                 char id[128];
-                if (ImGui::Button(lang_strings[STR_ONETIME_URL], ImVec2(535, 0)))
+                
+                ImGui::Checkbox("##enable_alldebrid_install_uril", &install_pkg_url.enable_alldebrid);
+                ImGui::SameLine();
+                ImGui::Text("%s", lang_strings[STR_ENABLE_ALLDEBRID_MSG]);
+
+                ImGui::SameLine();
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX()+40);
+                ImGui::Checkbox("##enable_realdebrid_install_uril", &install_pkg_url.enable_realdebrid);
+                ImGui::SameLine();
+                ImGui::Text("%s", lang_strings[STR_ENABLE_REALDEBRID_MSG]);
+
+                ImGui::SameLine();
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX()+40);
+                ImGui::Checkbox("##enable_rpi_install_url", &install_pkg_url.enable_rpi);
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetNextWindowSize(ImVec2(550, 110));
+                    ImGui::BeginTooltip();
+                    ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 540);
+                    ImGui::Text("%s", lang_strings[STR_ENABLE_RPI_WEBDAV_MSG]);
+                    ImGui::PopTextWrapPos();
+                    ImGui::EndTooltip();
+                }
+                ImGui::SameLine();
+                ImGui::Text("%s", lang_strings[STR_ENABLE_RPI]);
+
+                if (install_pkg_url.enable_rpi)
+                {
+                    ImGui::SameLine();
+                    ImGui::SetCursorPosX(ImGui::GetCursorPosX()+40);
+                    ImGui::Checkbox("##enable_diskcache_install_uril", &install_pkg_url.enable_disk_cache);
+                    if (ImGui::IsItemHovered())
+                    {
+                        ImGui::SetNextWindowSize(ImVec2(550, 110));
+                        ImGui::BeginTooltip();
+                        ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 540);
+                        ImGui::Text("%s", lang_strings[STR_ENABLE_DISC_CACHE_MSG]);
+                        ImGui::PopTextWrapPos();
+                        ImGui::EndTooltip();
+                    }
+                    ImGui::SameLine();
+                    ImGui::Text("%s", lang_strings[STR_ENABLE_DISKCACHE_DESC]);
+                }
+
+                ImGui::Separator();
+                if (ImGui::Button(lang_strings[STR_ONETIME_URL], ImVec2(1070, 0)))
                 {
                     ResetImeCallbacks();
                     sprintf(install_pkg_url.url, "%s", "");
@@ -1508,14 +1553,6 @@ namespace Windows
                     ime_callback = SingleValueImeCallback;
                     Dialog::initImeDialog("URL", install_pkg_url.url, 511, ORBIS_TYPE_BASIC_LATIN, 600, 340);
                     gui_mode = GUI_MODE_IME;
-                    select_url_inprogress = false;
-                    SetModalMode(false);
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::SameLine();
-                sprintf(id, "%s##favoriteurl", lang_strings[STR_CANCEL]);
-                if (ImGui::Button(id, ImVec2(535, 0)))
-                {
                     select_url_inprogress = false;
                     SetModalMode(false);
                     ImGui::CloseCurrentPopup();
@@ -1565,6 +1602,13 @@ namespace Windows
                         Dialog::initImeDialog("URL", favorite_urls[j], 511, ORBIS_TYPE_BASIC_LATIN, 600, 340);
                         gui_mode = GUI_MODE_IME;
                     }
+                }
+
+                if (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false))
+                {
+                    select_url_inprogress = false;
+                    SetModalMode(false);
+                    ImGui::CloseCurrentPopup();
                 }
 
                 ImGui::EndPopup();

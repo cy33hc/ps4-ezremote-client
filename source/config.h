@@ -121,6 +121,10 @@ struct PackageUrlInfo
     char url[512];
     char username[33];
     char password[25];
+    bool enable_alldebrid;
+    bool enable_realdebrid;
+    bool enable_disk_cache;
+    bool enable_rpi;
 };
 
 extern std::vector<std::string> sites;

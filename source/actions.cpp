@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <json-c/json.h>
 #include <lexbor/html/parser.h>
 #include <lexbor/dom/interfaces/element.h>
 #include <minizip/unzip.h>
@@ -19,6 +20,7 @@
 #include "clients/rclone.h"
 #include "clients/sftpclient.h"
 #include "filehost/filehost.h"
+#include "server/http_server.h"
 #include "common.h"
 #include "fs.h"
 #include "config.h"
@@ -1108,7 +1110,7 @@ namespace Actions
         }
     }
 
-    void *InstallUrlPkgThread(void *argp)
+    void *InstallLocalUrlPkgThread(void *argp)
     {
         bytes_transfered = 0;
         sceRtcGetCurrentTick(&prev_tick);
@@ -1119,10 +1121,10 @@ namespace Actions
         OrbisTick tick;
         sceRtcGetCurrentClockLocalTime(&now);
         sceRtcGetTick(&now, &tick);
-        sprintf(filename, "%s/%lu.pkg", DATA_PATH, tick.mytick);
+        sprintf(filename, "%s/%lu.pkg", TMP_FOLDER_PATH, tick.mytick);
 
         std::string full_url = std::string(install_pkg_url.url);
-        FileHost *filehost = FileHost::getFileHost(full_url);
+        FileHost *filehost = FileHost::getFileHost(full_url, install_pkg_url.enable_alldebrid, install_pkg_url.enable_realdebrid);
         if (!filehost->IsValidUrl())
         {
             sprintf(status_message, "%s", lang_strings[STR_FAIL_TO_OBTAIN_GG_DL_MSG]);
@@ -1145,7 +1147,7 @@ namespace Actions
         std::string host = full_url.substr(0, path_pos);
         std::string path = full_url.substr(path_pos);
 
-        WebDAVClient tmp_client;
+        BaseClient tmp_client;
         tmp_client.Connect(host.c_str(), install_pkg_url.username, install_pkg_url.password);
 
         sprintf(activity_message, "%s URL to %s", lang_strings[STR_DOWNLOADING], filename);
@@ -1153,7 +1155,7 @@ namespace Actions
         memset(&header, 0, s);
 
         int ret = tmp_client.Size(path, &bytes_to_download);
-        if (!ret)
+        if (ret == 0)
         {
             sprintf(status_message, "%s - %s", lang_strings[STR_FAILED], lang_strings[STR_CANNOT_READ_PKG_HDR_MSG]);
             tmp_client.Quit();
@@ -1163,7 +1165,7 @@ namespace Actions
         }
 
         file_transfering = 1;
-        int is_performed = tmp_client.Get(path, filename);
+        int is_performed = tmp_client.Get(filename, path);
 
         if (is_performed == 0)
         {
@@ -1216,10 +1218,70 @@ namespace Actions
         return NULL;
     }
 
+    void *InstallRpiUrlPkgThread(void *argp)
+    {
+        json_object *params = json_object_new_object();
+        json_object_object_add(params, "url", json_object_new_string(install_pkg_url.url));
+        json_object_object_add(params, "use_alldebrid", json_object_new_boolean(install_pkg_url.enable_alldebrid));
+        json_object_object_add(params, "use_realdebrid", json_object_new_boolean(install_pkg_url.enable_realdebrid));
+        json_object_object_add(params, "use_disk_cache", json_object_new_boolean(install_pkg_url.enable_disk_cache));
+
+        const char *params_str = json_object_to_json_string(params);
+
+        char host[128];
+        sprintf(host, "http://127.0.0.1:%d", http_server_port);
+
+        httplib::Client tmp_client(host);
+        tmp_client.set_keep_alive(true);
+        tmp_client.set_follow_location(true);
+        tmp_client.set_connection_timeout(30);
+        tmp_client.set_read_timeout(30);
+        tmp_client.enable_server_certificate_verification(false);
+
+        auto res = tmp_client.Post("/__local__/install_url", params_str, strlen(params_str), "application/json");
+        if (res != nullptr && HTTP_SUCCESS(res->status))
+        {
+            json_object *jobj = json_tokener_parse(res->body.c_str());
+            if (jobj != nullptr)
+            {
+                json_object *result = json_object_object_get(jobj, "result");
+                if (result != nullptr)
+                {
+                    bool success = json_object_get_boolean(json_object_object_get(result, "success"));
+                    if (!success)
+                    {
+                        const char* error_message = json_object_get_string(json_object_object_get(result, "error"));
+                        sprintf(status_message, "%s", error_message);
+                        activity_inprogess = false;
+                        Windows::SetModalMode(false);
+                    }
+                }
+            }
+            else
+            {
+                activity_inprogess = false;
+                Windows::SetModalMode(false);
+            }
+        }
+        else
+        {
+            activity_inprogess = false;
+            Windows::SetModalMode(false);
+        }
+
+        return NULL;
+    }
+
     void InstallUrlPkg()
     {
+        int res;
         sprintf(status_message, "%s", "");
-        int res = pthread_create(&bk_activity_thid, NULL, InstallUrlPkgThread, NULL);
+
+        if (!install_pkg_url.enable_rpi)
+            res = pthread_create(&bk_activity_thid, NULL, InstallLocalUrlPkgThread, NULL);
+        else
+            res = pthread_create(&bk_activity_thid, NULL, InstallRpiUrlPkgThread, NULL);
+
         if (res != 0)
         {
             activity_inprogess = false;

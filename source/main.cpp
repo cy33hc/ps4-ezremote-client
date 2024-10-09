@@ -139,41 +139,43 @@ void InitImgui()
 	sceSystemServiceParamGetInt( ORBIS_SYSTEM_SERVICE_PARAM_ID_LANG, &lang_idx );
 
 	lang = Util::Trim(lang, " ");
-	if (lang.compare("Korean") == 0 || (lang.empty() && lang_idx == ORBIS_SYSTEM_PARAM_LANG_KOREAN))
+	bool use_system_lang = lang.empty() || lang.compare("Default") == 0;
+
+	if (lang.compare("Korean") == 0 || (use_system_lang && lang_idx == ORBIS_SYSTEM_PARAM_LANG_KOREAN))
 	{
 		io.Fonts->AddFontFromFileTTF("/app0/assets/fonts/Roboto_ext.ttf", 26.0f, NULL, io.Fonts->GetGlyphRangesKorean());
 	}
-	else if (lang.compare("Simplified Chinese") == 0 || (lang.empty() && lang_idx == ORBIS_SYSTEM_PARAM_LANG_CHINESE_S))
+	else if (lang.compare("Simplified Chinese") == 0 || (use_system_lang && lang_idx == ORBIS_SYSTEM_PARAM_LANG_CHINESE_S))
 	{
 		ImFontConfig config;
 		config.OversampleH = 1;
 		config.OversampleV = 1;
 		io.Fonts->AddFontFromFileTTF("/app0/assets/fonts/Roboto_ext.ttf", 26.0f, &config, io.Fonts->GetGlyphRangesChineseFull());
 	}
-	else if (lang.compare("Traditional Chinese") == 0 || (lang.empty() && lang_idx == ORBIS_SYSTEM_PARAM_LANG_CHINESE_T))
+	else if (lang.compare("Traditional Chinese") == 0 || (use_system_lang && lang_idx == ORBIS_SYSTEM_PARAM_LANG_CHINESE_T))
 	{
 		ImFontConfig config;
 		config.OversampleH = 1;
 		config.OversampleV = 1;
 		io.Fonts->AddFontFromFileTTF("/app0/assets/fonts/Roboto_ext.ttf", 26.0f, &config, io.Fonts->GetGlyphRangesChineseFull());
 	}
-	else if (lang.compare("Japanese") == 0 || lang.compare("Ryukyuan") == 0 || (lang.empty() && lang_idx == ORBIS_SYSTEM_PARAM_LANG_JAPANESE))
+	else if (lang.compare("Japanese") == 0 || lang.compare("Ryukyuan") == 0 || (use_system_lang && lang_idx == ORBIS_SYSTEM_PARAM_LANG_JAPANESE))
 	{
 		io.Fonts->AddFontFromFileTTF("/app0/assets/fonts/Roboto_ext.ttf", 26.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
 	}
-	else if (lang.compare("Thai") == 0 || (lang.empty() && lang_idx == ORBIS_SYSTEM_PARAM_LANG_THAI))
+	else if (lang.compare("Thai") == 0 || (use_system_lang && lang_idx == ORBIS_SYSTEM_PARAM_LANG_THAI))
 	{
 		io.Fonts->AddFontFromFileTTF("/app0/assets/fonts/Roboto_ext.ttf", 26.0f, NULL, io.Fonts->GetGlyphRangesThai());
 	}
-	else if (lang.compare("Vietnamese") == 0 || (lang.empty() && lang_idx == ORBIS_SYSTEM_PARAM_LANG_VIETNAMESE))
+	else if (lang.compare("Vietnamese") == 0 || (use_system_lang && lang_idx == ORBIS_SYSTEM_PARAM_LANG_VIETNAMESE))
 	{
 		io.Fonts->AddFontFromFileTTF("/app0/assets/fonts/Roboto_ext.ttf", 26.0f, NULL, io.Fonts->GetGlyphRangesVietnamese());
 	}
-	else if (lang.compare("Greek") == 0 || (lang.empty() && lang_idx == ORBIS_SYSTEM_PARAM_LANG_GREEK))
+	else if (lang.compare("Greek") == 0 || (use_system_lang && lang_idx == ORBIS_SYSTEM_PARAM_LANG_GREEK))
 	{
 		io.Fonts->AddFontFromFileTTF("/app0/assets/fonts/Roboto_ext.ttf", 26.0f, NULL, io.Fonts->GetGlyphRangesGreek());
 	}
-	else if (lang.compare("Arabic") == 0 || (lang.empty() && lang_idx == ORBIS_SYSTEM_PARAM_LANG_ARABIC))
+	else if (lang.compare("Arabic") == 0 || (use_system_lang && lang_idx == ORBIS_SYSTEM_PARAM_LANG_ARABIC))
 	{
 		io.Fonts->AddFontFromFileTTF("/app0/assets/fonts/Roboto_ext.ttf", 26.0f, NULL, arabic);
 	}

@@ -99,7 +99,8 @@ namespace Actions
     void InstallRemotePkgs();
     void *InstallLocalPkgsThread(void *argp);
     void InstallLocalPkgs();
-    void *InstallUrlPkgThread(void *argp);
+    void *InstallLocalUrlPkgThread(void *argp);
+    void *InstallRpiUrlPkgThread(void *argp);
     void InstallUrlPkg();
     void *KeepAliveThread(void *argp);
     void *ExtractZipThread(void *argp);

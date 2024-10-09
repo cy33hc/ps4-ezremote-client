@@ -1177,6 +1177,12 @@ namespace HttpServer
 
             SplitPkgInstallData *pkg_data = INSTALLER::GetSplitPkgInstallData(hash);
 
+            if (pkg_data == nullptr)
+            {
+                failed(res, 500, "Cannot resume split_inst");
+                return;
+            }
+
             if (req.method == "HEAD")
             {
                 res.status = 204;
