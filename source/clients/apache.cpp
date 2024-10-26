@@ -128,18 +128,31 @@ std::vector<DirEntry> ApacheClient::ListDir(const std::string &path)
             tmp_string = std::string((const char *)value, value_len);
             if (tmp_string.compare("td") == 0)
             {
-                value = lxb_dom_node_text_content(node, &value_len);
+                // get the child <a> element
+                lxb_dom_node_t *a_node = NextChildElement(lxb_dom_interface_element(node));
+                if (a_node == nullptr) continue;
+
+                value = lxb_dom_element_local_name(lxb_dom_interface_element(a_node), &value_len);
                 tmp_string = std::string((const char *)value, value_len);
-                tmp_string = Util::Rtrim(tmp_string, "/");
-                sprintf(entry.name, "%s", tmp_string.c_str());
-                sprintf(entry.directory, "%s", path.c_str());
-                if (path.length() > 0 && path[path.length() - 1] == '/')
+                if (tmp_string.compare("a") == 0)
                 {
-                    sprintf(entry.path, "%s%s", path.c_str(), entry.name);
-                }
-                else
-                {
-                    sprintf(entry.path, "%s/%s", path.c_str(), entry.name);
+                    value = lxb_dom_element_get_attribute(lxb_dom_interface_element(a_node), (const lxb_char_t *)"href", 4, &value_len);
+                    tmp_string = std::string((const char *)value, value_len);
+                    tmp_string = Util::Rtrim(tmp_string, "/");
+                    tmp_string = BaseClient::UnEscape(tmp_string);
+                    if (tmp_string.compare("..") != 0)
+                    {
+                        sprintf(entry.directory, "%s", path.c_str());
+                        sprintf(entry.name, "%s", tmp_string.c_str());
+                        if (path.length() > 0 && path[path.length() - 1] == '/')
+                        {
+                            sprintf(entry.path, "%s%s", path.c_str(), entry.name);
+                        }
+                        else
+                        {
+                            sprintf(entry.path, "%s/%s", path.c_str(), entry.name);
+                        }
+                    }
                 }
             }
             else continue; // not valid record
