@@ -90,7 +90,7 @@ int BaseClient::Size(const std::string &path, int64_t *size)
                 *size = atoll(content_length.c_str());
             return 1;
         }
-        else // Server doesn't support HEAD request. Try get range with 0 bytes and grab size from the response header 
+        else if (res->status == 405)// Server doesn't support HEAD request. Try get range with 0 bytes and grab size from the response header 
              // example: Content-Range: bytes 0-10/4372785
         {
             Headers headers = {{"Range", "bytes=0-1"}};
@@ -110,6 +110,10 @@ int BaseClient::Size(const std::string &path, int64_t *size)
                     }
                 }
             }
+        }
+        else
+        {
+            sprintf(this->response, "%d - %s", res->status, detail::status_message(res->status));
         }
     }
     else

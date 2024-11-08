@@ -1292,7 +1292,7 @@ namespace HttpServer
                 failed(res, 200, lang_strings[STR_CANT_EXTRACT_URL_MSG]);
                 activity_inprogess = false;
                 file_transfering = false;
-                Windows::SetModalMode(true);
+                Windows::SetModalMode(false);
                 return;
             }
             delete(filehost);
@@ -1305,6 +1305,15 @@ namespace HttpServer
 
             BaseClient *baseclient = new BaseClient();
             baseclient->Connect(host, "", "");
+            
+            if (!baseclient->FileExists(path))
+            {
+                failed(res, 200, baseclient->LastResponse());
+                activity_inprogess = false;
+                file_transfering = false;
+                Windows::SetModalMode(false);
+                return;
+            }
             baseclient->Head(path, &header, sizeof(pkg_header));
 
             if (BE32(header.pkg_magic) == 0x7F434E54)
@@ -1322,7 +1331,7 @@ namespace HttpServer
                         failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
                         activity_inprogess = false;
                         file_transfering = false;
-                        Windows::SetModalMode(true);
+                        Windows::SetModalMode(false);
                         return;
                     }
                 }

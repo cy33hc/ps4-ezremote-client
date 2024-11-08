@@ -1898,6 +1898,8 @@ make_basic_authentication_header(const std::string &username,
 
 namespace detail {
 
+const char *status_message(int status);
+
 std::string encode_query_param(const std::string &value);
 
 std::string encode_url(const std::string &s);

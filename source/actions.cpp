@@ -1157,7 +1157,7 @@ namespace Actions
         int ret = tmp_client.Size(path, &bytes_to_download);
         if (ret == 0)
         {
-            sprintf(status_message, "%s - %s", lang_strings[STR_FAILED], lang_strings[STR_CANNOT_READ_PKG_HDR_MSG]);
+            sprintf(status_message, "%s", tmp_client.LastResponse());
             tmp_client.Quit();
             activity_inprogess = false;
             Windows::SetModalMode(false);
