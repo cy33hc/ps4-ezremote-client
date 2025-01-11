@@ -49,11 +49,14 @@ public:
     static std::string UnEscape(const std::string &url);
 
 protected:
+    int SetCookies(httplib::Headers &headers);
+
     httplib::Client *client;
     std::string base_path;
     std::string host_url;
     char response[512];
     bool connected = false;
+    std::map<std::string, std::string> cookies;
 };
 
 #endif

@@ -17,15 +17,72 @@ using httplib::Result;
 
 static std::map<std::string, int> month_map = {{"Jan", 1}, {"Feb", 2}, {"Mar", 3}, {"Apr", 4}, {"May", 5}, {"Jun", 6}, {"Jul", 7}, {"Aug", 8}, {"Sep", 9}, {"Oct", 10}, {"Nov", 11}, {"Dec", 12}};
 
+int ArchiveOrgClient::Connect(const std::string &url, const std::string &username, const std::string &password)
+{
+    int ret = BaseClient::Connect(url, username, password);
+    if (ret)
+    {
+        return Login(username, password);
+    }
+    return 1;
+}
+
+int ArchiveOrgClient::Login(const std::string &username, const std::string &password)
+{
+    std::string url = std::string("/account/login");
+    std::string post_data = std::string("username=") + username +
+                            "&password=" + password +
+                            "&remember=true" +
+                            "&referer=https://archive.org/" +
+                            "&login=true" +
+                            "&submit_by_js=true";
+
+    if (auto res = client->Post(url, post_data.c_str(), post_data.length(), "application/x-www-form-urlencoded"))
+    {
+        if (HTTP_SUCCESS(res->status))
+        {
+            if (res->has_header("set-cookie"))
+            {
+                int cookies_count = res->get_header_value_count("set-cookie");
+                for (int i=0; i < cookies_count; i++)
+                {
+                    std::string cookie_str = res->get_header_value("set-cookie", i);
+                    std::vector<std::string> cookies = Util::Split(cookie_str, ";");
+                    for (std::vector<std::string>::iterator it = cookies.begin(); it != cookies.end();)
+                    {
+                        std::vector<std::string> cookie = Util::Split(*it, "=");
+                        this->cookies[Util::Trim(cookie[0], " ")] = Util::Trim(cookie[1], " ");
+                    }
+                }
+                return 1;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+        else
+        {
+            return 0;
+        }
+    }
+    else
+    {
+        return 0;
+    }
+}
+
 std::vector<DirEntry> ArchiveOrgClient::ListDir(const std::string &path)
 {
     std::vector<DirEntry> out;
     DirEntry entry;
     Util::SetupPreviousFolder(path, &entry);
     out.push_back(entry);
+    Headers headers;
+    SetCookies(headers);
 
     std::string encoded_path = httplib::detail::encode_url(GetFullPath(path) + "/");
-    if (auto res = client->Get(encoded_path))
+    if (auto res = client->Get(encoded_path, headers))
     {
         lxb_status_t status;
         lxb_dom_attr_t *attr;
