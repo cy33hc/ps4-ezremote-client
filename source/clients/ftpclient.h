@@ -114,12 +114,12 @@ private:
 	char server[128];
 	int server_port;
 
-	int FtpSendCmd(const std::string &cmd, char expected_resp, ftphandle *nControl);
+	int FtpSendCmd(const std::string &cmd, const std::string &expected_resp, ftphandle *nControl);
 	ftphandle *RawOpen(const std::string &path, accesstype type, transfermode mode);
 	int RawClose(ftphandle *handle);
 	int RawWrite(void *buf, int len, ftphandle *handle);
 	int RawRead(void *buf, int max, ftphandle *handle);
-	int ReadResponse(char c, ftphandle *nControl);
+	int ReadResponse(const std::string &c, ftphandle *nControl);
 	int Readline(char *buf, int max, ftphandle *nControl);
 	int Writeline(char *buf, int len, ftphandle *nData);
 	void ClearHandle();
