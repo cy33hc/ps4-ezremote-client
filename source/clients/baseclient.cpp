@@ -27,9 +27,14 @@ int BaseClient::SetCookies(Headers &headers)
         std::string cookie;
         for (std::map<std::string, std::string>::iterator it = this->cookies.begin(); it != this->cookies.end();)
         {
-            cookie.append(it->first).append("=").append(it->second).append("; ");
+            cookie.append(it->first).append("=").append(it->second);
+            if (std::next(it, 1) != this->cookies.end())
+            {
+                cookie.append("; ");
+            }
+            ++it;
         }
-        headers["Cookie"] = cookie;
+        headers.emplace("Cookie", cookie);
     }
 
     return 1;
@@ -112,6 +117,8 @@ int BaseClient::Size(const std::string &path, int64_t *size)
              // example: Content-Range: bytes 0-10/4372785
         {
             Headers headers = {{"Range", "bytes=0-1"}};
+            SetCookies(headers);
+
             if (auto range_res = client->Get(GetFullPath(path), headers))
             {
                 if (HTTP_SUCCESS(range_res->status))
@@ -131,7 +138,7 @@ int BaseClient::Size(const std::string &path, int64_t *size)
         }
         else
         {
-            sprintf(this->response, "%d - %s", res->status, detail::status_message(res->status));
+            sprintf(this->response, "%d - %s", res->status, http_status_message(res->status));
         }
     }
     else

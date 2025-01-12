@@ -24,8 +24,6 @@
 #define FTP_CLIENT_READ 1
 #define FTP_CLIENT_WRITE 2
 
-#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
-
 FtpClient::FtpClient()
 {
 	mp_ftphandle = static_cast<ftphandle *>(calloc(1, sizeof(ftphandle)));
