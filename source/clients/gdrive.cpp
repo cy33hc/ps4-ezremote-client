@@ -431,7 +431,6 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
     sceRtcGetCurrentTick(&prev_tick);
 
     std::ifstream file_stream(inputfile, std::ios::binary);
-
     std::string id = GetValue(path_id_map, path);
     std::string drive_id = GetDriveId(path);
 
@@ -442,6 +441,7 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
     headers.insert(std::make_pair("X-Upload-Content-Type", "application/octet-stream"));
     headers.insert(std::make_pair("X-Upload-Content-Length", std::to_string(bytes_to_download)));
     char *buf = new char[GOOGLE_BUF_SIZE];
+
     if (auto res = client->Patch(url))
     {
         if (HTTP_SUCCESS(res->status))
@@ -457,8 +457,8 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
                     upload_uri, bytes_to_download,
                     [&file_stream, &buf](size_t offset, size_t length, DataSink &sink)
                     {
-                        uint32_t count = 0;
-                        uint32_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
+                        uint64_t count = 0;
+                        uint64_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
                         do
                         {
                             file_stream.read(buf, bytes_to_transfer);
@@ -471,7 +471,84 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
                     },
                     "application/octet-stream"))
             {
-                // success
+                if (HTTP_SUCCESS(res->status))
+                {
+                    delete[] buf;
+                    file_stream.close();
+                    return 1;
+                }
+                else if (res->status == 503)
+                {
+                    // retry interrupted uploads
+                    int retries = 5;
+                    while (res->status == 503 && retries > 0)
+                    {
+                        // Send empty PUT request to get resume position
+                        Headers headers;
+                        headers.insert(std::make_pair("Content-Range", "*/*"));
+                        auto resume_res = client->Put(upload_uri, headers, "", 0, "application/octet-stream");
+                        retries--;
+
+                        if (HTTP_SUCCESS(resume_res->status))
+                        {
+                            delete[] buf;
+                            file_stream.close();
+                            return 1;
+                        }
+                        else if (resume_res->status == 308)
+                        {
+                            std::string range_val = resume_res->get_header_value("Range");
+                            uint64_t resume_offset = std::stol(Util::Split(Util::Split(range_val, "=")[1], "-")[1]);
+
+                            Headers headers;
+                            headers.insert(std::make_pair("Content-Length", std::to_string(bytes_to_download-resume_offset)));
+                            std::string range_value = "bytes " + std::to_string(resume_offset + 1) + "_" + std::to_string(bytes_to_download-1);
+                            headers.insert(std::make_pair("Content-Range", range_value));
+                            file_stream.seekg(resume_offset+1);
+
+
+                            if (res = client->Put(upload_uri, bytes_to_download-resume_offset,
+                                    [&file_stream, &buf](size_t offset, size_t length, DataSink &sink)
+                                    {
+                                        uint64_t count = 0;
+                                        uint64_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
+                                        do
+                                        {
+                                            file_stream.read(buf, bytes_to_transfer);
+                                            if (sink.write(buf, bytes_to_transfer))
+                                            {
+                                                count += bytes_to_transfer;
+                                                bytes_transfered += bytes_to_transfer;
+                                                bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
+                                            }
+                                            else
+                                            {
+                                                return false;
+                                            }
+                                        } while (count < length);
+                                        return true;
+                                    },
+                                    "application/octet-stream"))
+                            {
+                                if (HTTP_SUCCESS(res->status))
+                                {
+                                    delete[] buf;
+                                    file_stream.close();
+                                    return 1;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            delete[] buf;
+                            file_stream.close();
+                            return 0;
+                        }
+
+                        // pause 5s before retrying
+                        sceKernelUsleep(5000000);
+                    }
+                }
             }
             else
             {
@@ -505,7 +582,6 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
     sceRtcGetCurrentTick(&prev_tick);
 
     std::ifstream file_stream(inputfile, std::ios::binary);
-
     size_t path_pos = path.find_last_of("/");
     std::string parent_dir;
     if (path_pos == 0)
@@ -528,7 +604,9 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
     headers.insert(std::make_pair("X-Upload-Content-Type", "application/octet-stream"));
     headers.insert(std::make_pair("X-Upload-Content-Length", std::to_string(bytes_to_download)));
     char *buf = new char[GOOGLE_BUF_SIZE];
-    if (auto res = client->Post(url, headers, post_data.c_str(), post_data.length(), "application/json"))
+
+    httplib::Result res;
+    if (res = client->Post(url, headers, post_data.c_str(), post_data.length(), "application/json"))
     {
         if (HTTP_SUCCESS(res->status))
         {
@@ -543,21 +621,104 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
                     upload_uri, bytes_to_download,
                     [&file_stream, &buf](size_t offset, size_t length, DataSink &sink)
                     {
-                        uint32_t count = 0;
-                        uint32_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
+                        uint64_t count = 0;
+                        uint64_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
                         do
                         {
                             file_stream.read(buf, bytes_to_transfer);
-                            sink.write(buf, bytes_to_transfer);
-                            count += bytes_to_transfer;
-                            bytes_transfered += bytes_to_transfer;
-                            bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
+                            if (sink.write(buf, bytes_to_transfer))
+                            {
+                                count += bytes_to_transfer;
+                                bytes_transfered += bytes_to_transfer;
+                                bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
+                            }
+                            else
+                            {
+                                return false;
+                            }
                         } while (count < length);
                         return true;
                     },
                     "application/octet-stream"))
             {
-                // success
+                if (HTTP_SUCCESS(res->status))
+                {
+                    delete[] buf;
+                    file_stream.close();
+                    return 1;
+                }
+                else if (res->status == 503)
+                {
+                    // retry interrupted uploads
+                    int retries = 5;
+                    while (res->status == 503)
+                    {
+                        // Send empty PUT request to get resume position
+                        Headers headers;
+                        headers.insert(std::make_pair("Content-Range", "*/*"));
+                        retries--;
+
+                        auto resume_res = client->Put(upload_uri, headers, "", 0, "application/octet-stream");
+
+                        if (HTTP_SUCCESS(resume_res->status))
+                        {
+                            delete[] buf;
+                            file_stream.close();
+                            return 1;
+                        }
+                        else if (resume_res->status == 308)
+                        {
+                            std::string range_val = resume_res->get_header_value("Range");
+                            uint64_t resume_offset = std::stol(Util::Split(Util::Split(range_val, "=")[1], "-")[1]);
+
+                            Headers headers;
+                            headers.insert(std::make_pair("Content-Length", std::to_string(bytes_to_download-resume_offset)));
+                            std::string range_value = "bytes " + std::to_string(resume_offset + 1) + "_" + std::to_string(bytes_to_download-1);
+                            headers.insert(std::make_pair("Content-Range", range_value));
+                            file_stream.seekg(resume_offset+1);
+
+                            if (res = client->Put(upload_uri, bytes_to_download-resume_offset,
+                                    [&file_stream, &buf](size_t offset, size_t length, DataSink &sink)
+                                    {
+                                        uint64_t count = 0;
+                                        uint64_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
+                                        do
+                                        {
+                                            file_stream.read(buf, bytes_to_transfer);
+                                            if (sink.write(buf, bytes_to_transfer))
+                                            {
+                                                count += bytes_to_transfer;
+                                                bytes_transfered += bytes_to_transfer;
+                                                bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
+                                            }
+                                            else
+                                            {
+                                                return false;
+                                            }
+                                        } while (count < length);
+                                        return true;
+                                    },
+                                    "application/octet-stream"))
+                            {
+                                if (HTTP_SUCCESS(res->status))
+                                {
+                                    delete[] buf;
+                                    file_stream.close();
+                                    return 1;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            delete[] buf;
+                            file_stream.close();
+                            return 0;
+                        }
+
+                        // pause 5s before retrying
+                        sceKernelUsleep(5000000);
+                    }
+                }
             }
             else
             {
