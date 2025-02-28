@@ -84,6 +84,7 @@
 #define HTTP_SERVER_RCLONE "RClone"
 #define HTTP_SERVER_ARCHIVEORG "Archive.org"
 #define HTTP_SERVER_MYRIENT "Myrient"
+#define HTTP_SERVER_GITHUB "Github"
 
 #define MAX_EDIT_FILE_SIZE 32768
 
