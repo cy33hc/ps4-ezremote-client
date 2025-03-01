@@ -202,7 +202,8 @@ namespace INSTALLER
 	std::string getRemoteUrl(const std::string path, bool encodeUrl)
 	{
 		if (strlen(remote_settings->username) == 0 && strlen(remote_settings->password) == 0 &&
-			(remoteclient->clientType() == CLIENT_TYPE_WEBDAV || remoteclient->clientType() == CLIENT_TYPE_HTTP_SERVER))
+			(remoteclient->clientType() == CLIENT_TYPE_WEBDAV || 
+			 (remoteclient->clientType() == CLIENT_TYPE_HTTP_SERVER && strcmp(remote_settings->http_server_type, HTTP_SERVER_GITHUB) != 0)))
 		{
 			std::string full_url = WebDAVClient::GetHttpUrl(remote_settings->server + path);
 			size_t scheme_pos = full_url.find("://");
