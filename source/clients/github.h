@@ -39,6 +39,8 @@ private:
     std::map<std::string, std::map<std::string, GitAsset>> m_assets;
     bool releases_parsed = false;
     BaseClient m_client;
+
+    bool ParseReleases();
 };
 
 #endif

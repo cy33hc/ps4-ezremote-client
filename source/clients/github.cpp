@@ -43,6 +43,146 @@ std::vector<DirEntry> GithubClient::ListDir(const std::string &path)
     Util::SetupPreviousFolder(path, &entry);
     out.push_back(entry);
 
+    if (!ParseReleases())
+        return out;
+
+    if (path.compare("/") == 0) // return releases as folders
+    {
+        for (std::vector<GitRelease>::iterator release = m_releases.begin(); release != m_releases.end();)
+        {
+            DirEntry entry;
+            entry.isDir = true;
+            entry.selectable = true;
+            entry.file_size = 0;
+            snprintf(entry.directory, 512, "%s", "/");
+            snprintf(entry.name, 256, "%s", release->name.c_str());
+            snprintf(entry.path, 768, "/%s", release->name.c_str());
+            snprintf(entry.display_size, 48, "%s", lang_strings[STR_FOLDER]);
+            entry.modified = release->modified;
+            
+            out.push_back(entry);
+            release++;
+        }
+    }
+    else // return assets in the releases matching the path
+    {
+        std::string tag_name = path.substr(1);
+        std::map<std::string, GitAsset> assets = m_assets[tag_name];
+        for (std::map<std::string, GitAsset>::iterator asset = assets.begin(); asset != assets.end();)
+        {
+            DirEntry entry;
+            memset(&entry, 0, sizeof(DirEntry));
+            entry.isDir = false;
+            entry.selectable = true;
+            snprintf(entry.directory, 512, "%s", path.c_str());
+            snprintf(entry.name, 256, "%s", asset->second.name.c_str());
+            snprintf(entry.path, 768, "%s/%s", path.c_str(), asset->second.name.c_str());
+            entry.file_size = asset->second.size;
+            entry.modified = asset->second.modified;
+            DirEntry::SetDisplaySize(&entry);
+
+            out.push_back(entry);
+            asset++;
+        }
+    }
+
+    return out;
+}
+
+int GithubClient::Size(const std::string &path, int64_t *size)
+{
+    if (!ParseReleases())
+        return 0;
+
+    std::vector<std::string> path_parts = Util::Split(path, "/");
+    
+    if (path_parts.size() != 2)
+    {
+        return 0;
+    }
+
+    *size = m_assets[path_parts[0]][path_parts[1]].size;
+
+    return 1;
+}
+
+int GithubClient::Head(const std::string &path, void *buffer, uint64_t len)
+{
+    if (!ParseReleases())
+        return 0;
+
+    std::vector<std::string> path_parts = Util::Split(path, "/");
+    
+    if (path_parts.size() != 2)
+    {
+        return 0;
+    }
+
+    return m_client.Head(m_assets[path_parts[0]][path_parts[1]].url, buffer, len);
+}
+
+int GithubClient::Get(const std::string &outputfile, const std::string &path, uint64_t offset)
+{
+    if (!ParseReleases())
+        return 0;
+
+    std::vector<std::string> path_parts = Util::Split(path, "/");
+    
+    if (path_parts.size() != 2)
+    {
+        return 0;
+    }
+
+    return m_client.Get(outputfile, m_assets[path_parts[0]][path_parts[1]].url, offset);  
+}
+
+int GithubClient::Get(SplitFile *split_file, const std::string &path, uint64_t offset)
+{
+    if (!ParseReleases())
+        return 0;
+
+    std::vector<std::string> path_parts = Util::Split(path, "/");
+    
+    if (path_parts.size() != 2)
+    {
+        return 0;
+    }
+
+    return m_client.Get(split_file, m_assets[path_parts[0]][path_parts[1]].url, offset);  
+}
+
+int GithubClient::GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset)
+{
+    if (!ParseReleases())
+        return 0;
+
+    std::vector<std::string> path_parts = Util::Split(path, "/");
+    
+    if (path_parts.size() != 2)
+    {
+        return 0;
+    }
+
+    return m_client.GetRange(m_assets[path_parts[0]][path_parts[1]].url, buffer, size, offset);  
+}
+
+int GithubClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset)
+{
+    if (!ParseReleases())
+        return 0;
+
+    std::vector<std::string> path_parts = Util::Split(path, "/");
+    
+    if (path_parts.size() != 2)
+    {
+        return 0;
+    }
+
+    return m_client.GetRange(m_assets[path_parts[0]][path_parts[1]].url, sink, size, offset);  
+}
+
+bool GithubClient::ParseReleases()
+{
     if (!releases_parsed)
     {
         if (auto res = client->Get(this->base_path + "?per_page=100&page=1"))
@@ -105,124 +245,13 @@ std::vector<DirEntry> GithubClient::ListDir(const std::string &path)
 
                     m_releases.push_back(release_entry);
                 }
+
+                releases_parsed = true;
+                return 1;
             }
         }
-        releases_parsed = true;
-    }
-
-    if (path.compare("/") == 0) // return releases as folders
-    {
-        for (std::vector<GitRelease>::iterator release = m_releases.begin(); release != m_releases.end();)
-        {
-            DirEntry entry;
-            entry.isDir = true;
-            entry.selectable = true;
-            entry.file_size = 0;
-            snprintf(entry.directory, 512, "%s", "/");
-            snprintf(entry.name, 256, "%s", release->name.c_str());
-            snprintf(entry.path, 768, "/%s", release->name.c_str());
-            snprintf(entry.display_size, 48, "%s", lang_strings[STR_FOLDER]);
-            entry.modified = release->modified;
-            
-            out.push_back(entry);
-            release++;
-        }
-    }
-    else // return assets in the releases matching the path
-    {
-        std::string tag_name = path.substr(1);
-        std::map<std::string, GitAsset> assets = m_assets[tag_name];
-        for (std::map<std::string, GitAsset>::iterator asset = assets.begin(); asset != assets.end();)
-        {
-            DirEntry entry;
-            memset(&entry, 0, sizeof(DirEntry));
-            entry.isDir = false;
-            entry.selectable = true;
-            snprintf(entry.directory, 512, "%s", path.c_str());
-            snprintf(entry.name, 256, "%s", asset->second.name.c_str());
-            snprintf(entry.path, 768, "%s/%s", path.c_str(), asset->second.name.c_str());
-            entry.file_size = asset->second.size;
-            entry.modified = asset->second.modified;
-            DirEntry::SetDisplaySize(&entry);
-
-            out.push_back(entry);
-            asset++;
-        }
-    }
-
-    return out;
-}
-
-int GithubClient::Size(const std::string &path, int64_t *size)
-{
-    std::vector<std::string> path_parts = Util::Split(path, "/");
-    
-    if (path_parts.size() != 2)
-    {
         return 0;
     }
-
-    *size = m_assets[path_parts[0]][path_parts[1]].size;
 
     return 1;
-}
-
-int GithubClient::Head(const std::string &path, void *buffer, uint64_t len)
-{
-    std::vector<std::string> path_parts = Util::Split(path, "/");
-    
-    if (path_parts.size() != 2)
-    {
-        return 0;
-    }
-
-    return m_client.Head(m_assets[path_parts[0]][path_parts[1]].url, buffer, len);
-}
-
-int GithubClient::Get(const std::string &outputfile, const std::string &path, uint64_t offset)
-{
-    std::vector<std::string> path_parts = Util::Split(path, "/");
-    
-    if (path_parts.size() != 2)
-    {
-        return 0;
-    }
-
-    return m_client.Get(outputfile, m_assets[path_parts[0]][path_parts[1]].url, offset);  
-}
-
-int GithubClient::Get(SplitFile *split_file, const std::string &path, uint64_t offset)
-{
-    std::vector<std::string> path_parts = Util::Split(path, "/");
-    
-    if (path_parts.size() != 2)
-    {
-        return 0;
-    }
-
-    return m_client.Get(split_file, m_assets[path_parts[0]][path_parts[1]].url, offset);  
-}
-
-int GithubClient::GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset)
-{
-    std::vector<std::string> path_parts = Util::Split(path, "/");
-    
-    if (path_parts.size() != 2)
-    {
-        return 0;
-    }
-
-    return m_client.GetRange(m_assets[path_parts[0]][path_parts[1]].url, buffer, size, offset);  
-}
-
-int GithubClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset)
-{
-    std::vector<std::string> path_parts = Util::Split(path, "/");
-    
-    if (path_parts.size() != 2)
-    {
-        return 0;
-    }
-
-    return m_client.GetRange(m_assets[path_parts[0]][path_parts[1]].url, sink, size, offset);  
 }
