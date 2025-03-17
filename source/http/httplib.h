@@ -1,14 +1,14 @@
 //
 //  httplib.h
 //
-//  Copyright (c) 2024 Yuji Hirose. All rights reserved.
+//  Copyright (c) 2023 Yuji Hirose. All rights reserved.
 //  MIT License
 //
 
 #ifndef CPPHTTPLIB_HTTPLIB_H
 #define CPPHTTPLIB_HTTPLIB_H
 
-#define CPPHTTPLIB_VERSION "0.16.1"
+#define CPPHTTPLIB_VERSION "0.13.1"
 
 /*
  * Configuration
@@ -82,20 +82,16 @@
 #define CPPHTTPLIB_FORM_URL_ENCODED_PAYLOAD_MAX_LENGTH 8192
 #endif
 
-#ifndef CPPHTTPLIB_RANGE_MAX_COUNT
-#define CPPHTTPLIB_RANGE_MAX_COUNT 1024
-#endif
-
 #ifndef CPPHTTPLIB_TCP_NODELAY
 #define CPPHTTPLIB_TCP_NODELAY false
 #endif
 
 #ifndef CPPHTTPLIB_RECV_BUFSIZ
-#define CPPHTTPLIB_RECV_BUFSIZ size_t(16384u)
+#define CPPHTTPLIB_RECV_BUFSIZ size_t(524288u)
 #endif
 
 #ifndef CPPHTTPLIB_COMPRESSION_BUFSIZ
-#define CPPHTTPLIB_COMPRESSION_BUFSIZ size_t(16384u)
+#define CPPHTTPLIB_COMPRESSION_BUFSIZ size_t(524288u)
 #endif
 
 #ifndef CPPHTTPLIB_THREAD_POOL_COUNT
@@ -145,11 +141,11 @@ using ssize_t = long;
 #endif // _MSC_VER
 
 #ifndef S_ISREG
-#define S_ISREG(m) (((m) & S_IFREG) == S_IFREG)
+#define S_ISREG(m) (((m)&S_IFREG) == S_IFREG)
 #endif // S_ISREG
 
 #ifndef S_ISDIR
-#define S_ISDIR(m) (((m) & S_IFDIR) == S_IFDIR)
+#define S_ISDIR(m) (((m)&S_IFDIR) == S_IFDIR)
 #endif // S_ISDIR
 
 #ifndef NOMINMAX
@@ -163,6 +159,10 @@ using ssize_t = long;
 #ifndef WSA_FLAG_NO_HANDLE_INHERIT
 #define WSA_FLAG_NO_HANDLE_INHERIT 0x80
 #endif
+
+#ifndef strcasecmp
+#define strcasecmp _stricmp
+#endif // strcasecmp
 
 using socket_t = SOCKET;
 #ifdef CPPHTTPLIB_USE_POLL
@@ -193,7 +193,6 @@ using socket_t = SOCKET;
 #endif
 #include <csignal>
 #include <pthread.h>
-#include <sys/mman.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -214,7 +213,6 @@ using socket_t = int;
 #include <condition_variable>
 #include <cstring>
 #include <errno.h>
-#include <exception>
 #include <fcntl.h>
 #include <fstream>
 #include <functional>
@@ -248,6 +246,7 @@ using socket_t = int;
 
 #ifdef _MSC_VER
 #pragma comment(lib, "crypt32.lib")
+#pragma comment(lib, "cryptui.lib")
 #endif
 #elif defined(CPPHTTPLIB_USE_CERTS_FROM_MACOSX_KEYCHAIN) && defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -331,7 +330,7 @@ struct scope_exit {
   explicit scope_exit(std::function<void(void)> &&f)
       : exit_function(std::move(f)), execute_on_destruction{true} {}
 
-  scope_exit(scope_exit &&rhs) noexcept
+  scope_exit(scope_exit &&rhs)
       : exit_function(std::move(rhs.exit_function)),
         execute_on_destruction{rhs.execute_on_destruction} {
     rhs.release();
@@ -353,81 +352,6 @@ private:
 };
 
 } // namespace detail
-
-enum StatusCode {
-  // Information responses
-  Continue_100 = 100,
-  SwitchingProtocol_101 = 101,
-  Processing_102 = 102,
-  EarlyHints_103 = 103,
-
-  // Successful responses
-  OK_200 = 200,
-  Created_201 = 201,
-  Accepted_202 = 202,
-  NonAuthoritativeInformation_203 = 203,
-  NoContent_204 = 204,
-  ResetContent_205 = 205,
-  PartialContent_206 = 206,
-  MultiStatus_207 = 207,
-  AlreadyReported_208 = 208,
-  IMUsed_226 = 226,
-
-  // Redirection messages
-  MultipleChoices_300 = 300,
-  MovedPermanently_301 = 301,
-  Found_302 = 302,
-  SeeOther_303 = 303,
-  NotModified_304 = 304,
-  UseProxy_305 = 305,
-  unused_306 = 306,
-  TemporaryRedirect_307 = 307,
-  PermanentRedirect_308 = 308,
-
-  // Client error responses
-  BadRequest_400 = 400,
-  Unauthorized_401 = 401,
-  PaymentRequired_402 = 402,
-  Forbidden_403 = 403,
-  NotFound_404 = 404,
-  MethodNotAllowed_405 = 405,
-  NotAcceptable_406 = 406,
-  ProxyAuthenticationRequired_407 = 407,
-  RequestTimeout_408 = 408,
-  Conflict_409 = 409,
-  Gone_410 = 410,
-  LengthRequired_411 = 411,
-  PreconditionFailed_412 = 412,
-  PayloadTooLarge_413 = 413,
-  UriTooLong_414 = 414,
-  UnsupportedMediaType_415 = 415,
-  RangeNotSatisfiable_416 = 416,
-  ExpectationFailed_417 = 417,
-  ImATeapot_418 = 418,
-  MisdirectedRequest_421 = 421,
-  UnprocessableContent_422 = 422,
-  Locked_423 = 423,
-  FailedDependency_424 = 424,
-  TooEarly_425 = 425,
-  UpgradeRequired_426 = 426,
-  PreconditionRequired_428 = 428,
-  TooManyRequests_429 = 429,
-  RequestHeaderFieldsTooLarge_431 = 431,
-  UnavailableForLegalReasons_451 = 451,
-
-  // Server error responses
-  InternalServerError_500 = 500,
-  NotImplemented_501 = 501,
-  BadGateway_502 = 502,
-  ServiceUnavailable_503 = 503,
-  GatewayTimeout_504 = 504,
-  HttpVersionNotSupported_505 = 505,
-  VariantAlsoNegotiates_506 = 506,
-  InsufficientStorage_507 = 507,
-  LoopDetected_508 = 508,
-  NotExtended_510 = 510,
-  NetworkAuthenticationRequired_511 = 511,
-};
 
 using Headers = std::multimap<std::string, std::string, detail::ci>;
 
@@ -458,18 +382,17 @@ public:
   DataSink &operator=(DataSink &&) = delete;
 
   std::function<bool(const char *data, size_t data_len)> write;
-  std::function<bool()> is_writable;
   std::function<void()> done;
   std::function<void(const Headers &trailer)> done_with_trailer;
   std::ostream os;
 
 private:
-  class data_sink_streambuf final : public std::streambuf {
+  class data_sink_streambuf : public std::streambuf {
   public:
     explicit data_sink_streambuf(DataSink &sink) : sink_(sink) {}
 
   protected:
-    std::streamsize xsputn(const char *s, std::streamsize n) override {
+    std::streamsize xsputn(const char *s, std::streamsize n) {
       sink_.write(s, static_cast<size_t>(n));
       return n;
     }
@@ -563,7 +486,8 @@ struct Request {
 
   bool has_header(const std::string &key) const;
   std::string get_header_value(const std::string &key, size_t id = 0) const;
-  uint64_t get_header_value_u64(const std::string &key, size_t id = 0) const;
+  template <typename T>
+  T get_header_value(const std::string &key, size_t id = 0) const;
   size_t get_header_value_count(const std::string &key) const;
   void set_header(const std::string &key, const std::string &val);
 
@@ -595,14 +519,14 @@ struct Response {
 
   bool has_header(const std::string &key) const;
   std::string get_header_value(const std::string &key, size_t id = 0) const;
-  uint64_t get_header_value_u64(const std::string &key, size_t id = 0) const;
+  template <typename T>
+  T get_header_value(const std::string &key, size_t id = 0) const;
   size_t get_header_value_count(const std::string &key) const;
   void set_header(const std::string &key, const std::string &val);
 
-  void set_redirect(const std::string &url, int status = StatusCode::Found_302);
+  void set_redirect(const std::string &url, int status = 302);
   void set_content(const char *s, size_t n, const std::string &content_type);
   void set_content(const std::string &s, const std::string &content_type);
-  void set_content(std::string &&s, const std::string &content_type);
 
   void set_content_provider(
       size_t length, const std::string &content_type, ContentProvider provider,
@@ -659,16 +583,15 @@ public:
   TaskQueue() = default;
   virtual ~TaskQueue() = default;
 
-  virtual bool enqueue(std::function<void()> fn) = 0;
+  virtual void enqueue(std::function<void()> fn) = 0;
   virtual void shutdown() = 0;
 
   virtual void on_idle() {}
 };
 
-class ThreadPool final : public TaskQueue {
+class ThreadPool : public TaskQueue {
 public:
-  explicit ThreadPool(size_t n, size_t mqr = 0)
-      : shutdown_(false), max_queued_requests_(mqr) {
+  explicit ThreadPool(size_t n) : shutdown_(false) {
     while (n) {
       threads_.emplace_back(worker(*this));
       n--;
@@ -678,17 +601,13 @@ public:
   ThreadPool(const ThreadPool &) = delete;
   ~ThreadPool() override = default;
 
-  bool enqueue(std::function<void()> fn) override {
+  void enqueue(std::function<void()> fn) override {
     {
       std::unique_lock<std::mutex> lock(mutex_);
-      if (max_queued_requests_ > 0 && jobs_.size() >= max_queued_requests_) {
-        return false;
-      }
       jobs_.push_back(std::move(fn));
     }
 
     cond_.notify_one();
-    return true;
   }
 
   void shutdown() override {
@@ -721,17 +640,13 @@ private:
 
           if (pool_.shutdown_ && pool_.jobs_.empty()) { break; }
 
-          fn = pool_.jobs_.front();
+          fn = std::move(pool_.jobs_.front());
           pool_.jobs_.pop_front();
         }
 
         assert(true == static_cast<bool>(fn));
         fn();
       }
-
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
-      OPENSSL_thread_stop();
-#endif
     }
 
     ThreadPool &pool_;
@@ -742,7 +657,6 @@ private:
   std::list<std::function<void()>> jobs_;
 
   bool shutdown_;
-  size_t max_queued_requests_ = 0;
 
   std::condition_variable cond_;
   std::mutex mutex_;
@@ -753,10 +667,6 @@ using Logger = std::function<void(const Request &, const Response &)>;
 using SocketOptions = std::function<void(socket_t sock)>;
 
 void default_socket_options(socket_t sock);
-
-const char *http_status_message(int status);
-
-std::string get_bearer_token_auth(const Request &req);
 
 namespace detail {
 
@@ -786,7 +696,7 @@ public:
  * the resulting capture will be
  * {{"capture", "1"}, {"second_capture", "2"}}
  */
-class PathParamsMatcher final : public MatcherBase {
+class PathParamsMatcher : public MatcherBase {
 public:
   PathParamsMatcher(const std::string &pattern);
 
@@ -816,7 +726,7 @@ private:
  * This means that wildcard patterns may match multiple path segments with /:
  * "/begin/(.*)/end" will match both "/begin/middle/end" and "/begin/1/2/end".
  */
-class RegexMatcher final : public MatcherBase {
+class RegexMatcher : public MatcherBase {
 public:
   RegexMatcher(const std::string &pattern) : regex_(pattern) {}
 
@@ -825,8 +735,6 @@ public:
 private:
   std::regex regex_;
 };
-
-ssize_t write_headers(Stream &strm, const Headers &headers);
 
 } // namespace detail
 
@@ -874,16 +782,10 @@ public:
   bool remove_mount_point(const std::string &mount_point);
   Server &set_file_extension_and_mimetype_mapping(const std::string &ext,
                                                   const std::string &mime);
-  Server &set_default_file_mimetype(const std::string &mime);
   Server &set_file_request_handler(Handler handler);
 
-  template <class ErrorHandlerFunc>
-  Server &set_error_handler(ErrorHandlerFunc &&handler) {
-    return set_error_handler_core(
-        std::forward<ErrorHandlerFunc>(handler),
-        std::is_convertible<ErrorHandlerFunc, HandlerWithResponse>{});
-  }
-
+  Server &set_error_handler(HandlerWithResponse handler);
+  Server &set_error_handler(Handler handler);
   Server &set_exception_handler(ExceptionHandler handler);
   Server &set_pre_routing_handler(HandlerWithResponse handler);
   Server &set_post_routing_handler(Handler handler);
@@ -896,8 +798,6 @@ public:
   Server &set_socket_options(SocketOptions socket_options);
 
   Server &set_default_headers(Headers headers);
-  Server &
-  set_header_writer(std::function<ssize_t(Stream &, Headers &)> const &writer);
 
   Server &set_keep_alive_max_count(size_t count);
   Server &set_keep_alive_timeout(time_t sec);
@@ -954,9 +854,6 @@ private:
   static std::unique_ptr<detail::MatcherBase>
   make_matcher(const std::string &pattern);
 
-  Server &set_error_handler_core(HandlerWithResponse handler, std::true_type);
-  Server &set_error_handler_core(Handler handler, std::false_type);
-
   socket_t create_server_socket(const std::string &host, int port,
                                 int socket_flags,
                                 SocketOptions socket_options) const;
@@ -966,16 +863,16 @@ private:
   bool routing(Request &req, Response &res, Stream &strm);
   bool handle_file_request(const Request &req, Response &res,
                            bool head = false);
-  bool dispatch_request(Request &req, Response &res,
-                        const Handlers &handlers) const;
-  bool dispatch_request_for_content_reader(
-      Request &req, Response &res, ContentReader content_reader,
-      const HandlersForContentReader &handlers) const;
+  bool dispatch_request(Request &req, Response &res, const Handlers &handlers);
+  bool
+  dispatch_request_for_content_reader(Request &req, Response &res,
+                                      ContentReader content_reader,
+                                      const HandlersForContentReader &handlers);
 
-  bool parse_request_line(const char *s, Request &req) const;
+  bool parse_request_line(const char *s, Request &req);
   void apply_ranges(const Request &req, Response &res,
-                    std::string &content_type, std::string &boundary) const;
-  bool write_response(Stream &strm, bool close_connection, Request &req,
+                    std::string &content_type, std::string &boundary);
+  bool write_response(Stream &strm, bool close_connection, const Request &req,
                       Response &res);
   bool write_response_with_content(Stream &strm, bool close_connection,
                                    const Request &req, Response &res);
@@ -994,7 +891,7 @@ private:
   bool read_content_core(Stream &strm, Request &req, Response &res,
                          ContentReceiver receiver,
                          MultipartContentHeader multipart_header,
-                         ContentReceiver multipart_receiver) const;
+                         ContentReceiver multipart_receiver);
 
   virtual bool process_and_close_socket(socket_t sock);
 
@@ -1008,7 +905,6 @@ private:
   };
   std::vector<MountPointEntry> base_dirs_;
   std::map<std::string, std::string> file_extension_and_mimetype_map_;
-  std::string default_file_mimetype_ = "application/octet-stream";
   Handler file_request_handler_;
 
   Handlers get_handlers_;
@@ -1035,8 +931,6 @@ private:
   SocketOptions socket_options_ = default_socket_options;
 
   Headers default_headers_;
-  std::function<ssize_t(Stream &, Headers &)> header_writer_ =
-      detail::write_headers;
 };
 
 enum class Error {
@@ -1054,13 +948,12 @@ enum class Error {
   UnsupportedMultipartBoundaryChars,
   Compression,
   ConnectionTimeout,
-  ProxyConnection,
 
   // For internal use only
   SSLPeerCouldBeClosed_,
 };
 
-std::string to_string(Error error);
+std::string to_string(const Error error);
 
 std::ostream &operator<<(std::ostream &os, const Error &obj);
 
@@ -1089,8 +982,8 @@ public:
   bool has_request_header(const std::string &key) const;
   std::string get_request_header_value(const std::string &key,
                                        size_t id = 0) const;
-  uint64_t get_request_header_value_u64(const std::string &key,
-                                        size_t id = 0) const;
+  template <typename T>
+  T get_request_header_value(const std::string &key, size_t id = 0) const;
   size_t get_request_header_value_count(const std::string &key) const;
 
 private:
@@ -1154,18 +1047,10 @@ public:
               const std::string &content_type);
   Result Post(const std::string &path, const Headers &headers, const char *body,
               size_t content_length, const std::string &content_type);
-  Result Post(const std::string &path, const Headers &headers, const char *body,
-              size_t content_length, const std::string &content_type,
-              Progress progress);
   Result Post(const std::string &path, const std::string &body,
               const std::string &content_type);
-  Result Post(const std::string &path, const std::string &body,
-              const std::string &content_type, Progress progress);
   Result Post(const std::string &path, const Headers &headers,
               const std::string &body, const std::string &content_type);
-  Result Post(const std::string &path, const Headers &headers,
-              const std::string &body, const std::string &content_type,
-              Progress progress);
   Result Post(const std::string &path, size_t content_length,
               ContentProvider content_provider,
               const std::string &content_type);
@@ -1181,8 +1066,6 @@ public:
   Result Post(const std::string &path, const Params &params);
   Result Post(const std::string &path, const Headers &headers,
               const Params &params);
-  Result Post(const std::string &path, const Headers &headers,
-              const Params &params, Progress progress);
   Result Post(const std::string &path, const MultipartFormDataItems &items);
   Result Post(const std::string &path, const Headers &headers,
               const MultipartFormDataItems &items);
@@ -1197,18 +1080,10 @@ public:
              const std::string &content_type);
   Result Put(const std::string &path, const Headers &headers, const char *body,
              size_t content_length, const std::string &content_type);
-  Result Put(const std::string &path, const Headers &headers, const char *body,
-             size_t content_length, const std::string &content_type,
-             Progress progress);
   Result Put(const std::string &path, const std::string &body,
              const std::string &content_type);
-  Result Put(const std::string &path, const std::string &body,
-             const std::string &content_type, Progress progress);
   Result Put(const std::string &path, const Headers &headers,
              const std::string &body, const std::string &content_type);
-  Result Put(const std::string &path, const Headers &headers,
-             const std::string &body, const std::string &content_type,
-             Progress progress);
   Result Put(const std::string &path, size_t content_length,
              ContentProvider content_provider, const std::string &content_type);
   Result Put(const std::string &path,
@@ -1223,8 +1098,6 @@ public:
   Result Put(const std::string &path, const Params &params);
   Result Put(const std::string &path, const Headers &headers,
              const Params &params);
-  Result Put(const std::string &path, const Headers &headers,
-             const Params &params, Progress progress);
   Result Put(const std::string &path, const MultipartFormDataItems &items);
   Result Put(const std::string &path, const Headers &headers,
              const MultipartFormDataItems &items);
@@ -1237,23 +1110,13 @@ public:
   Result Patch(const std::string &path);
   Result Patch(const std::string &path, const char *body, size_t content_length,
                const std::string &content_type);
-  Result Patch(const std::string &path, const char *body, size_t content_length,
-               const std::string &content_type, Progress progress);
   Result Patch(const std::string &path, const Headers &headers,
                const char *body, size_t content_length,
                const std::string &content_type);
-  Result Patch(const std::string &path, const Headers &headers,
-               const char *body, size_t content_length,
-               const std::string &content_type, Progress progress);
   Result Patch(const std::string &path, const std::string &body,
                const std::string &content_type);
-  Result Patch(const std::string &path, const std::string &body,
-               const std::string &content_type, Progress progress);
   Result Patch(const std::string &path, const Headers &headers,
                const std::string &body, const std::string &content_type);
-  Result Patch(const std::string &path, const Headers &headers,
-               const std::string &body, const std::string &content_type,
-               Progress progress);
   Result Patch(const std::string &path, size_t content_length,
                ContentProvider content_provider,
                const std::string &content_type);
@@ -1271,24 +1134,13 @@ public:
   Result Delete(const std::string &path, const Headers &headers);
   Result Delete(const std::string &path, const char *body,
                 size_t content_length, const std::string &content_type);
-  Result Delete(const std::string &path, const char *body,
-                size_t content_length, const std::string &content_type,
-                Progress progress);
   Result Delete(const std::string &path, const Headers &headers,
                 const char *body, size_t content_length,
                 const std::string &content_type);
-  Result Delete(const std::string &path, const Headers &headers,
-                const char *body, size_t content_length,
-                const std::string &content_type, Progress progress);
   Result Delete(const std::string &path, const std::string &body,
                 const std::string &content_type);
-  Result Delete(const std::string &path, const std::string &body,
-                const std::string &content_type, Progress progress);
   Result Delete(const std::string &path, const Headers &headers,
                 const std::string &body, const std::string &content_type);
-  Result Delete(const std::string &path, const Headers &headers,
-                const std::string &body, const std::string &content_type,
-                Progress progress);
 
   Result Options(const std::string &path);
   Result Options(const std::string &path, const Headers &headers);
@@ -1307,9 +1159,6 @@ public:
   void set_hostname_addr_map(std::map<std::string, std::string> addr_map);
 
   void set_default_headers(Headers headers);
-
-  void
-  set_header_writer(std::function<ssize_t(Stream &, Headers &)> const &writer);
 
   void set_address_family(int family);
   void set_tcp_nodelay(bool on);
@@ -1359,7 +1208,7 @@ public:
   void set_ca_cert_path(const std::string &ca_cert_file_path,
                         const std::string &ca_cert_dir_path = std::string());
   void set_ca_cert_store(X509_STORE *ca_cert_store);
-  X509_STORE *create_ca_cert_store(const char *ca_cert, std::size_t size) const;
+  X509_STORE *create_ca_cert_store(const char *ca_cert, std::size_t size);
 #endif
 
 #ifdef CPPHTTPLIB_OPENSSL_SUPPORT
@@ -1388,14 +1237,14 @@ protected:
   // Also, shutdown_ssl and close_socket should also NOT be called concurrently
   // with a DIFFERENT thread sending requests using that socket.
   virtual void shutdown_ssl(Socket &socket, bool shutdown_gracefully);
-  void shutdown_socket(Socket &socket) const;
+  void shutdown_socket(Socket &socket);
   void close_socket(Socket &socket);
 
   bool process_request(Stream &strm, Request &req, Response &res,
                        bool close_connection, Error &error);
 
   bool write_content_with_provider(Stream &strm, const Request &req,
-                                   Error &error) const;
+                                   Error &error);
 
   void copy_settings(const ClientImpl &rhs);
 
@@ -1419,10 +1268,6 @@ protected:
 
   // Default headers
   Headers default_headers_;
-
-  // Header writer
-  std::function<ssize_t(Stream &, Headers &)> header_writer_ =
-      detail::write_headers;
 
   // Settings
   std::string client_cert_path_;
@@ -1486,8 +1331,7 @@ private:
   Result send_(Request &&req);
 
   socket_t create_client_socket(Error &error) const;
-  bool read_response_line(Stream &strm, const Request &req,
-                          Response &res) const;
+  bool read_response_line(Stream &strm, const Request &req, Response &res);
   bool write_request(Stream &strm, Request &req, bool close_connection,
                      Error &error);
   bool redirect(Request &req, Response &res, Error &error);
@@ -1503,10 +1347,10 @@ private:
       const Headers &headers, const char *body, size_t content_length,
       ContentProvider content_provider,
       ContentProviderWithoutLength content_provider_without_length,
-      const std::string &content_type, Progress progress);
+      const std::string &content_type);
   ContentProviderWithoutLength get_multipart_content_provider(
       const std::string &boundary, const MultipartFormDataItems &items,
-      const MultipartFormDataProviderItems &provider_items) const;
+      const MultipartFormDataProviderItems &provider_items);
 
   std::string adjust_host_string(const std::string &host) const;
 
@@ -1532,7 +1376,6 @@ public:
                   const std::string &client_key_path);
 
   Client(Client &&) = default;
-  Client &operator=(Client &&) = default;
 
   ~Client();
 
@@ -1579,18 +1422,10 @@ public:
               const std::string &content_type);
   Result Post(const std::string &path, const Headers &headers, const char *body,
               size_t content_length, const std::string &content_type);
-  Result Post(const std::string &path, const Headers &headers, const char *body,
-              size_t content_length, const std::string &content_type,
-              Progress progress);
   Result Post(const std::string &path, const std::string &body,
               const std::string &content_type);
-  Result Post(const std::string &path, const std::string &body,
-              const std::string &content_type, Progress progress);
   Result Post(const std::string &path, const Headers &headers,
               const std::string &body, const std::string &content_type);
-  Result Post(const std::string &path, const Headers &headers,
-              const std::string &body, const std::string &content_type,
-              Progress progress);
   Result Post(const std::string &path, size_t content_length,
               ContentProvider content_provider,
               const std::string &content_type);
@@ -1606,8 +1441,6 @@ public:
   Result Post(const std::string &path, const Params &params);
   Result Post(const std::string &path, const Headers &headers,
               const Params &params);
-  Result Post(const std::string &path, const Headers &headers,
-              const Params &params, Progress progress);
   Result Post(const std::string &path, const MultipartFormDataItems &items);
   Result Post(const std::string &path, const Headers &headers,
               const MultipartFormDataItems &items);
@@ -1622,18 +1455,10 @@ public:
              const std::string &content_type);
   Result Put(const std::string &path, const Headers &headers, const char *body,
              size_t content_length, const std::string &content_type);
-  Result Put(const std::string &path, const Headers &headers, const char *body,
-             size_t content_length, const std::string &content_type,
-             Progress progress);
   Result Put(const std::string &path, const std::string &body,
              const std::string &content_type);
-  Result Put(const std::string &path, const std::string &body,
-             const std::string &content_type, Progress progress);
   Result Put(const std::string &path, const Headers &headers,
              const std::string &body, const std::string &content_type);
-  Result Put(const std::string &path, const Headers &headers,
-             const std::string &body, const std::string &content_type,
-             Progress progress);
   Result Put(const std::string &path, size_t content_length,
              ContentProvider content_provider, const std::string &content_type);
   Result Put(const std::string &path,
@@ -1648,8 +1473,6 @@ public:
   Result Put(const std::string &path, const Params &params);
   Result Put(const std::string &path, const Headers &headers,
              const Params &params);
-  Result Put(const std::string &path, const Headers &headers,
-             const Params &params, Progress progress);
   Result Put(const std::string &path, const MultipartFormDataItems &items);
   Result Put(const std::string &path, const Headers &headers,
              const MultipartFormDataItems &items);
@@ -1662,23 +1485,13 @@ public:
   Result Patch(const std::string &path);
   Result Patch(const std::string &path, const char *body, size_t content_length,
                const std::string &content_type);
-  Result Patch(const std::string &path, const char *body, size_t content_length,
-               const std::string &content_type, Progress progress);
   Result Patch(const std::string &path, const Headers &headers,
                const char *body, size_t content_length,
                const std::string &content_type);
-  Result Patch(const std::string &path, const Headers &headers,
-               const char *body, size_t content_length,
-               const std::string &content_type, Progress progress);
   Result Patch(const std::string &path, const std::string &body,
                const std::string &content_type);
-  Result Patch(const std::string &path, const std::string &body,
-               const std::string &content_type, Progress progress);
   Result Patch(const std::string &path, const Headers &headers,
                const std::string &body, const std::string &content_type);
-  Result Patch(const std::string &path, const Headers &headers,
-               const std::string &body, const std::string &content_type,
-               Progress progress);
   Result Patch(const std::string &path, size_t content_length,
                ContentProvider content_provider,
                const std::string &content_type);
@@ -1696,24 +1509,13 @@ public:
   Result Delete(const std::string &path, const Headers &headers);
   Result Delete(const std::string &path, const char *body,
                 size_t content_length, const std::string &content_type);
-  Result Delete(const std::string &path, const char *body,
-                size_t content_length, const std::string &content_type,
-                Progress progress);
   Result Delete(const std::string &path, const Headers &headers,
                 const char *body, size_t content_length,
                 const std::string &content_type);
-  Result Delete(const std::string &path, const Headers &headers,
-                const char *body, size_t content_length,
-                const std::string &content_type, Progress progress);
   Result Delete(const std::string &path, const std::string &body,
                 const std::string &content_type);
-  Result Delete(const std::string &path, const std::string &body,
-                const std::string &content_type, Progress progress);
   Result Delete(const std::string &path, const Headers &headers,
                 const std::string &body, const std::string &content_type);
-  Result Delete(const std::string &path, const Headers &headers,
-                const std::string &body, const std::string &content_type,
-                Progress progress);
 
   Result Options(const std::string &path);
   Result Options(const std::string &path, const Headers &headers);
@@ -1732,9 +1534,6 @@ public:
   void set_hostname_addr_map(std::map<std::string, std::string> addr_map);
 
   void set_default_headers(Headers headers);
-
-  void
-  set_header_writer(std::function<ssize_t(Stream &, Headers &)> const &writer);
 
   void set_address_family(int family);
   void set_tcp_nodelay(bool on);
@@ -1827,9 +1626,6 @@ public:
 
   SSL_CTX *ssl_context() const;
 
-  void update_certs(X509 *cert, EVP_PKEY *private_key,
-                    X509_STORE *client_ca_cert_store = nullptr);
-
 private:
   bool process_and_close_socket(socket_t sock) override;
 
@@ -1837,7 +1633,7 @@ private:
   std::mutex ctx_mutex_;
 };
 
-class SSLClient final : public ClientImpl {
+class SSLClient : public ClientImpl {
 public:
   explicit SSLClient(const std::string &host);
 
@@ -1845,12 +1641,10 @@ public:
 
   explicit SSLClient(const std::string &host, int port,
                      const std::string &client_cert_path,
-                     const std::string &client_key_path,
-                     const std::string &private_key_password = std::string());
+                     const std::string &client_key_path);
 
   explicit SSLClient(const std::string &host, int port, X509 *client_cert,
-                     EVP_PKEY *client_key,
-                     const std::string &private_key_password = std::string());
+                     EVP_PKEY *client_key);
 
   ~SSLClient() override;
 
@@ -1866,7 +1660,7 @@ public:
 private:
   bool create_and_connect_socket(Socket &socket, Error &error) override;
   void shutdown_ssl(Socket &socket, bool shutdown_gracefully) override;
-  void shutdown_ssl_impl(Socket &socket, bool shutdown_gracefully);
+  void shutdown_ssl_impl(Socket &socket, bool shutdown_socket);
 
   bool process_socket(const Socket &socket,
                       std::function<bool(Stream &strm)> callback) override;
@@ -1910,9 +1704,15 @@ inline void duration_to_sec_and_usec(const T &duration, U callback) {
   callback(static_cast<time_t>(sec), static_cast<time_t>(usec));
 }
 
-inline uint64_t get_header_value_u64(const Headers &headers,
-                                     const std::string &key, size_t id,
-                                     uint64_t def) {
+template <typename T>
+inline T get_header_value(const Headers & /*headers*/,
+                          const std::string & /*key*/, size_t /*id*/ = 0,
+                          uint64_t /*def*/ = 0) {}
+
+template <>
+inline uint64_t get_header_value<uint64_t>(const Headers &headers,
+                                           const std::string &key, size_t id,
+                                           uint64_t def) {
   auto rng = headers.equal_range(key);
   auto it = rng.first;
   std::advance(it, static_cast<ssize_t>(id));
@@ -1924,14 +1724,14 @@ inline uint64_t get_header_value_u64(const Headers &headers,
 
 } // namespace detail
 
-inline uint64_t Request::get_header_value_u64(const std::string &key,
-                                              size_t id) const {
-  return detail::get_header_value_u64(headers, key, id, 0);
+template <typename T>
+inline T Request::get_header_value(const std::string &key, size_t id) const {
+  return detail::get_header_value<T>(headers, key, id, 0);
 }
 
-inline uint64_t Response::get_header_value_u64(const std::string &key,
-                                               size_t id) const {
-  return detail::get_header_value_u64(headers, key, id, 0);
+template <typename T>
+inline T Response::get_header_value(const std::string &key, size_t id) const {
+  return detail::get_header_value<T>(headers, key, id, 0);
 }
 
 template <typename... Args>
@@ -1974,91 +1774,9 @@ inline void default_socket_options(socket_t sock) {
              reinterpret_cast<const void *>(&yes), sizeof(yes));
 #endif
 #endif
-}
-
-inline const char *http_status_message(int status) {
-  switch (status) {
-  case StatusCode::Continue_100: return "Continue";
-  case StatusCode::SwitchingProtocol_101: return "Switching Protocol";
-  case StatusCode::Processing_102: return "Processing";
-  case StatusCode::EarlyHints_103: return "Early Hints";
-  case StatusCode::OK_200: return "OK";
-  case StatusCode::Created_201: return "Created";
-  case StatusCode::Accepted_202: return "Accepted";
-  case StatusCode::NonAuthoritativeInformation_203:
-    return "Non-Authoritative Information";
-  case StatusCode::NoContent_204: return "No Content";
-  case StatusCode::ResetContent_205: return "Reset Content";
-  case StatusCode::PartialContent_206: return "Partial Content";
-  case StatusCode::MultiStatus_207: return "Multi-Status";
-  case StatusCode::AlreadyReported_208: return "Already Reported";
-  case StatusCode::IMUsed_226: return "IM Used";
-  case StatusCode::MultipleChoices_300: return "Multiple Choices";
-  case StatusCode::MovedPermanently_301: return "Moved Permanently";
-  case StatusCode::Found_302: return "Found";
-  case StatusCode::SeeOther_303: return "See Other";
-  case StatusCode::NotModified_304: return "Not Modified";
-  case StatusCode::UseProxy_305: return "Use Proxy";
-  case StatusCode::unused_306: return "unused";
-  case StatusCode::TemporaryRedirect_307: return "Temporary Redirect";
-  case StatusCode::PermanentRedirect_308: return "Permanent Redirect";
-  case StatusCode::BadRequest_400: return "Bad Request";
-  case StatusCode::Unauthorized_401: return "Unauthorized";
-  case StatusCode::PaymentRequired_402: return "Payment Required";
-  case StatusCode::Forbidden_403: return "Forbidden";
-  case StatusCode::NotFound_404: return "Not Found";
-  case StatusCode::MethodNotAllowed_405: return "Method Not Allowed";
-  case StatusCode::NotAcceptable_406: return "Not Acceptable";
-  case StatusCode::ProxyAuthenticationRequired_407:
-    return "Proxy Authentication Required";
-  case StatusCode::RequestTimeout_408: return "Request Timeout";
-  case StatusCode::Conflict_409: return "Conflict";
-  case StatusCode::Gone_410: return "Gone";
-  case StatusCode::LengthRequired_411: return "Length Required";
-  case StatusCode::PreconditionFailed_412: return "Precondition Failed";
-  case StatusCode::PayloadTooLarge_413: return "Payload Too Large";
-  case StatusCode::UriTooLong_414: return "URI Too Long";
-  case StatusCode::UnsupportedMediaType_415: return "Unsupported Media Type";
-  case StatusCode::RangeNotSatisfiable_416: return "Range Not Satisfiable";
-  case StatusCode::ExpectationFailed_417: return "Expectation Failed";
-  case StatusCode::ImATeapot_418: return "I'm a teapot";
-  case StatusCode::MisdirectedRequest_421: return "Misdirected Request";
-  case StatusCode::UnprocessableContent_422: return "Unprocessable Content";
-  case StatusCode::Locked_423: return "Locked";
-  case StatusCode::FailedDependency_424: return "Failed Dependency";
-  case StatusCode::TooEarly_425: return "Too Early";
-  case StatusCode::UpgradeRequired_426: return "Upgrade Required";
-  case StatusCode::PreconditionRequired_428: return "Precondition Required";
-  case StatusCode::TooManyRequests_429: return "Too Many Requests";
-  case StatusCode::RequestHeaderFieldsTooLarge_431:
-    return "Request Header Fields Too Large";
-  case StatusCode::UnavailableForLegalReasons_451:
-    return "Unavailable For Legal Reasons";
-  case StatusCode::NotImplemented_501: return "Not Implemented";
-  case StatusCode::BadGateway_502: return "Bad Gateway";
-  case StatusCode::ServiceUnavailable_503: return "Service Unavailable";
-  case StatusCode::GatewayTimeout_504: return "Gateway Timeout";
-  case StatusCode::HttpVersionNotSupported_505:
-    return "HTTP Version Not Supported";
-  case StatusCode::VariantAlsoNegotiates_506: return "Variant Also Negotiates";
-  case StatusCode::InsufficientStorage_507: return "Insufficient Storage";
-  case StatusCode::LoopDetected_508: return "Loop Detected";
-  case StatusCode::NotExtended_510: return "Not Extended";
-  case StatusCode::NetworkAuthenticationRequired_511:
-    return "Network Authentication Required";
-
-  default:
-  case StatusCode::InternalServerError_500: return "Internal Server Error";
-  }
-}
-
-inline std::string get_bearer_token_auth(const Request &req) {
-  if (req.has_header("Authorization")) {
-    static std::string BearerHeaderPrefix = "Bearer ";
-    return req.get_header_value("Authorization")
-        .substr(BearerHeaderPrefix.length());
-  }
-  return "";
+  int const size = 1048576;
+  setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
+  setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size));
 }
 
 template <class Rep, class Period>
@@ -2101,7 +1819,6 @@ inline std::string to_string(const Error error) {
     return "Unsupported HTTP multipart boundary characters";
   case Error::Compression: return "Compression failed";
   case Error::ConnectionTimeout: return "Connection timed out";
-  case Error::ProxyConnection: return "Proxy connection failed";
   case Error::Unknown: return "Unknown";
   default: break;
   }
@@ -2115,9 +1832,10 @@ inline std::ostream &operator<<(std::ostream &os, const Error &obj) {
   return os;
 }
 
-inline uint64_t Result::get_request_header_value_u64(const std::string &key,
-                                                     size_t id) const {
-  return detail::get_header_value_u64(request_headers_, key, id, 0);
+template <typename T>
+inline T Result::get_request_header_value(const std::string &key,
+                                          size_t id) const {
+  return detail::get_header_value<T>(request_headers_, key, id, 0);
 }
 
 template <class Rep, class Period>
@@ -2171,7 +1889,7 @@ void hosted_at(const std::string &hostname, std::vector<std::string> &addrs);
 
 std::string append_query_params(const std::string &path, const Params &params);
 
-std::pair<std::string, std::string> make_range_header(const Ranges &ranges);
+std::pair<std::string, std::string> make_range_header(Ranges ranges);
 
 std::pair<std::string, std::string>
 make_basic_authentication_header(const std::string &username,
@@ -2179,6 +1897,8 @@ make_basic_authentication_header(const std::string &username,
                                  bool is_proxy = false);
 
 namespace detail {
+
+const char *status_message(int status);
 
 std::string encode_query_param(const std::string &value);
 
@@ -2189,20 +1909,7 @@ void read_file(const std::string &path, std::string &out);
 
 std::string trim_copy(const std::string &s);
 
-void divide(
-    const char *data, std::size_t size, char d,
-    std::function<void(const char *, std::size_t, const char *, std::size_t)>
-        fn);
-
-void divide(
-    const std::string &str, char d,
-    std::function<void(const char *, std::size_t, const char *, std::size_t)>
-        fn);
-
 void split(const char *b, const char *e, char d,
-           std::function<void(const char *, const char *)> fn);
-
-void split(const char *b, const char *e, char d, size_t m,
            std::function<void(const char *, const char *)> fn);
 
 bool process_client_socket(socket_t sock, time_t read_timeout_sec,
@@ -2222,8 +1929,6 @@ const char *get_header_value(const Headers &headers, const std::string &key,
 
 std::string params_to_query_str(const Params &params);
 
-void parse_query_text(const char *data, std::size_t size, Params &params);
-
 void parse_query_text(const std::string &s, Params &params);
 
 bool parse_multipart_boundary(const std::string &content_type,
@@ -2241,7 +1946,7 @@ enum class EncodingType { None = 0, Gzip, Brotli };
 
 EncodingType encoding_type(const Request &req, const Response &res);
 
-class BufferStream final : public Stream {
+class BufferStream : public Stream {
 public:
   BufferStream() = default;
   ~BufferStream() override = default;
@@ -2281,19 +1986,19 @@ public:
                           Callback callback) = 0;
 };
 
-class nocompressor final : public compressor {
+class nocompressor : public compressor {
 public:
-  ~nocompressor() override = default;
+  virtual ~nocompressor() = default;
 
   bool compress(const char *data, size_t data_length, bool /*last*/,
                 Callback callback) override;
 };
 
 #ifdef CPPHTTPLIB_ZLIB_SUPPORT
-class gzip_compressor final : public compressor {
+class gzip_compressor : public compressor {
 public:
   gzip_compressor();
-  ~gzip_compressor() override;
+  ~gzip_compressor();
 
   bool compress(const char *data, size_t data_length, bool last,
                 Callback callback) override;
@@ -2303,10 +2008,10 @@ private:
   z_stream strm_;
 };
 
-class gzip_decompressor final : public decompressor {
+class gzip_decompressor : public decompressor {
 public:
   gzip_decompressor();
-  ~gzip_decompressor() override;
+  ~gzip_decompressor();
 
   bool is_valid() const override;
 
@@ -2320,7 +2025,7 @@ private:
 #endif
 
 #ifdef CPPHTTPLIB_BROTLI_SUPPORT
-class brotli_compressor final : public compressor {
+class brotli_compressor : public compressor {
 public:
   brotli_compressor();
   ~brotli_compressor();
@@ -2332,7 +2037,7 @@ private:
   BrotliEncoderState *state_ = nullptr;
 };
 
-class brotli_decompressor final : public decompressor {
+class brotli_decompressor : public decompressor {
 public:
   brotli_decompressor();
   ~brotli_decompressor();
@@ -2367,29 +2072,6 @@ private:
   const size_t fixed_buffer_size_;
   size_t fixed_buffer_used_size_ = 0;
   std::string glowable_buffer_;
-};
-
-class mmap {
-public:
-  mmap(const char *path);
-  ~mmap();
-
-  bool open(const char *path);
-  void close();
-
-  bool is_open() const;
-  size_t size() const;
-  const char *data() const;
-
-private:
-#if defined(_WIN32)
-  HANDLE hFile_;
-  HANDLE hMapping_;
-#else
-  int fd_;
-#endif
-  size_t size_;
-  void *addr_;
 };
 
 } // namespace detail

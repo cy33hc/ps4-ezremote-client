@@ -439,45 +439,42 @@ namespace Windows
             }
         }
 
-        if (strcmp(remote_settings->http_server_type, HTTP_SERVER_GITHUB) != 0)
+        ImGui::SameLine();
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
+        ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_ENABLE_RPI]);
+        ImGui::SameLine();
+
+        if (ImGui::Checkbox("###enable_rpi", &remote_settings->enable_rpi))
         {
-            ImGui::SameLine();
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
-            ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_ENABLE_RPI]);
-            ImGui::SameLine();
+            CONFIG::SaveConfig();
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetNextWindowSize(ImVec2(450, 110));
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 440);
+            ImGui::Text("%s", lang_strings[STR_ENABLE_RPI_FTP_SMB_MSG]);
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        }
 
-            if (ImGui::Checkbox("###enable_rpi", &remote_settings->enable_rpi))
-            {
-                CONFIG::SaveConfig();
-            }
-            if (ImGui::IsItemHovered())
-            {
-                ImGui::SetNextWindowSize(ImVec2(450, 110));
-                ImGui::BeginTooltip();
-                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 440);
-                ImGui::Text("%s", lang_strings[STR_ENABLE_RPI_FTP_SMB_MSG]);
-                ImGui::PopTextWrapPos();
-                ImGui::EndTooltip();
-            }
+        ImGui::SameLine();
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
+        ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_ENABLE_DISK_CACHE]);
+        ImGui::SameLine();
 
-            ImGui::SameLine();
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 5);
-            ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_ENABLE_DISK_CACHE]);
-            ImGui::SameLine();
-
-            if (ImGui::Checkbox("###enable_disk_cache", &remote_settings->enable_disk_cache))
-            {
-                CONFIG::SaveConfig();
-            }
-            if (ImGui::IsItemHovered())
-            {
-                ImGui::SetNextWindowSize(ImVec2(550, 110));
-                ImGui::BeginTooltip();
-                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 540);
-                ImGui::Text("%s", lang_strings[STR_ENABLE_DISC_CACHE_MSG]);
-                ImGui::PopTextWrapPos();
-                ImGui::EndTooltip();
-            }
+        if (ImGui::Checkbox("###enable_disk_cache", &remote_settings->enable_disk_cache))
+        {
+            CONFIG::SaveConfig();
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetNextWindowSize(ImVec2(550, 110));
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 540);
+            ImGui::Text("%s", lang_strings[STR_ENABLE_DISC_CACHE_MSG]);
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
         }
 
         ImGui::PopStyleVar();
@@ -2653,8 +2650,6 @@ namespace Windows
             else if (strncasecmp(remote_settings->server, "https://github.com/", 19) == 0)
             {
                 snprintf(remote_settings->http_server_type, 24, "%s", HTTP_SERVER_GITHUB);
-                remote_settings->enable_rpi = false;
-                remote_settings->enable_disk_cache = false;
             }
         }
     }

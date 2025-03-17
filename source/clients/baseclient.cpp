@@ -138,7 +138,7 @@ int BaseClient::Size(const std::string &path, int64_t *size)
         }
         else
         {
-            sprintf(this->response, "%d - %s", res->status, http_status_message(res->status));
+            sprintf(this->response, "%d - %s", res->status, detail::status_message(res->status));
         }
     }
     else
