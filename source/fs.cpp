@@ -50,7 +50,7 @@ namespace FS
 
     void RmDir(const std::string &path)
     {
-        remove(path.c_str());
+        rmdir(path.c_str());
     }
 
     int64_t GetSize(const std::string &path)
@@ -85,6 +85,7 @@ namespace FS
             return 1;
         return 0;
     }
+
     void Rename(const std::string &from, const std::string &to)
     {
         int res = rename(from.c_str(), to.c_str());
@@ -269,6 +270,7 @@ namespace FS
             if (dirent == NULL)
             {
                 closedir(fd);
+                fd = NULL;
                 return out;
             }
             else
@@ -344,6 +346,7 @@ namespace FS
             }
         }
         closedir(fd);
+        fd = NULL;
 
         return out;
     }
@@ -549,11 +552,16 @@ namespace FS
         if (from.compare(to) == 0)
             return true;
 
-        bool res = Copy(from, to);
-        if (res)
-            Rm(from);
-        else
-            return res;
+        errno = 0;
+        int ret = rename(from.c_str(), to.c_str());
+        if (ret != 0 && (errno == EXDEV || errno == EEXIST))
+        {
+            bool res = Copy(from, to);
+            if (res)
+                Rm(from);
+            else
+                return res;
+        }
 
         return true;
     }
