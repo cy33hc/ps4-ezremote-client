@@ -1618,6 +1618,9 @@ namespace Windows
 
     void ShowEditorDialog()
     {
+        if (!paused)
+            saved_selected_browser = selected_browser;
+
         if (editor_inprogress)
         {
             ImGuiIO &io = ImGui::GetIO();
