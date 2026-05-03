@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include <semaphore.h>
 #include <pthread.h>
 
 enum FileBlockStatus
@@ -35,8 +36,9 @@ public:
 
 private:
     std::vector<FileBlock*> file_blocks;
-    size_t write_offset;
+    size_t write_offset = 0;
     size_t block_size;
+    size_t read_offset;
     std::string path;
     int write_error;
     bool complete;

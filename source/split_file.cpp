@@ -56,7 +56,10 @@ size_t SplitFile::Read(char *buf, size_t buf_size, size_t offset)
     while ((block_num >= this->file_blocks.size() && !this->complete) ||
            (block_num < this->file_blocks.size() && this->file_blocks[block_num]->status == BLOCK_STATUS_NOT_EXISTS))
     {
-        sem_wait(&this->block_ready);
+        struct timespec ts;
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_sec += 2;
+        sem_timedwait(&this->block_ready, &ts);
     }
 
     block = this->file_blocks[block_num];
@@ -120,7 +123,10 @@ size_t SplitFile::Read(char *buf, size_t buf_size, size_t offset)
         while ((block_num > this->file_blocks.size() - 1 && !this->complete) ||
                this->file_blocks[block_num]->status == BLOCK_STATUS_NOT_EXISTS)
         {
-            sem_wait(&this->block_ready);
+            struct timespec ts;
+            clock_gettime(CLOCK_REALTIME, &ts);
+            ts.tv_sec += 2;
+            sem_timedwait(&this->block_ready, &ts);
         }
 
         block = this->file_blocks[block_num];
@@ -128,7 +134,7 @@ size_t SplitFile::Read(char *buf, size_t buf_size, size_t offset)
 
     // delete blocks before the first read offset block. Assumuption, that reads are always
     // forward and won't read previously already read blocks. For safety, keeping only current block and 2 previous blocks
-    for (int j=0; j < first_block_num - 2; j++)
+    for (int j=0; j < first_block_num - 13; j++)
     {
         if (this->file_blocks[j]->status == BLOCK_STATUS_CREATED)
         {
@@ -142,18 +148,22 @@ size_t SplitFile::Read(char *buf, size_t buf_size, size_t offset)
         }
     }
 
+    this->read_offset = offset + total_bytes_read;
     return total_bytes_read;
 }
 
 size_t SplitFile::Write(char *buf, size_t buf_size)
 {
-    size_t bytes_written;
+    size_t bytes_written = 0;
     size_t block_space_remaining;
     size_t bytes_to_write;
 
     char *p = buf;
     size_t total_bytes_written = 0;
     size_t remaining_to_write = buf_size;
+
+    if (this->IsClosed())
+        return -1;
 
     while (remaining_to_write > 0 && !this->complete)
     {
@@ -186,6 +196,7 @@ size_t SplitFile::Write(char *buf, size_t buf_size)
             block_in_progress = NewBlock();
         }
     }
+    this->write_offset += total_bytes_written;
 
     return total_bytes_written;
 }
@@ -194,6 +205,8 @@ int SplitFile::Close()
 {
     if (this->complete)
         return 0;
+
+    this->complete = true;
 
     if (block_in_progress->fd != nullptr)
     {
@@ -204,9 +217,28 @@ int SplitFile::Close()
     block_in_progress->status = BLOCK_STATUS_CREATED;
     block_in_progress->is_last = true;
     this->file_blocks.push_back(block_in_progress);
-    this->complete = true;
     sem_post(&this->block_ready);
 
+    // Wait until file is fully read, if file isn't full read
+    // in 5 mins then go ahead and delete all file chunks
+    int retries = 10;
+    size_t prev_read_offset = 0;
+    while (this->read_offset != this->write_offset && retries > 0)
+    {
+        if (prev_read_offset == this->read_offset)
+            retries--;
+        prev_read_offset = this->read_offset;
+        sceKernelUsleep(1000000);
+    }
+    sceKernelUsleep(5000000);
+
+    for (size_t j = 0; j < this->file_blocks.size(); j++)
+    {
+        if (this->file_blocks[j] != nullptr && this->file_blocks[j]->status == BLOCK_STATUS_CREATED)
+        {
+            remove(this->file_blocks[j]->block_file.c_str());
+        }
+    }
     return 0;
 }
 
