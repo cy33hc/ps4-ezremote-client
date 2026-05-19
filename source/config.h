@@ -77,6 +77,9 @@
 
 #define CONFIG_LANGUAGE "language"
 
+#define CONFIG_ENABLE_BG_DOWNLOAD "enable_background_download"
+#define CONFIG_BG_DOWNLOAD_SIZE "minimum_backgrond_file_size"
+
 #define HTTP_SERVER_APACHE "Apache"
 #define HTTP_SERVER_MS_IIS "Microsoft IIS"
 #define HTTP_SERVER_NGINX "Nginx"
@@ -85,6 +88,8 @@
 #define HTTP_SERVER_ARCHIVEORG "Archive.org"
 #define HTTP_SERVER_MYRIENT "Myrient"
 #define HTTP_SERVER_GITHUB "Github"
+
+#define EZREMOTE_SERVER_REQUIRED_VERSION "1.00"
 
 #define MAX_EDIT_FILE_SIZE 32768
 
@@ -153,6 +158,9 @@ extern bool show_hidden_files;
 extern char alldebrid_api_key[64];
 extern char realdebrid_api_key[64];
 extern char temp_folder[256];
+extern std::string ezremote_server_version;
+extern bool enable_background_download;
+extern uint64_t minimum_backgrond_file_size;
 
 namespace CONFIG
 {

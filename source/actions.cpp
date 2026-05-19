@@ -1911,4 +1911,55 @@ namespace Actions
         sprintf(remote_file_to_select, "%s", temp_file.c_str());
     }
 
+    void RestartServer()
+    {
+        StopServer();
+        sleep(2);
+        INSTALLER::StartEzRemoteServer();
+        sleep(2);
+    }
+
+    void StopServer()
+    {
+        httplib::Client client = httplib::Client("http://localhost:" + std::to_string(http_int_server_port));
+        client.Get("/stop");
+    }
+
+    void GetBackgroundDownloadProgress()
+    {
+        httplib::Client client = httplib::Client("http://localhost:" + std::to_string(http_int_server_port));
+
+        if (auto res = client.Get("/get_download_state"))
+        {
+            if (HTTP_SUCCESS(res->status))
+            {
+                bg_download_progress.clear();
+
+                json_object *jobj = json_tokener_parse(res->body.c_str());
+                if (jobj != nullptr)
+                {
+                    struct array_list *progress_list = json_object_get_array(jobj);
+
+                    for (size_t idx = 0; idx < progress_list->length; ++idx)
+                    {
+                        DownloadProgress progress;
+
+                        json_object *progress_obj = (json_object *)array_list_get_idx(progress_list, idx);
+                        progress.path = json_object_get_string(json_object_object_get(progress_obj, "path"));
+                        progress.bytes_transfered = json_object_get_uint64(json_object_object_get(progress_obj, "bytes_transfered"));
+                        progress.file_size = json_object_get_uint64(json_object_object_get(progress_obj, "file_size"));
+                        progress.state = state_strings[json_object_get_int(json_object_object_get(progress_obj, "state"))];
+                        progress.timestamp = json_object_get_uint64(json_object_object_get(progress_obj, "timestamp"));
+
+                        bg_download_progress.push_back(progress);
+                    }
+                    json_object_put(jobj);
+                }
+            }
+            else
+            {
+                snprintf(status_message, 1024, "Failed to get the download progress from ezRemote Server");
+            }
+        }
+    }
 }

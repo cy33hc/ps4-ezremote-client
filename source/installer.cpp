@@ -12,6 +12,21 @@
 #include <orbis/SystemService.h>
 #include "clients/webdav.h"
 #include "clients/remote_client.h"
+#include "clients/smbclient.h"
+#include "clients/sftpclient.h"
+#include "clients/ftpclient.h"
+#include "clients/nfsclient.h"
+#include "clients/webdav.h"
+#include "clients/apache.h"
+#include "clients/archiveorg.h"
+#include "clients/iis.h"
+#include "clients/github.h"
+#include "clients/myrient.h"
+#include "clients/nginx.h"
+#include "clients/npxserve.h"
+#include "clients/rclone.h"
+#include "dbglogger.h"
+
 #include "server/http_server.h"
 #include "installer.h"
 #include "util.h"
@@ -41,6 +56,11 @@ static std::map<std::string, SplitPkgInstallData *> split_pkg_install_data_list;
 
 namespace INSTALLER
 {
+	static int FtpCallback(int64_t xfered, void *arg)
+	{
+		return 1;
+	}
+
 	int Init(void)
 	{
 		int ret;
@@ -1170,5 +1190,152 @@ namespace INSTALLER
 		file_transfering = false;
 		Windows::SetModalMode(false);
 		return ret;
+	}
+
+	std::string EzRemoteServerVersion()
+	{
+		httplib::Client client = httplib::Client(std::string("http://localhost:") + std::to_string(http_int_server_port));
+
+		if (auto res = client.Get("/version"))
+		{
+			if (HTTP_SUCCESS(res->status))
+			{
+				return res->body;
+			}
+		}
+
+		return "";
+	}
+
+	int StartEzRemoteServer()
+	{
+		/*
+		char buffer[8192];
+		in_addr_t in_addr;
+		in_addr_t server_addr;
+		int filefd;
+		int sockfd;
+		ssize_t i;
+		ssize_t read_return;
+		struct hostent *hostent;
+		struct sockaddr_in sockaddr_in;
+		unsigned short server_port = 9021;
+
+		if (!EzRemoteServerVersion().empty())
+			return 0;
+
+		filefd = open(SERVER_ELF_PATH, O_RDONLY);
+		if (filefd == -1)
+		{
+			return -1;
+		}
+
+		sockfd = socket(AF_INET, SOCK_STREAM, 0);
+		if (sockfd == -1)
+		{
+			return -1;
+		}
+
+		hostent = gethostbyname("127.0.0.1");
+		if (hostent == NULL)
+		{
+			return -1;
+		}
+
+		in_addr = inet_addr(inet_ntoa(*(struct in_addr *)*(hostent->h_addr_list)));
+		if (in_addr == (in_addr_t)-1)
+		{
+			return -1;
+		}
+
+		sockaddr_in.sin_addr.s_addr = in_addr;
+		sockaddr_in.sin_family = AF_INET;
+		sockaddr_in.sin_port = htons(server_port);
+
+		if (connect(sockfd, (struct sockaddr *)&sockaddr_in, sizeof(sockaddr_in)) == -1)
+		{
+			return -1;
+		}
+
+		while (1)
+		{
+			read_return = read(filefd, buffer, 8192);
+			if (read_return == 0)
+				break;
+			if (read_return == -1)
+			{
+				return -1;
+			}
+			if (write(sockfd, buffer, read_return) == -1)
+			{
+				return -1;
+			}
+		}
+
+		close(filefd);
+		close(sockfd);
+		*/
+
+		return 0;
+	}
+
+	RemoteClient *GetRemoteClient(int site_idx)
+	{
+		RemoteClient *tmp_client = nullptr;
+		RemoteSettings *tmp_settings = &site_settings[sites[site_idx]];
+
+		return GetRemoteClient(tmp_settings);
+	}
+
+	RemoteClient *GetRemoteClient(RemoteSettings *settings)
+	{
+		RemoteClient *tmp_client = nullptr;
+		;
+
+		if (settings->type == CLIENT_TYPE_HTTP_SERVER)
+		{
+			if (strcmp(remote_settings->http_server_type, HTTP_SERVER_APACHE) == 0)
+				tmp_client = new ApacheClient();
+			else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_MS_IIS) == 0)
+				tmp_client = new IISClient();
+			else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_NGINX) == 0)
+				tmp_client = new NginxClient();
+			else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_NPX_SERVE) == 0)
+				tmp_client = new NpxServeClient();
+			else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_RCLONE) == 0)
+				tmp_client = new RCloneClient();
+			else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_ARCHIVEORG) == 0)
+				tmp_client = new ArchiveOrgClient();
+			else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_GITHUB) == 0)
+				tmp_client = new GithubClient();
+			else if (strcmp(remote_settings->http_server_type, HTTP_SERVER_MYRIENT) == 0)
+				tmp_client = new MyrientClient();
+		}
+		else if (settings->type == CLIENT_TYPE_WEBDAV)
+		{
+			tmp_client = new WebDAVClient();
+		}
+		else if (settings->type == CLIENT_TYPE_SMB)
+		{
+			tmp_client = new SmbClient();
+		}
+		else if (settings->type == CLIENT_TYPE_SFTP)
+		{
+			tmp_client = new SFTPClient();
+		}
+		else if (settings->type == CLIENT_TYPE_FTP)
+		{
+			tmp_client = new FtpClient();
+			FtpClient *ftp_client = (FtpClient *)tmp_client;
+			ftp_client->SetCallbackXferFunction(FtpCallback);
+		}
+		else if (settings->type == CLIENT_TYPE_NFS)
+		{
+			tmp_client = new NfsClient();
+		}
+
+		tmp_client->Connect(settings->server, settings->username, settings->password, false);
+
+		return tmp_client;
 	}
 }

@@ -11,6 +11,10 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+enum DownloadState { STATE_PENDING, STATE_DOWNLOADING, STATE_RESUMED, STATE_FAILED, STATE_SUCCESS };
+
+static const char* state_strings[] = {"Pending", "Downloading", "Resumed", "Failed", "Success"};
+
 typedef struct
 {
     uint16_t year;
@@ -86,6 +90,15 @@ struct DirEntry
             sprintf(entry->display_size, "%.2fGB", entry->file_size * 1.0f / (1024 * 1024 * 1024));
         }
     }
+};
+
+struct DownloadProgress
+{
+    std::string path;
+    std::string state;
+    uint64_t bytes_transfered;
+    uint64_t file_size;
+    time_t timestamp;
 };
 
 static lxb_dom_node_t *NextChildElement(lxb_dom_element_t *element)

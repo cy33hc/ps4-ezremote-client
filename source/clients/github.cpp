@@ -12,7 +12,7 @@ using httplib::Client;
 using httplib::Headers;
 using httplib::Result;
 
-int GithubClient::Connect(const std::string &url, const std::string &username, const std::string &password)
+int GithubClient::Connect(const std::string &url, const std::string &username, const std::string &password, bool send_ping)
 {
     if (url.find("https://github.com") == std::string::npos)
         return 0;
@@ -31,8 +31,11 @@ int GithubClient::Connect(const std::string &url, const std::string &username, c
     client->enable_server_certificate_verification(false);
     m_client.Connect("https://github.com", username, password);
 
-    if (Ping())
+    if (!send_ping)
         this->connected = true;
+    else if (Ping())
+        this->connected = true;
+
     return 1;
 }
 

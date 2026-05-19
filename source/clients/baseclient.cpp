@@ -40,7 +40,7 @@ int BaseClient::SetCookies(Headers &headers)
     return 1;
 }
 
-int BaseClient::Connect(const std::string &url, const std::string &username, const std::string &password)
+int BaseClient::Connect(const std::string &url, const std::string &username, const std::string &password, bool send_ping)
 {
     this->host_url = url;
     size_t scheme_pos = url.find("://");
@@ -58,8 +58,12 @@ int BaseClient::Connect(const std::string &url, const std::string &username, con
     client->set_connection_timeout(30);
     client->set_read_timeout(30);
     client->enable_server_certificate_verification(false);
-    if (Ping())
+
+    if (!send_ping)
         this->connected = true;
+    else if (Ping())
+        this->connected = true;
+
     return 1;
 }
 

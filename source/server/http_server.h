@@ -8,6 +8,7 @@ extern Server *svr;
 
 static pthread_t http_server_thid;
 extern int http_server_port;
+extern int http_int_server_port;
 extern char compressed_file_path[];
 extern bool web_server_enabled;
 

@@ -24,7 +24,7 @@ SmbClient::~SmbClient()
 {
 }
 
-int SmbClient::Connect(const std::string &url, const std::string &user, const std::string &pass)
+int SmbClient::Connect(const std::string &url, const std::string &user, const std::string &pass, bool send_ping)
 {
 	struct smb2_url *smb_url;
 

@@ -4,6 +4,7 @@
 #include "zip_util.h"
 #include "split_file.h"
 #include "pthread.h"
+#include "config.h"
 
 #define SWAP16(x)                                         \
     ((uint16_t)((((uint16_t)(x)&UINT16_C(0x00FF)) << 8) | \
@@ -164,4 +165,9 @@ namespace INSTALLER
     void AddSplitPkgInstallData(const std::string &hash, SplitPkgInstallData *pkg_data);
     void RemoveSplitPkgInstallData(const std::string &hash);
     bool InstallSplitPkg(const std::string &path, SplitPkgInstallData* pkg_data, bool bg = false);
+    std::string EzRemoteServerVersion();
+    int StartEzRemoteServer();
+    std::string StoreBgInstallHostData(RemoteSettings *remote_settings, const std::string &path);
+    RemoteClient *GetRemoteClient(int site_idx);
+    RemoteClient *GetRemoteClient(RemoteSettings *settings);
 }

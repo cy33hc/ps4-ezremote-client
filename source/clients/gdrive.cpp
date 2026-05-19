@@ -159,7 +159,7 @@ GDriveClient::GDriveClient()
     path_id_map.insert(std::make_pair("/" + shared_with_me, shared_with_me));
 }
 
-int GDriveClient::Connect(const std::string &url, const std::string &user, const std::string &pass)
+int GDriveClient::Connect(const std::string &url, const std::string &user, const std::string &pass, bool send_ping)
 {
     if (strlen(remote_settings->gg_account.refresh_token) > 0)
     {

@@ -41,6 +41,9 @@ bool show_hidden_files;
 char alldebrid_api_key[64];
 char realdebrid_api_key[64];
 char temp_folder[256];
+std::string ezremote_server_version;
+bool enable_background_download;
+uint64_t minimum_backgrond_file_size;
 
 unsigned char cipher_key[32] = {'s', '5', 'v', '8', 'y', '/', 'B', '?', 'E', '(', 'H', '+', 'M', 'b', 'Q', 'e', 'T', 'h', 'W', 'm', 'Z', 'q', '4', 't', '7', 'w', '9', 'z', '$', 'C', '&', 'F'};
 unsigned char cipher_iv[16] = {'Y', 'p', '3', 's', '6', 'v', '9', 'y', '$', 'B', '&', 'E', ')', 'H', '@', 'M'};
@@ -195,6 +198,12 @@ namespace CONFIG
 
         sprintf(temp_folder, ReadString(CONFIG_GLOBAL, CONFIG_TMP_FOLDER_PATH, TMP_FOLDER_PATH));
         WriteString(CONFIG_GLOBAL, CONFIG_TMP_FOLDER_PATH, temp_folder);
+
+        enable_background_download = ReadBool(CONFIG_GLOBAL, CONFIG_ENABLE_BG_DOWNLOAD, true);
+        WriteBool(CONFIG_GLOBAL, CONFIG_ENABLE_BG_DOWNLOAD, enable_background_download);
+
+        minimum_backgrond_file_size = ReadLong(CONFIG_GLOBAL, CONFIG_BG_DOWNLOAD_SIZE, 1024*1024*1024);
+        WriteLong(CONFIG_GLOBAL, CONFIG_BG_DOWNLOAD_SIZE, minimum_backgrond_file_size);
 
         if (!FS::FolderExists(temp_folder))
         {
@@ -434,6 +443,8 @@ namespace CONFIG
         WriteInt(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_PORT, http_server_port);
         WriteString(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_COMPRESSED_FILE_PATH, compressed_file_path);
         WriteBool(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_ENABLED, web_server_enabled);
+        WriteBool(CONFIG_GLOBAL, CONFIG_ENABLE_BG_DOWNLOAD, enable_background_download);
+        WriteLong(CONFIG_GLOBAL, CONFIG_BG_DOWNLOAD_SIZE, minimum_backgrond_file_size);
 
         WriteIniFile(CONFIG_INI_FILE);
         CloseIniFile();

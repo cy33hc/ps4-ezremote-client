@@ -3954,6 +3954,10 @@ bool Server::listen_internal() {
 #endif
       }
 
+      int const size = 1048576;
+      setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
+      setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size));
+
       task_queue->enqueue([this, sock]() { process_and_close_socket(sock); });
     }
 

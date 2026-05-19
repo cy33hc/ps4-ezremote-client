@@ -39,7 +39,7 @@ std::string ArchiveOrgClient::GenerateRandomId(const int len)
     return tmp_s;
 }
 
-int ArchiveOrgClient::Connect(const std::string &url, const std::string &username, const std::string &password)
+int ArchiveOrgClient::Connect(const std::string &url, const std::string &username, const std::string &password, bool send_ping)
 {
     this->host_url = url;
     size_t scheme_pos = url.find("://");
@@ -64,6 +64,8 @@ int ArchiveOrgClient::Connect(const std::string &url, const std::string &usernam
 
     if (username.length() > 0)
         return Login(username, password);
+    else if (!send_ping)
+        this->connected = true;
     else if (Ping())
         this->connected = true;
     return 1;

@@ -47,6 +47,7 @@ static RemoteDownloadData remote_data[100];
 
 Server *svr;
 int http_server_port = 8080;
+int http_int_server_port = 6701;
 char compressed_file_path[1024];
 bool web_server_enabled = false;
 
@@ -324,7 +325,7 @@ namespace HttpServer
                 }); });
 
         svr->Post("/__local__/list", [&](const Request &req, Response &res)
-                  {
+        {
             const char *path;
             bool onlyFolders = false;
             json_object *jobj = json_tokener_parse(req.body.c_str());
@@ -369,11 +370,12 @@ namespace HttpServer
             json_object *results = json_object_new_object();
             json_object_object_add(results, "result", json_files);
             const char *results_str = json_object_to_json_string(results);
+
             res.status = 200;
             res.set_content(results_str, strlen(results_str), "application/json"); });
 
         svr->Post("/__local__/rename", [&](const Request &req, Response &res)
-                  {
+        {
             const char *item;
             const char *newItemPath;
             json_object *jobj = json_tokener_parse(req.body.c_str());
@@ -398,7 +400,13 @@ namespace HttpServer
             return; });
 
         svr->Post("/__local__/move", [&](const Request &req, Response &res)
-                  {
+        {
+            if (activity_inprogess)
+            {
+                failed(res, 200, lang_strings[STR_ACTIVITY_IN_PROGRESS_MSG]);
+                return;
+            }
+
             const json_object *items;
             const char *newPath;
             json_object *jobj = json_tokener_parse(req.body.c_str());
@@ -452,7 +460,13 @@ namespace HttpServer
                 success(res); });
 
         svr->Post("/__local__/copy", [&](const Request &req, Response &res)
-                  {
+        {
+            if (activity_inprogess)
+            {
+                failed(res, 200, lang_strings[STR_ACTIVITY_IN_PROGRESS_MSG]);
+                return;
+            }
+
             const json_object *items;
             const char *newPath;
             const char *singleFilename;
@@ -526,7 +540,13 @@ namespace HttpServer
                 success(res); });
 
         svr->Post("/__local__/remove", [&](const Request &req, Response &res)
-                  {
+        {
+            if (activity_inprogess)
+            {
+                failed(res, 200, lang_strings[STR_ACTIVITY_IN_PROGRESS_MSG]);
+                return;
+            }
+
             json_object *items;
             json_object *jobj = json_tokener_parse(req.body.c_str());
             if (jobj != nullptr)
@@ -565,7 +585,13 @@ namespace HttpServer
                 success(res); });
 
         svr->Post("/__local__/install", [&](const Request &req, Response &res)
-                  {
+        {
+            if (activity_inprogess)
+            {
+                failed(res, 200, lang_strings[STR_ACTIVITY_IN_PROGRESS_MSG]);
+                return;
+            }
+
             json_object *items;
             json_object *jobj = json_tokener_parse(req.body.c_str());
             if (jobj != nullptr)
@@ -598,10 +624,11 @@ namespace HttpServer
                 failed(res, 200, error_msg);
             }
             else
-                success(res); });
+                success(res);
+        });
 
         svr->Post("/__local__/edit", [&](const Request &req, Response &res)
-                  {
+        {
             const char *item;
             const char *content;
             size_t content_len;
@@ -634,7 +661,7 @@ namespace HttpServer
             success(res); });
 
         svr->Post("/__local__/getContent", [&](const Request &req, Response &res)
-                  {
+        {
             const char *item;
             json_object *jobj = json_tokener_parse(req.body.c_str());
             if (jobj != nullptr)
@@ -656,11 +683,13 @@ namespace HttpServer
             json_object *result = json_object_new_object();
             json_object_object_add(result, "result", json_object_new_string(content.data()));
             const char *result_str = json_object_to_json_string(result);
+
             res.status = 200;
-            res.set_content(result_str, strlen(result_str), "application/json"); });
+            res.set_content(result_str, strlen(result_str), "application/json");
+        });
 
         svr->Post("/__local__/createFolder", [&](const Request &req, Response &res)
-                  {
+        {
             const char *newPath;
             json_object *jobj = json_tokener_parse(req.body.c_str());
             if (jobj != nullptr)
@@ -679,13 +708,22 @@ namespace HttpServer
             }
 
             FS::MkDirs(newPath);
-            success(res); });
+            success(res);
+        });
 
         svr->Post("/__local__/permission", [&](const Request &req, Response &res)
-                  { failed(res, 200, "Operation not supported"); });
+        {
+            failed(res, 200, "Operation not supported");
+        });
 
         svr->Post("/__local__/compress", [&](const Request &req, Response &res)
-                  {
+        {
+            if (activity_inprogess)
+            {
+                failed(res, 200, lang_strings[STR_ACTIVITY_IN_PROGRESS_MSG]);
+                return;
+            }
+
             json_object *items;
             const char* destination;
             const char* compressedFilename;
@@ -738,7 +776,13 @@ namespace HttpServer
             } });
 
         svr->Post("/__local__/extract", [&](const Request &req, Response &res)
-                  {
+        {
+            if (activity_inprogess)
+            {
+                failed(res, 200, lang_strings[STR_ACTIVITY_IN_PROGRESS_MSG]);
+                return;
+            }
+
             const char* item;
             const char* destination;
             const char* folderName;
@@ -777,7 +821,7 @@ namespace HttpServer
                 success(res); });
 
         svr->Get("/__local__/uploadResumeSize", [&](const Request &req, Response &res)
-                 {
+        {
             std::string destination = req.get_param_value("destination");
             std::string filename = req.get_param_value("filename");
             std::string file_path = destination + "/" + filename;
@@ -789,7 +833,7 @@ namespace HttpServer
             res.set_content(result_str.c_str(), result_str.length(), "application/json"); });
 
         svr->Post("/__local__/upload", [&](const Request &req, Response &res, const ContentReader &content_reader)
-                  {
+        {
             MultipartFormDataItems items;
             std::string destination;
             size_t chunk_size = 0;
@@ -859,7 +903,7 @@ namespace HttpServer
 
         // Download multiple files as ZIP
         svr->Get("/__local__/downloadMultiple", [&](const Request &req, Response &res)
-                 {
+        {
             if (req.get_param_value_count("items") == 0 || req.get_param_value_count("toFilename") == 0)
             {
                 failed(res, 200, "Required items and toFilename parameter missing");
@@ -917,7 +961,7 @@ namespace HttpServer
 
         // Download single file
         svr->Get("/__local__/downloadFile", [&](const Request &req, Response &res)
-                 {
+        {
             std::string path = req.get_param_value("path", 0);
             if (path.empty())
             {
@@ -950,7 +994,7 @@ namespace HttpServer
                 }); });
 
         svr->Get("/google_auth", [](const Request &req, Response &res)
-                 {
+        {
             std::string auth_code = req.get_param_value("code");
             Client client(GOOGLE_OAUTH_HOST);
             client.set_follow_location(true);
@@ -996,10 +1040,11 @@ namespace HttpServer
             }
             login_state = -1;
             std::string str = std::string(lang_strings[STR_FAIL_GET_TOKEN_MSG]) + " Google";
-            res.set_content(str.c_str(), "text/plain"); });
+            res.set_content(str.c_str(), "text/plain");
+        });
 
         svr->Get("/rmt_inst/Site (\\d+)(/)(.*)", [&](const Request &req, Response &res)
-                 {
+        {
             RemoteClient *tmp_client = nullptr;
             RemoteSettings *tmp_settings;
             auto site_idx = std::stoi(req.matches[1])-1;
@@ -1120,7 +1165,7 @@ namespace HttpServer
             } });
 
         svr->Get("/archive_inst/(.*)", [&](const Request &req, Response &res)
-                 {
+        {
             RemoteClient *tmp_client;
             RemoteSettings *tmp_settings;
             std::string hash = req.matches[1];
@@ -1175,7 +1220,8 @@ namespace HttpServer
                     [](bool success) {
                         return true;
                     });
-            } });
+            }
+        });
 
         svr->Get("/split_inst/(.*)", [&](const Request &req, Response &res)
         {
@@ -1240,7 +1286,7 @@ namespace HttpServer
             } });
 
         svr->Post("/__local__/install_url", [&](const Request &req, Response &res)
-                  {
+        {
             std::string url;
             const char *url_param;
             bool use_alldebrid = false;
@@ -1410,17 +1456,120 @@ namespace HttpServer
                     return;
                 }
             }
-            success(res); });
+            success(res);
+    
+        });
+
+        svr->Post("/__local__/download_url", [&](const Request &req, Response &res)
+        {
+            std::string url;
+            std::string dest;
+            const char *url_param;
+            const char *dest_param;
+            bool use_alldebrid = false;
+            bool use_realdebrid = false;
+
+            json_object *jobj = json_tokener_parse(req.body.c_str());
+            if (jobj != nullptr)
+            {
+                url_param = json_object_get_string(json_object_object_get(jobj, "url"));
+                dest_param = json_object_get_string(json_object_object_get(jobj, "dest"));
+                use_alldebrid  = json_object_get_boolean(json_object_object_get(jobj, "use_alldebrid"));
+                use_realdebrid = json_object_get_boolean(json_object_object_get(jobj, "use_realdebrid"));
+
+                if (url_param == nullptr || dest_param == nullptr)
+                {
+                    bad_request(res, "Required url, dest parameter missing");
+                    return;
+                }
+            }
+            else
+            {
+                bad_request(res, "Invalid payload");
+                return;
+            }
+
+            if ((use_alldebrid && strlen(alldebrid_api_key) == 0) || (use_realdebrid && strlen(realdebrid_api_key) == 0))
+            {
+                failed(res, 200, lang_strings[STR_ALLDEBRID_API_KEY_MISSING_MSG]);
+                return;
+            }
+
+            url = std::string(url_param);
+            FileHost *filehost = FileHost::getFileHost(url, use_alldebrid, use_realdebrid);
+
+            if (!filehost->IsValidUrl())
+            {
+                failed(res, 200, lang_strings[STR_INVALID_URL]);
+                return;
+            }
+
+            std::string download_url = filehost->GetDownloadUrl();
+            if (download_url.empty())
+            {
+                failed(res, 200, lang_strings[STR_CANT_EXTRACT_URL_MSG]);
+                return;
+            }
+            delete(filehost);
+
+			size_t scheme_pos = download_url.find("://");
+			size_t root_pos = download_url.find("/", scheme_pos + 3);
+			std::string host = download_url.substr(0, root_pos);
+			std::string path = download_url.substr(root_pos);
+            int64_t file_size;
+
+            RemoteClient *baseclient = new BaseClient();
+            baseclient->Connect(host, "", "");
+            baseclient->Size(path, &file_size);
+            delete baseclient;
+
+            OrbisTick tick;
+            sceRtcGetCurrentTick(&tick);
+            json_object *params = json_object_new_object();
+            json_object_object_add(params, "type", json_object_new_int(CLIENT_TYPE_FILEHOST));
+            json_object_object_add(params, "url", json_object_new_string(host.c_str()));
+            json_object_object_add(params, "username", json_object_new_string(""));
+            json_object_object_add(params, "password", json_object_new_string(""));
+            json_object_object_add(params, "src_path", json_object_new_string(path.c_str()));
+            json_object_object_add(params, "dest_path", json_object_new_string(dest_param));
+            json_object_object_add(params, "size", json_object_new_uint64(file_size));
+            json_object_object_add(params, "id", json_object_new_uint64(tick.mytick));
+
+            const char *params_str = json_object_to_json_string(params);
+            httplib::Client tmp_client = httplib::Client(std::string("http://localhost:") + std::to_string(http_int_server_port));
+
+            std::string download_req_url =  + "/download_url";
+            if (auto resp = tmp_client.Post(download_req_url, params_str, strlen(params_str), "application/json"))
+            {
+                if (HTTP_SUCCESS(resp->status))
+                {
+                    Util::Notify("%s queued for download", path.c_str());
+                    success(res);
+                    return;
+                }
+                else
+                {
+                    Util::Notify("Failed to queue %s for download in background", path.c_str());
+                    failed(res, 200, "Failed to download");
+                    return;
+                }
+            }
+
+            failed(res, 200, "Failed to download");
+        });
 
         svr->Get("/stop", [&](const Request & /*req*/, Response & /*res*/)
-                 { svr->stop(); });
+        {
+            svr->stop();
+        });
 
         svr->set_error_handler([](const Request & /*req*/, Response &res)
-                               {
+        {
             const char *fmt = "<p>Error Status: <span style='color:red;'>%d</span></p>";
             char buf[BUFSIZ];
             snprintf(buf, sizeof(buf), fmt, res.status);
-            res.set_content(buf, "text/html"); });
+            res.set_content(buf, "text/html");
+        });
 
         /*
         svr->set_logger([](const Request &req, const Response &res)

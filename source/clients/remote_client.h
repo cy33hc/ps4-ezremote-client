@@ -35,6 +35,7 @@ enum ClientType
     CLIENT_TYPE_HTTP_SERVER,
     CLIENT_TYPE_GOOGLE,
     CLIENT_TYPE_NFS,
+    CLIENT_TYPE_FILEHOST,
     CLINET_TYPE_UNKNOWN
 };
 
@@ -45,7 +46,7 @@ class RemoteClient
 public:
     RemoteClient(){};
     virtual ~RemoteClient(){};
-    virtual int Connect(const std::string &url, const std::string &username, const std::string &password) = 0;
+    virtual int Connect(const std::string &url, const std::string &username, const std::string &password, bool send_ping=false) = 0;
     virtual int Mkdir(const std::string &path) = 0;
     virtual int Rmdir(const std::string &path, bool recursive) = 0;
     virtual int Size(const std::string &path, int64_t *size) = 0;

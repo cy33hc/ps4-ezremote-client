@@ -14,7 +14,7 @@ class SFTPClient : public RemoteClient
 public:
     SFTPClient();
     ~SFTPClient();
-    int Connect(const std::string &url, const std::string &username, const std::string &password);
+    int Connect(const std::string &url, const std::string &username, const std::string &password, bool send_ping=false);
     int Mkdir(const std::string &path);
     int Rmdir(const std::string &path, bool recursive);
     int Rmdir(const std::string &path);

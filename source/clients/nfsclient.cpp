@@ -27,7 +27,7 @@ NfsClient::~NfsClient()
 {
 }
 
-int NfsClient::Connect(const std::string &url, const std::string &user, const std::string &pass)
+int NfsClient::Connect(const std::string &url, const std::string &user, const std::string &pass, bool send_ping)
 {
 	nfs = nfs_init_context();
 	if (nfs == nullptr)

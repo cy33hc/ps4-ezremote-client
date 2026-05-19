@@ -67,7 +67,7 @@ public:
 
 	FtpClient();
 	~FtpClient();
-	int Connect(const std::string &url, const std::string &user, const std::string &pass);
+	int Connect(const std::string &url, const std::string &user, const std::string &pass, bool send_ping=false);
 	void SetConnmode(connmode mode);
 	int Site(const std::string &cmd);
 	int Raw(const std::string &cmd);
