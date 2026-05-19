@@ -19,6 +19,7 @@
 #include "textures.h"
 #include "sfo.h"
 #include "system.h"
+#include "dbglogger.h"
 
 #define MAX_IMAGE_HEIGHT 980
 #define MAX_IMAGE_WIDTH 1820
@@ -41,9 +42,13 @@ static ime_callback_t ime_cancelled = nullptr;
 static std::vector<std::string> *ime_multi_field;
 static char *ime_single_field;
 static int ime_field_size;
+static bool show_ezremote_server_warning;
 
 static char txt_http_server_port[6];
+static char txt_bg_download_size[32];
 
+bool is_server_started = false;
+bool ezremote_server_version_match = true;
 bool handle_updates = false;
 int64_t bytes_transfered;
 int64_t bytes_to_download;
@@ -55,6 +60,7 @@ std::set<DirEntry> multi_selected_local_files;
 std::set<DirEntry> multi_selected_remote_files;
 std::vector<DirEntry> local_paste_files;
 std::vector<DirEntry> remote_paste_files;
+std::vector<DownloadProgress> bg_download_progress;
 DirEntry selected_local_file;
 DirEntry selected_remote_file;
 ACTIONS selected_action;
@@ -78,6 +84,8 @@ int favorite_url_idx = 0;
 char extract_zip_folder[256];
 char zip_file_path[384];
 bool show_settings = false;
+bool show_bg_download_progress = false;
+uint64_t refresh_bg_download_time;
 
 // Editor variables
 std::vector<std::string> edit_buffer;
@@ -124,12 +132,17 @@ namespace Windows
         sprintf(local_filter, "");
         sprintf(remote_filter, "");
         sprintf(txt_http_server_port, "%d", http_server_port);
+        sprintf(txt_bg_download_size, "%lu", minimum_backgrond_file_size);
         dont_prompt_overwrite = false;
         confirm_transfer_state = -1;
         dont_prompt_overwrite_cb = false;
         overwrite_type = OVERWRITE_PROMPT;
         local_paste_files.clear();
         remote_paste_files.clear();
+        //std::string cur_version = INSTALLER::EzRemoteServerVersion();
+        //ezremote_server_version_match = cur_version.empty() || (cur_version.compare(EZREMOTE_SERVER_REQUIRED_VERSION) == 0);
+        show_ezremote_server_warning = false; //!ezremote_server_version_match;
+        //dbglogger_log("verion=%s, show_warning=%d", cur_version.c_str(), show_ezremote_server_warning);
 
         Actions::RefreshLocalFiles(false);
     }
@@ -484,6 +497,7 @@ namespace Windows
         if (ImGui::Button(ICON_FA_GEAR, ImVec2(35, 0)))
         {
             show_settings = true;
+            is_server_started = !INSTALLER::EzRemoteServerVersion().empty();
         }
         if (ImGui::IsItemHovered())
         {
@@ -1408,7 +1422,10 @@ namespace Windows
 
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 300);
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
-            if (ImGui::Button(lang_strings[STR_CLOSE], ImVec2(100, 0)))
+
+            char id[128];
+            sprintf(id, "%s##prodialog", lang_strings[STR_CLOSE]);
+            if (ImGui::Button(id, ImVec2(100, 0)))
             {
                 SetModalMode(false);
                 selected_action = ACTION_NONE;
@@ -1755,6 +1772,139 @@ namespace Windows
         }
     }
 
+    void ShowWarningDialog()
+    {
+        if (show_ezremote_server_warning)
+        {
+            ImGuiIO &io = ImGui::GetIO();
+            (void)io;
+            ImGuiStyle *style = &ImGui::GetStyle();
+            ImVec4 *colors = style->Colors;
+
+            SetModalMode(true);
+            ImGui::OpenPopup(lang_strings[STR_WARNING]);
+
+            ImGui::SetNextWindowPos(ImVec2(600, 350));
+            ImGui::SetNextWindowSizeConstraints(ImVec2(720, 80), ImVec2(720, 500), NULL, NULL);
+            if (ImGui::BeginPopupModal(lang_strings[STR_WARNING], NULL, ImGuiWindowFlags_AlwaysAutoResize))
+            {
+                ImVec2 cur_pos = ImGui::GetCursorPos();
+                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 700);
+                ImGui::Text("%s %s %s", lang_strings[STR_WARNING_MSG_1], lang_strings[STR_WARNING_MSG_2], lang_strings[STR_WARNING_MSG_3]);
+                ImGui::PopTextWrapPos();
+
+                ImGui::Separator();
+
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 285);
+                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
+
+                char id[128];
+                sprintf(id, "%s##warning", lang_strings[STR_CLOSE]);
+                if (ImGui::Button(id, ImVec2(150, 0)))
+                {
+                    show_ezremote_server_warning = false;
+                    SetModalMode(false);
+                }
+
+                if (ImGui::IsWindowAppearing())
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+                if (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false))
+                {
+                    show_ezremote_server_warning = false;
+                    SetModalMode(false);
+                    ImGui::CloseCurrentPopup();
+                }
+
+                ImGui::EndPopup();
+            }
+        }
+    }
+
+    void ShowDownloadProgressDialog()
+    {
+        if (show_bg_download_progress)
+        {
+            ImGuiIO &io = ImGui::GetIO();
+            (void)io;
+            ImGuiStyle *style = &ImGui::GetStyle();
+            ImVec4 *colors = style->Colors;
+            char datetime_str[32];
+
+            SetModalMode(true);
+            ImGui::OpenPopup(lang_strings[STR_BG_DOWNLOAD_PROGRESS]);
+
+            ImGui::SetNextWindowPos(ImVec2(345, 320));
+            ImGui::SetNextWindowSizeConstraints(ImVec2(1260, 80), ImVec2(1260, 500), NULL, NULL);
+            if (ImGui::BeginPopupModal(lang_strings[STR_BG_DOWNLOAD_PROGRESS], NULL, ImGuiWindowFlags_AlwaysAutoResize))
+            {
+                ImGui::Columns(4, "bg_download_progress##Columns", true);
+                
+                for (int j = 0; j < bg_download_progress.size(); j++)
+                {
+                    DownloadProgress item = bg_download_progress[j];
+
+                    std::tm* ptm = std::localtime(&item.timestamp);
+                    // Format: YYYY-MM-DD HH:MM:SS
+                    std::strftime(datetime_str, sizeof(datetime_str), "%Y-%m-%d %H:%M", ptm);
+
+                    ImGui::SetColumnWidth(-1, 220);
+                    ImGui::Text("%s", datetime_str);
+
+                    ImGui::NextColumn();
+                    ImGui::SetColumnWidth(-1, 740);
+                    ImGui::Text("%s", item.path.c_str());
+
+                    ImGui::NextColumn();
+                    ImGui::SetColumnWidth(-1, 150);
+                    ImGui::Text("%s", item.state.c_str());
+
+                    ImGui::NextColumn();
+                    ImGui::SetColumnWidth(-1, 100);
+                    ImGui::Text("%.2f%%", (item.bytes_transfered * 1.0f/item.file_size * 1.0f)*100);
+
+                    ImGui::NextColumn();
+                    ImGui::Separator();
+                }
+                ImGui::Columns(1);
+
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 485);
+                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
+
+                char id[128];
+                sprintf(id, "%s##bg_dl_progress", lang_strings[STR_CLOSE]);
+                if (ImGui::Button(id, ImVec2(150, 0)))
+                {
+                    show_bg_download_progress = false;
+                    SetModalMode(false);
+                }
+
+                if (ImGui::IsWindowAppearing())
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+                if (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false))
+                {
+                    show_bg_download_progress = false;
+                    SetModalMode(false);
+                    ImGui::CloseCurrentPopup();
+                }
+
+                ImGui::EndPopup();
+
+                OrbisTick tick;
+                sceRtcGetCurrentTick(&tick);
+                uint64_t cur_time = tick.mytick;
+                if (cur_time - refresh_bg_download_time > 2000000)
+                {
+                    refresh_bg_download_time = cur_time;
+                    Actions::GetBackgroundDownloadProgress();
+                }
+            }
+        }
+    }
+
     void ShowSettingsDialog()
     {
         if (show_settings)
@@ -1806,6 +1956,7 @@ namespace Windows
                 ImGui::SetCursorPosX(805);
                 ImGui::Checkbox("##auto_delete_tmp_pkg", &auto_delete_tmp_pkg);
                 ImGui::Separator();
+
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
                 ImGui::Text("%s", lang_strings[STR_SHOW_HIDDEN_FILES]);
                 ImGui::SameLine();
@@ -1827,7 +1978,36 @@ namespace Windows
                     ime_single_field = temp_folder;
                     ime_field_size = 512;
                     ime_callback = SingleValueImeCallback;
-                    Dialog::initImeDialog(lang_strings[STR_COMPRESSED_FILE_PATH], temp_folder, 255, ORBIS_TYPE_BASIC_LATIN, 1050, 80);
+                    Dialog::initImeDialog(lang_strings[STR_COMPRESSED_FILE_PATH], temp_folder, 255, ORBIS_TYPE_DEFAULT, 1050, 80);
+                    gui_mode = GUI_MODE_IME;
+                }
+                ImGui::PopStyleVar();
+                ImGui::Separator();
+
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                ImGui::Text("%s", lang_strings[STR_ENABLE_BG_DOWNLOAD]);
+                ImGui::SameLine();
+                ImGui::SetCursorPosX(805);
+                ImGui::Checkbox("##enable_bg_download", &enable_background_download);
+                ImGui::Separator();
+
+                field_size = ImGui::CalcTextSize(lang_strings[STR_BG_DOWNLOAD_MIN_SIZE]);
+                width = field_size.x + 45;
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                ImGui::Text("%s", lang_strings[STR_BG_DOWNLOAD_MIN_SIZE]);
+                ImGui::SameLine();
+
+                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 1.0f));
+                sprintf(id, "%s##bg_download_min_size", txt_bg_download_size);
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
+                if (ImGui::Button(id, ImVec2(835-width, 0)))
+                {
+                    ResetImeCallbacks();
+                    ime_single_field = txt_bg_download_size;
+                    ime_field_size = 16;
+                    ime_callback = SingleValueImeCallback;
+                    ime_after_update = AfterMinBgDlSizeChangeCallback;
+                    Dialog::initImeDialog(lang_strings[STR_BG_DOWNLOAD_MIN_SIZE], txt_bg_download_size, 16, ORBIS_TYPE_NUMBER, 1050, 80);
                     gui_mode = GUI_MODE_IME;
                 }
                 ImGui::PopStyleVar();
@@ -1863,6 +2043,7 @@ namespace Windows
                     gui_mode = GUI_MODE_IME;
                 }
                 ImGui::Separator();
+
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
                 ImGui::Text("%s", lang_strings[STR_COMPRESSED_FILE_PATH]);
                 ImGui::SameLine();
@@ -1880,6 +2061,33 @@ namespace Windows
                     gui_mode = GUI_MODE_IME;
                 }
                 ImGui::PopStyleVar();
+                ImGui::Separator();
+
+                sprintf(id, "%s##settings", lang_strings[STR_RESTART_SERVER]);
+                if (is_server_started)
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 1.0f, 0.0f, 1.0f)); // Green background
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 1.0f)); // Black Text
+                }
+                else
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 0.0f, 0.0f, 1.0f)); // Red background
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); // White Text
+                }
+                if (ImGui::Button(id, ImVec2(410, 0)))
+                {
+                    Actions::RestartServer();
+                    is_server_started = !INSTALLER::EzRemoteServerVersion().empty();
+                }
+                ImGui::SameLine();
+
+                sprintf(id, "%s##settings", lang_strings[STR_STOP_SERVER]);
+                if (ImGui::Button(id, ImVec2(410, 0)))
+                {
+                    Actions::StopServer();
+                    is_server_started = !INSTALLER::EzRemoteServerVersion().empty();
+                }
+                ImGui::PopStyleColor(2);
                 ImGui::Separator();
 
                 ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_ALLDEBRID]);
@@ -1981,6 +2189,21 @@ namespace Windows
                 }
                 ImGui::PopStyleVar();
                 ImGui::Separator();
+
+                sprintf(id, "%s##settings", lang_strings[STR_SHOW_BG_DOWNLOAD_PROGRESS]);
+                if (ImGui::Button(id, ImVec2(835, 0)))
+                {
+                    Actions::GetBackgroundDownloadProgress();
+                    show_bg_download_progress = true;
+                    show_settings = false;
+                    OrbisTick tick;
+                    sceRtcGetCurrentTick(&tick);
+                    refresh_bg_download_time = tick.mytick;
+                    SetModalMode(false);
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::Separator();
+
                 sprintf(id, "%s##settings", lang_strings[STR_CLOSE]);
                 if (ImGui::Button(id, ImVec2(835, 0)))
                 {
@@ -2144,6 +2367,8 @@ namespace Windows
             ShowSettingsDialog();
             ShowImageDialog();
             ShowPackageInfoDialog();
+            ShowWarningDialog();
+            ShowDownloadProgressDialog();
         }
         ImGui::End();
     }
@@ -2662,6 +2887,14 @@ namespace Windows
         if (ime_result == IME_DIALOG_RESULT_FINISHED)
         {
             http_server_port = atoi(txt_http_server_port);
+        }
+    }
+
+    void AfterMinBgDlSizeChangeCallback(int ime_result)
+    {
+        if (ime_result == IME_DIALOG_RESULT_FINISHED)
+        {
+            minimum_backgrond_file_size = atol(txt_bg_download_size);
         }
     }
 

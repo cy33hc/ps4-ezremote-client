@@ -24,6 +24,7 @@ extern std::set<DirEntry> multi_selected_local_files;
 extern std::set<DirEntry> multi_selected_remote_files;
 extern std::vector<DirEntry> local_paste_files;
 extern std::vector<DirEntry> remote_paste_files;
+extern std::vector<DownloadProgress> bg_download_progress;
 extern ACTIONS paste_action;
 extern DirEntry selected_local_file;
 extern DirEntry selected_remote_file;
@@ -44,6 +45,8 @@ extern bool file_transfering;
 extern char extract_zip_folder[];
 extern char zip_file_path[];
 extern std::vector<std::string> edit_buffer;
+extern bool is_server_started;
+extern bool ezremote_server_version_match;
 
 static ImVector<ImRect> s_GroupPanelLabelStack;
 
@@ -212,6 +215,7 @@ namespace Windows
     void AfterZipFileCallback(int ime_result);
     void AferServerChangeCallback(int ime_result);
     void AfterHttpPortChangeCallback(int ime_result);
+    void AfterMinBgDlSizeChangeCallback(int ime_result);
     void AfterEditorCallback(int ime_result);
 }
 
