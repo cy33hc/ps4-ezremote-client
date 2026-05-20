@@ -50,6 +50,7 @@ add_executable(ezremote_client
   source/actions.cpp
   source/config.cpp
   source/crypt.c
+  source/daemon.cpp
   source/fs.cpp
   source/gui.cpp
   source/getentropy.c
@@ -67,10 +68,6 @@ add_executable(ezremote_client
   source/split_file.cpp
   source/mem_file.cpp
 )
-
-add_self(ezremote_client)
-
-add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.40" 32 0)
 
 target_link_libraries(ezremote_client
   dbglogger
@@ -116,4 +113,15 @@ target_link_libraries(ezremote_client
   SceNet
   SceBgft
   SceAppInstUtil
+  SceLncUtil
+)
+
+add_self(ezremote_client)
+add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.40" 32 0)
+
+add_custom_target(package
+  COMMAND mkdir -p ${PROJECT_SOURCE_DIR}/data/daemon
+  COMMAND cp ${PROJECT_SOURCE_DIR}/ps4-ezremote-server/data/eboot.bin ${PROJECT_SOURCE_DIR}/data/daemon/daemon.self
+  COMMAND cp ${PROJECT_SOURCE_DIR}/ps4-ezremote-server/data/eboot.md5 ${PROJECT_SOURCE_DIR}/data/daemon/daemon.md5
+  COMMAND cp ${PROJECT_SOURCE_DIR}/ps4-ezremote-server/data/sce_sys/param.sfo ${PROJECT_SOURCE_DIR}/data/daemon/param
 )

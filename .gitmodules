@@ -1,0 +1,3 @@
+[submodule "ps4-ezremote-server"]
+	path = ps4-ezremote-server
+	url = git@github.com:cy33hc/ps4-ezremote-server.git

@@ -45,25 +45,34 @@ static void build_iovec(struct iovec** iov, int* iovlen, const char* name, const
 
 int mount_large_fs(const char* device, const char* mountpoint, const char* fstype, const char* mode, unsigned int flags)
 {
-	struct iovec* iov = NULL;
-	int iovlen = 0;
+    struct iovec* iov = NULL;
+    int iovlen = 0;
+    int ret;
 
-	unmount(mountpoint, 0);
+    build_iovec(&iov, &iovlen, "fstype", fstype, -1);
+    build_iovec(&iov, &iovlen, "fspath", mountpoint, -1);
+    build_iovec(&iov, &iovlen, "from", device, -1);
+    build_iovec(&iov, &iovlen, "large", "yes", -1);
+    build_iovec(&iov, &iovlen, "timezone", "static", -1);
+    build_iovec(&iov, &iovlen, "async", "", -1);
+    build_iovec(&iov, &iovlen, "ignoreacl", "", -1);
 
-	build_iovec(&iov, &iovlen, "fstype", fstype, -1);
-	build_iovec(&iov, &iovlen, "fspath", mountpoint, -1);
-	build_iovec(&iov, &iovlen, "from", device, -1);
-	build_iovec(&iov, &iovlen, "large", "yes", -1);
-	build_iovec(&iov, &iovlen, "timezone", "static", -1);
-	build_iovec(&iov, &iovlen, "async", "", -1);
-	build_iovec(&iov, &iovlen, "ignoreacl", "", -1);
+    if (mode) {
+        build_iovec(&iov, &iovlen, "dirmask", mode, -1);
+        build_iovec(&iov, &iovlen, "mask", mode, -1);
+    }
 
-	if (mode) {
-		build_iovec(&iov, &iovlen, "dirmask", mode, -1);
-		build_iovec(&iov, &iovlen, "mask", mode, -1);
-	}
+    dbglogger_log("##^  [I] Mounting %s \"%s\" to \"%s\"", fstype, device, mountpoint);
+    ret = nmount(iov, iovlen, flags);
+    if (ret < 0) {
+        goto error;
+    }
+    else {
+        dbglogger_log("##^  [I] Success.");
+    }
 
-	return nmount(iov, iovlen, flags);
+error:
+    return ret;
 }
 
 // Variables for (un)jailbreaking

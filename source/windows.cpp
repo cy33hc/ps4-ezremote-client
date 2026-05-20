@@ -139,10 +139,10 @@ namespace Windows
         overwrite_type = OVERWRITE_PROMPT;
         local_paste_files.clear();
         remote_paste_files.clear();
-        //std::string cur_version = INSTALLER::EzRemoteServerVersion();
-        //ezremote_server_version_match = cur_version.empty() || (cur_version.compare(EZREMOTE_SERVER_REQUIRED_VERSION) == 0);
-        show_ezremote_server_warning = false; //!ezremote_server_version_match;
-        //dbglogger_log("verion=%s, show_warning=%d", cur_version.c_str(), show_ezremote_server_warning);
+        std::string cur_version = INSTALLER::EzRemoteServerVersion();
+        ezremote_server_version_match = cur_version.empty() || (cur_version.compare(EZREMOTE_SERVER_REQUIRED_VERSION) == 0);
+        show_ezremote_server_warning = !ezremote_server_version_match;
+        dbglogger_log("verion=%s, show_warning=%d", cur_version.c_str(), show_ezremote_server_warning);
 
         Actions::RefreshLocalFiles(false);
     }
@@ -1878,6 +1878,7 @@ namespace Windows
                 {
                     show_bg_download_progress = false;
                     SetModalMode(false);
+                    ImGui::CloseCurrentPopup();
                 }
 
                 if (ImGui::IsWindowAppearing())
@@ -1918,7 +1919,7 @@ namespace Windows
             ImGui::OpenPopup(lang_strings[STR_SETTINGS]);
 
             ImGui::SetNextWindowPos(ImVec2(1050, 80));
-            ImGui::SetNextWindowSizeConstraints(ImVec2(850, 80), ImVec2(850, 750), NULL, NULL);
+            ImGui::SetNextWindowSizeConstraints(ImVec2(850, 80), ImVec2(850, 850), NULL, NULL);
             if (ImGui::BeginPopupModal(lang_strings[STR_SETTINGS], NULL, ImGuiWindowFlags_AlwaysAutoResize))
             {
                 char id[192];

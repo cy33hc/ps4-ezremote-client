@@ -37,6 +37,7 @@ extern int (*sceRtcFormatRFC3339LocalTime)(char *pszDateTime, const OrbisTick *t
 extern unsigned int (*sceRtcGetTickResolution)();
 extern int (*sceShellUIUtilLaunchByUri)(const char *uri, SceShellUIUtilLaunchByUriParam *param);
 extern int (*sceShellUIUtilInitialize)();
+// extern int (*sceLncUtilGetAppId)(const char* tid);
 
 int load_sys_modules();
 void convertUtcToLocalTime(const OrbisDateTime *utc, OrbisDateTime *local_time);

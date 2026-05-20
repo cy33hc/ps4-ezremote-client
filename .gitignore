@@ -11,3 +11,4 @@ CTestTestfile.cmake
 _deps
 .vscode
 build
+data/daemon

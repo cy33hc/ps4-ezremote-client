@@ -20,6 +20,7 @@
 #include "server/http_server.h"
 #include "clients/gdrive.h"
 #include "config.h"
+#include "daemon.h"
 #include "lang.h"
 #include "gui.h"
 #include "util.h"
@@ -324,6 +325,8 @@ int main()
 		terminate();
 	}
 
+	Daemon::BootDaemonServices();
+	
 	if (load_sys_modules() != 0)
 		return 0;
 
