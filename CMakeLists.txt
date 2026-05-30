@@ -107,7 +107,6 @@ target_link_libraries(ezremote_client
   SceUserService
   ScePad
   SceAudioOut
-  SceSysUtil
   SceImeDialog
   SceNet
   SceBgft

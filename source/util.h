@@ -88,6 +88,13 @@ namespace Util
         return out;
     }
 
+    static uint64_t GetTick()
+    {
+        static struct timeval tick;
+        gettimeofday(&tick, NULL);
+        return tick.tv_sec * 1000000 + tick.tv_usec;
+    }
+
     static inline void Notify(const char *fmt, ...)
     {
         OrbisNotificationRequest request;

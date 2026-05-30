@@ -490,6 +490,43 @@ namespace Actions
         }
     }
 
+    int BackgroundDownload(const char *src, const char *dest, uint64_t file_size)
+    {
+        uint64_t id = Util::GetTick();
+        json_object *params = json_object_new_object();
+        json_object_object_add(params, "type", json_object_new_int(remote_settings->type));
+        json_object_object_add(params, "url", json_object_new_string(remote_settings->server));
+        json_object_object_add(params, "username", json_object_new_string(remote_settings->username));
+        json_object_object_add(params, "password", json_object_new_string(remote_settings->password));
+        json_object_object_add(params, "src_path", json_object_new_string(src));
+        json_object_object_add(params, "dest_path", json_object_new_string(dest));
+        json_object_object_add(params, "size", json_object_new_uint64(file_size));
+        json_object_object_add(params, "id", json_object_new_uint64(id));
+        if (remote_settings->type == CLIENT_TYPE_HTTP_SERVER)
+        {
+            json_object_object_add(params, "http_server_type", json_object_new_string(remote_settings->http_server_type));
+        }
+
+        const char *params_str = json_object_to_json_string(params);
+
+        httplib::Client tmp_client = httplib::Client("http://127.0.0.1:" + std::to_string(http_int_server_port));
+        if (auto res = tmp_client.Post("/download_url", params_str, strlen(params_str), "application/json"))
+        {
+            if (HTTP_SUCCESS(res->status))
+            {
+                Util::Notify("%s queued for download", src);
+                return 1;
+            }
+            else
+            {
+                Util::Notify("Failed to queue %s for download in background", src);
+                return 0;
+            }
+        }
+
+        return 0;
+    }
+
     int DownloadFile(const char *src, const char *dest)
     {
         bytes_transfered = 0;
@@ -526,6 +563,10 @@ namespace Actions
         if (confirm_state == CONFIRM_YES)
         {
             sceRtcGetCurrentTick(&prev_tick);
+            if (enable_background_download && bytes_to_download > minimum_backgrond_file_size)
+            {
+                return BackgroundDownload(src, dest, bytes_to_download);
+            }
             return remoteclient->Get(dest, src);
         }
 
