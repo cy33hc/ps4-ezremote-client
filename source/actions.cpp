@@ -654,39 +654,6 @@ namespace Actions
         else
             files.push_back(selected_remote_file);
 
-        bool download_and_install = false;
-        if (remote_settings->enable_rpi)
-        {
-            std::string url = INSTALLER::getRemoteUrl(files.begin()->path);
-            sprintf(activity_message, "%s", lang_strings[STR_CHECKING_REMOTE_SERVER_MSG]);
-            file_transfering = false;
-            if (!INSTALLER::canInstallRemotePkg(url))
-            {
-                confirm_state = CONFIRM_WAIT;
-                action_to_take = selected_action;
-                activity_inprogess = false;
-                while (confirm_state == CONFIRM_WAIT)
-                {
-                    sceKernelUsleep(100000);
-                }
-                activity_inprogess = true;
-                selected_action = action_to_take;
-
-                if (confirm_state == CONFIRM_YES)
-                {
-                    download_and_install = true;
-                }
-                else
-                {
-                    goto finish;
-                }
-            }
-        }
-        else
-        {
-            download_and_install = true;
-        }
-        
         for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
         {
             if (stop_activity)
@@ -708,7 +675,7 @@ namespace Actions
                     {
                         if (BE32(header.pkg_magic) == PKG_MAGIC)
                         {
-                            if (download_and_install)
+                            if (!remote_settings->enable_rpi)
                             {
                                 if (DownloadAndInstallPkg(it->path, &header) == 0)
                                     failed++;
@@ -728,11 +695,11 @@ namespace Actions
                                     SplitFile *sp = new SplitFile(install_pkg_path, INSTALL_ARCHIVE_PKG_SPLIT_SIZE/2);
 
                                     install_data->split_file = sp;
-                                    install_data->remote_client = remoteclient;
+                                    install_data->remote_client = INSTALLER::GetRemoteClient(remote_settings);
                                     install_data->path = it->path;
                                     remoteclient->Size(it->path, &install_data->size);
                                     install_data->stop_write_thread = false;
-                                    install_data->delete_client = false;
+                                    install_data->delete_client = true;
 
                                     int ret = pthread_create(&install_data->thread, NULL, DownloadSplitPkg, install_data);
 
@@ -745,10 +712,15 @@ namespace Actions
                                 {
                                     std::string url = INSTALLER::getRemoteUrl(it->path, true);
                                     std::string title = INSTALLER::GetRemotePkgTitle(remoteclient, it->path, &header);
-                                    if (INSTALLER::InstallRemotePkg(url, &header, title, true) == 0)
+                                    if (INSTALLER::InstallRemotePkg(url, &header, title) == 0)
                                         failed++;
                                     else
                                         success++;
+
+                                    if (it != files.end())
+                                    {
+                                        sleep(3);
+                                    }
                                 }
                             }
                         }
@@ -764,6 +736,8 @@ namespace Actions
                     {
                         while (entry != nullptr)
                         {
+                            snprintf(activity_message, 1023, "%s %s", lang_strings[STR_INSTALLING], entry->filename.c_str());
+
                             ArchivePkgInstallData *install_data = (ArchivePkgInstallData*) malloc(sizeof(ArchivePkgInstallData));
                             memset(install_data, 0, sizeof(ArchivePkgInstallData));
 
@@ -1913,21 +1887,15 @@ namespace Actions
 
     void RestartServer()
     {
-        StopServer();
+        INSTALLER::StopEzRemoteServer();
         sleep(2);
         INSTALLER::StartEzRemoteServer();
         sleep(2);
     }
 
-    void StopServer()
-    {
-        httplib::Client client = httplib::Client("http://localhost:" + std::to_string(http_int_server_port));
-        client.Get("/stop");
-    }
-
     void GetBackgroundDownloadProgress()
     {
-        httplib::Client client = httplib::Client("http://localhost:" + std::to_string(http_int_server_port));
+        httplib::Client client = httplib::Client("http://127.0.0.1:" + std::to_string(http_int_server_port));
 
         if (auto res = client.Get("/get_download_state"))
         {

@@ -123,7 +123,6 @@ namespace Actions
     void *ExtractArchivePkg(void *argp);
     void *DownloadSplitPkg(void *argp);
     void RestartServer();
-    void StopServer();
     void GetBackgroundDownloadProgress();
 }
 

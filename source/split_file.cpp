@@ -24,7 +24,7 @@ SplitFile::~SplitFile()
                 fclose(this->file_blocks[i]->fd);
             }
             remove(this->file_blocks[i]->block_file.c_str());
-            free(this->file_blocks[i]);
+            delete this->file_blocks[i];
         }
     }
     sem_destroy(&this->block_ready);
@@ -33,8 +33,6 @@ SplitFile::~SplitFile()
 int SplitFile::Open()
 {
     this->block_in_progress = NewBlock();
-    this->block_in_progress->fd = fopen(block_in_progress->block_file.c_str(), "w");
-
     return (block_in_progress->fd == nullptr);
 }
 
@@ -61,6 +59,10 @@ size_t SplitFile::Read(char *buf, size_t buf_size, size_t offset)
         ts.tv_sec += 2;
         sem_timedwait(&this->block_ready, &ts);
     }
+
+    // If complete and block_num is past the end, the requested offset is beyond EOF
+    if (block_num >= this->file_blocks.size())
+        return 0;
 
     block = this->file_blocks[block_num];
     if (block->status == BLOCK_STATUS_DELETED)
@@ -121,13 +123,17 @@ size_t SplitFile::Read(char *buf, size_t buf_size, size_t offset)
         block_offset = 0;
 
         while ((block_num > this->file_blocks.size() - 1 && !this->complete) ||
-               this->file_blocks[block_num]->status == BLOCK_STATUS_NOT_EXISTS)
+               (block_num < this->file_blocks.size() && this->file_blocks[block_num]->status == BLOCK_STATUS_NOT_EXISTS))
         {
             struct timespec ts;
             clock_gettime(CLOCK_REALTIME, &ts);
             ts.tv_sec += 2;
             sem_timedwait(&this->block_ready, &ts);
         }
+
+        // If complete and block_num is past the end, no more data
+        if (block_num >= this->file_blocks.size())
+            break;
 
         block = this->file_blocks[block_num];
     }
@@ -136,7 +142,7 @@ size_t SplitFile::Read(char *buf, size_t buf_size, size_t offset)
     // forward and won't read previously already read blocks. For safety, keeping only current block and 2 previous blocks
     for (int j=0; j < first_block_num - 13; j++)
     {
-        if (this->file_blocks[j]->status == BLOCK_STATUS_CREATED)
+        if (this->file_blocks[j] != nullptr && this->file_blocks[j]->status == BLOCK_STATUS_CREATED)
         {
             if (this->file_blocks[j]->fd != nullptr)
             {
@@ -145,6 +151,8 @@ size_t SplitFile::Read(char *buf, size_t buf_size, size_t offset)
             }
             this->file_blocks[j]->status = BLOCK_STATUS_DELETED;
             remove(this->file_blocks[j]->block_file.c_str());
+            delete (this->file_blocks[j]);
+            this->file_blocks[j] = nullptr;
         }
     }
 
@@ -152,14 +160,14 @@ size_t SplitFile::Read(char *buf, size_t buf_size, size_t offset)
     return total_bytes_read;
 }
 
-size_t SplitFile::Write(char *buf, size_t buf_size)
+ssize_t SplitFile::Write(char *buf, size_t buf_size)
 {
     size_t bytes_written = 0;
     size_t block_space_remaining;
     size_t bytes_to_write;
 
     char *p = buf;
-    size_t total_bytes_written = 0;
+    ssize_t total_bytes_written = 0;
     size_t remaining_to_write = buf_size;
 
     if (this->IsClosed())
@@ -249,8 +257,7 @@ bool SplitFile::IsClosed()
 
 FileBlock *SplitFile::NewBlock()
 {
-    FileBlock *block = (FileBlock *)malloc(sizeof(FileBlock));
-    memset(block, 0, sizeof(FileBlock));
+    FileBlock *block = new FileBlock{};
 
     block->is_last = false;
     block->size = 0;

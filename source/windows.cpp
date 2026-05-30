@@ -2085,7 +2085,7 @@ namespace Windows
                 sprintf(id, "%s##settings", lang_strings[STR_STOP_SERVER]);
                 if (ImGui::Button(id, ImVec2(410, 0)))
                 {
-                    Actions::StopServer();
+                    INSTALLER::StopEzRemoteServer();
                     is_server_started = !INSTALLER::EzRemoteServerVersion().empty();
                 }
                 ImGui::PopStyleColor(2);

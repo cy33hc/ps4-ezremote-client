@@ -21,6 +21,7 @@ int GithubClient::Connect(const std::string &url, const std::string &username, c
     this->base_path = "/repos" + url.substr(18);
     Util::Rtrim(this->base_path, "/");
     this->base_path += "/releases";
+    this->m_download_url = "https://github.com";
 
     client = new httplib::Client(this->host_url);
     if (username.length() > 0)
@@ -257,4 +258,19 @@ bool GithubClient::ParseReleases()
     }
 
     return 1;
+}
+
+std::string GithubClient::GetDownloadUrl(const std::string &path)
+{
+    if (!ParseReleases())
+        return "";
+
+    std::vector<std::string> path_parts = Util::Split(path, "/");
+    
+    if (path_parts.size() != 2)
+    {
+        return "";
+    }
+
+    return this->m_download_url + Escape(m_assets[path_parts[0]][path_parts[1]].url);
 }

@@ -19,6 +19,7 @@ public:
     int GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset);
     int GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset);
     int Head(const std::string &path, void *buffer, uint64_t len);
+    std::string GetDownloadUrl(const std::string &path);
 
 private:
     struct GitAsset
@@ -38,6 +39,7 @@ private:
     std::vector<GitRelease> m_releases;
     std::map<std::string, std::map<std::string, GitAsset>> m_assets;
     bool releases_parsed = false;
+    std::string m_download_url;
     BaseClient m_client;
 
     bool ParseReleases();

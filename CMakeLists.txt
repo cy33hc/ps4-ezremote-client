@@ -50,7 +50,6 @@ add_executable(ezremote_client
   source/actions.cpp
   source/config.cpp
   source/crypt.c
-  source/daemon.cpp
   source/fs.cpp
   source/gui.cpp
   source/getentropy.c
@@ -117,7 +116,7 @@ target_link_libraries(ezremote_client
 )
 
 add_self(ezremote_client)
-add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.40" 32 0)
+add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "01.41" 32 0)
 
 add_custom_target(package
   COMMAND mkdir -p ${PROJECT_SOURCE_DIR}/data/daemon

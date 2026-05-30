@@ -31,27 +31,36 @@ int SmbClient::Connect(const std::string &url, const std::string &user, const st
 	smb2 = smb2_init_context();
 	if (smb2 == NULL)
 	{
-		sprintf(response, "Failed to init SMB context");
+		snprintf(response, sizeof(response), "Failed to init SMB context");
 		return 0;
 	}
 
 	smb_url = smb2_parse_url(smb2, url.c_str());
 	if (smb_url == NULL || smb_url->share == NULL || strlen(smb_url->share) == 0)
 	{
-		sprintf(response, "Invalid SMB Url");
+		if (smb_url != NULL)
+			smb2_destroy_url(smb_url);
+		smb2_destroy_context(smb2);
+		smb2 = NULL;
+		snprintf(response, sizeof(response), "Invalid SMB Url");
 		return 0;
 	}
 
 	if (pass.length() > 0)
 		smb2_set_password(smb2, pass.c_str());
 	smb2_set_security_mode(smb2, SMB2_NEGOTIATE_SIGNING_ENABLED);
+	smb2_set_version(smb2, SMB2_VERSION_ANY);
 	smb2_set_timeout(smb2, 30);
 
 	if (smb2_connect_share(smb2, smb_url->server, smb_url->share, user.c_str()) < 0)
 	{
-		sprintf(response, "%s", smb2_get_error(smb2));
+		snprintf(response, sizeof(response), "%s", smb2_get_error(smb2));
+		smb2_destroy_url(smb_url);
+		smb2_destroy_context(smb2);
+		smb2 = NULL;
 		return 0;
 	}
+
 	smb2_destroy_url(smb_url);
 	max_read_size = smb2_get_max_read_size(smb2);
 	max_write_size = smb2_get_max_write_size(smb2);
@@ -109,7 +118,7 @@ int SmbClient::Mkdir(const std::string &ppath)
 	path = Util::Trim(path, "/");
 	if (smb2_mkdir(smb2, path.c_str()) != 0)
 	{
-		sprintf(response, "%s", smb2_get_error(smb2));
+		snprintf(response, sizeof(response), "%s", smb2_get_error(smb2));
 		return 0;
 	}
 	return 1;
@@ -126,7 +135,7 @@ int SmbClient::_Rmdir(const std::string &ppath)
 	path = Util::Trim(path, "/");
 	if (smb2_rmdir(smb2, path.c_str()) != 0)
 	{
-		sprintf(response, "%s", smb2_get_error(smb2));
+		snprintf(response, sizeof(response), "%s", smb2_get_error(smb2));
 		return 0;
 	}
 	return 1;
@@ -193,37 +202,45 @@ int SmbClient::Get(const std::string &outputfile, const std::string &ppath, uint
 	path = Util::Trim(path, "/");
 	if (!Size(path.c_str(), &bytes_to_download))
 	{
-		sprintf(response, "%s", smb2_get_error(smb2));
+		snprintf(response, sizeof(response), "%s", smb2_get_error(smb2));
 		return 0;
 	}
 
-	struct smb2fh *in = smb2_open(smb2, path.c_str(), O_RDONLY);
+	struct smb2fh* in = smb2_open(smb2, path.c_str(), O_RDONLY);
 	if (in == NULL)
 	{
-		sprintf(response, "%s", smb2_get_error(smb2));
+		snprintf(response, sizeof(response), "%s", smb2_get_error(smb2));
 		return 0;
 	}
 
-	FILE *out = FS::Create(outputfile);
+	FILE* out = FS::Create(outputfile);
 	if (out == NULL)
 	{
-		sprintf(response, "%s", lang_strings[STR_FAILED]);
+		snprintf(response, sizeof(response), "%s", lang_strings[STR_FAILED]);
+		smb2_close(smb2, in);
 		return 0;
 	}
 
-	uint8_t *buff = (uint8_t *)malloc(max_read_size);
+	uint8_t *buff = (uint8_t*)malloc(max_read_size);
+	if (buff == NULL)
+	{
+		snprintf(response, sizeof(response), "%s", lang_strings[STR_FAILED]);
+		FS::Close(out);
+		smb2_close(smb2, in);
+		return 0;
+	}
 	int count = 0;
 	bytes_transfered = 0;
 	sceRtcGetCurrentTick(&prev_tick);
 
-	while ((count = smb2_read(smb2, in, buff, max_read_size)) > 0)
+	while ((count = smb2_read(smb2, in, buff, max_read_size)) != 0)
 	{
 		if (count < 0)
 		{
-			sprintf(response, "%s", smb2_get_error(smb2));
+			snprintf(response, sizeof(response), "%s", smb2_get_error(smb2));
 			FS::Close(out);
 			smb2_close(smb2, in);
-			free((void *)buff);
+			free((void*)buff);
 			return 0;
 		}
 		FS::Write(out, buff, count);
@@ -231,7 +248,7 @@ int SmbClient::Get(const std::string &outputfile, const std::string &ppath, uint
 	}
 	FS::Close(out);
 	smb2_close(smb2, in);
-	free((void *)buff);
+	free((void*)buff);
 	return 1;
 }
 
@@ -243,23 +260,33 @@ int SmbClient::Get(SplitFile *split_file, const std::string &ppath, uint64_t off
 	struct smb2fh *in = smb2_open(smb2, path.c_str(), O_RDONLY);
 	if (in == NULL)
 	{
-		sprintf(response, "%s", smb2_get_error(smb2));
+		snprintf(response, sizeof(response), "%s", smb2_get_error(smb2));
 		return 0;
 	}
 
 	uint8_t *buff = (uint8_t *)malloc(max_read_size);
+	if (buff == NULL)
+	{
+		smb2_close(smb2, in);
+		return 0;
+	}
 	int count = 0;
 
-	while ((count = smb2_read(smb2, in, buff, max_read_size)) > 0)
+	while ((count = smb2_read(smb2, in, buff, max_read_size)) != 0)
 	{
 		if (count < 0)
 		{
-			sprintf(response, "%s", smb2_get_error(smb2));
+			snprintf(response, sizeof(response), "%s", smb2_get_error(smb2));
 			smb2_close(smb2, in);
 			free((void *)buff);
 			return 0;
 		}
-		split_file->Write((char*)buff, count);
+		if (split_file->Write((char*)buff, count) < 0)
+		{
+			smb2_close(smb2, in);
+			free((void *)buff);
+			return 0;
+		}
 	}
 
 	smb2_close(smb2, in);
@@ -345,24 +372,27 @@ int SmbClient::GetRange(void *fp, void *buffer, uint64_t size, uint64_t offset)
 
 	smb2_lseek(smb2, in, offset, SEEK_SET, NULL);
 
-	uint8_t *buff = (uint8_t *)buffer;
-	int count = 0;
 	size_t bytes_remaining = size;
+	uint8_t *buff = (uint8_t*)buffer;
+	int count = 0;
+	uint64_t total = 0;
 	do
 	{
-		size_t bytes_to_read = std::min<size_t>(max_read_size, bytes_remaining);
-		count = smb2_read(smb2, in, buff, bytes_to_read);
+		count = smb2_read(smb2, in, buff, bytes_remaining);
 		if (count > 0)
 		{
 			bytes_remaining -= count;
 			buff += count;
+			total += count;
 		}
 		else
 		{
 			break;
 		}
 	} while (1);
-
+	
+	if (total != size)
+		return 0;
 	return 1;
 }
 
@@ -425,7 +455,7 @@ bool SmbClient::FileExists(const std::string &ppath)
 	int ret = smb2_stat(smb2, path.c_str(), &st);
 	if (ret != 0)
 	{
-		sprintf(response, "%s", smb2_get_error(smb2));
+		snprintf(response, sizeof(response), "%s", smb2_get_error(smb2));
 		return false;
 	}
 
@@ -449,21 +479,29 @@ int SmbClient::Put(const std::string &inputfile, const std::string &ppath, uint6
 		return 0;
 	}
 
-	FILE *in = FS::OpenRead(inputfile);
+	FILE* in = FS::OpenRead(inputfile);
 	if (in == NULL)
 	{
-		sprintf(response, "%s", lang_strings[STR_FAILED]);
+		snprintf(response, sizeof(response), "%s", lang_strings[STR_FAILED]);
 		return 0;
 	}
-
-	struct smb2fh *out = smb2_open(smb2, path.c_str(), O_WRONLY | O_CREAT | O_TRUNC);
+	
+	struct smb2fh* out = smb2_open(smb2, path.c_str(), O_WRONLY | O_CREAT | O_TRUNC);
 	if (out == NULL)
 	{
-		sprintf(response, "%s", smb2_get_error(smb2));
+		snprintf(response, sizeof(response), "%s", smb2_get_error(smb2));
+		FS::Close(in);
 		return 0;
 	}
 
-	uint8_t *buff = (uint8_t *)malloc(max_write_size);
+	uint8_t* buff = (uint8_t*)malloc(max_write_size);
+	if (buff == NULL)
+	{
+		snprintf(response, sizeof(response), "%s", lang_strings[STR_FAILED]);
+		FS::Close(in);
+		smb2_close(smb2, out);
+		return 0;
+	}
 	int count = 0;
 	bytes_transfered = 0;
 	sceRtcGetCurrentTick(&prev_tick);
@@ -472,13 +510,20 @@ int SmbClient::Put(const std::string &inputfile, const std::string &ppath, uint6
 	{
 		if (count < 0)
 		{
-			sprintf(response, "%s", lang_strings[STR_FAILED]);
+			snprintf(response, sizeof(response), "%s", lang_strings[STR_FAILED]);
 			FS::Close(in);
 			smb2_close(smb2, out);
 			free(buff);
 			return 0;
 		}
-		smb2_write(smb2, out, buff, count);
+		if (smb2_write(smb2, out, buff, count) < 0)
+		{
+			snprintf(response, sizeof(response), "%s", smb2_get_error(smb2));
+			FS::Close(in);
+			smb2_close(smb2, out);
+			free(buff);
+			return 0;
+		}
 		bytes_transfered += count;
 	}
 	FS::Close(in);
@@ -496,7 +541,7 @@ int SmbClient::Rename(const std::string &src, const std::string &dst)
 	path2 = Util::Trim(path2, "/");
 	if (smb2_rename(smb2, path1.c_str(), path2.c_str()) != 0)
 	{
-		sprintf(response, "%s", smb2_get_error(smb2));
+		snprintf(response, sizeof(response), "%s", smb2_get_error(smb2));
 		return 0;
 	}
 
@@ -509,7 +554,7 @@ int SmbClient::Delete(const std::string &ppath)
 	path = Util::Trim(path, "/");
 	if (smb2_unlink(smb2, path.c_str()) != 0)
 	{
-		sprintf(response, "%s", smb2_get_error(smb2));
+		snprintf(response, sizeof(response), "%s", smb2_get_error(smb2));
 		return 0;
 	}
 
@@ -523,7 +568,7 @@ int SmbClient::Size(const std::string &ppath, int64_t *size)
 	smb2_stat_64 st;
 	if (smb2_stat(smb2, path.c_str(), &st) != 0)
 	{
-		sprintf(response, "%s", smb2_get_error(smb2));
+		snprintf(response, sizeof(response), "%s", smb2_get_error(smb2));
 		return 0;
 	}
 	*size = st.smb2_size;
@@ -592,7 +637,8 @@ std::vector<DirEntry> SmbClient::ListDir(const std::string &path)
 			sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
 			break;
 		}
-		if (strcmp(entry.name, "..") != 0 && strcmp(entry.name, ".") != 0)
+		if (strcmp(entry.name, "..") != 0 && strcmp(entry.name, ".") != 0 &&
+			(show_hidden_files || entry.name[0] != '.'))
 			out.push_back(entry);
 	}
 	smb2_closedir(smb2, dir);
@@ -619,15 +665,15 @@ int SmbClient::Head(const std::string &ppath, void *buffer, uint64_t len)
 		return 0;
 	}
 
-	struct smb2fh *in = smb2_open(smb2, path.c_str(), O_RDONLY);
+	struct smb2fh* in = smb2_open(smb2, path.c_str(), O_RDONLY);
 	if (in == NULL)
 	{
 		return 0;
 	}
 
-	int count = smb2_read(smb2, in, (uint8_t *)buffer, len);
+	uint64_t count = smb2_read(smb2, in, (uint8_t*)buffer, len);
 	smb2_close(smb2, in);
-	if (count != len)
+	if (count < 0 || count != len)
 		return 0;
 
 	return 1;

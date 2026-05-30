@@ -20,7 +20,6 @@
 #include "server/http_server.h"
 #include "clients/gdrive.h"
 #include "config.h"
-#include "daemon.h"
 #include "lang.h"
 #include "gui.h"
 #include "util.h"
@@ -301,7 +300,6 @@ int main()
 		return 0;
 
 	CONFIG::LoadConfig();
-	HttpServer::Start();
 
 	// Create a window context
 	window = SDL_CreateWindow("main", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, FRAME_WIDTH, FRAME_HEIGHT, 0);
@@ -325,12 +323,13 @@ int main()
 		terminate();
 	}
 
-	Daemon::BootDaemonServices();
-	
 	if (load_sys_modules() != 0)
 		return 0;
 
 	atexit(terminate);
+
+	HttpServer::Start();
+	INSTALLER::StartEzRemoteServer();
 
 	GUI::RenderLoop(renderer);
 	SDL_DestroyRenderer(renderer);

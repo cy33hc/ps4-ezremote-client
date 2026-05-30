@@ -16,6 +16,7 @@
 #include "clients/smbclient.h"
 #include "clients/sftpclient.h"
 #include "clients/ftpclient.h"
+#include "clients/github.h"
 #include "clients/nfsclient.h"
 #include "clients/webdav.h"
 #include "clients/apache.h"
@@ -26,7 +27,6 @@
 #include "clients/nginx.h"
 #include "clients/npxserve.h"
 #include "clients/rclone.h"
-#include "dbglogger.h"
 
 #include "server/http_server.h"
 #include "installer.h"
@@ -37,6 +37,8 @@
 #include "system.h"
 #include "fs.h"
 #include "sfo.h"
+
+#define SERVER_ELF_PATH "/mnt/sandbox/pfsmnt/RMTC00001-app0/daemon/daemon.elf"
 
 #define BGFT_HEAP_SIZE (1 * 1024 * 1024)
 
@@ -238,7 +240,7 @@ namespace INSTALLER
 
 		const char *params_str = json_object_to_json_string(history_item_obj);
 		
-		httplib::Client client = httplib::Client(std::string("http://localhost:") + std::to_string(http_int_server_port));
+		httplib::Client client = httplib::Client(std::string("http://127.0.0.1:") + std::to_string(http_int_server_port));
 		client.set_connection_timeout(1);
 
 		if (auto res = client.Post("/store_bg_install_data", params_str, "application/json"))
@@ -256,9 +258,17 @@ namespace INSTALLER
 
 	std::string getRemoteUrl(const std::string path, bool encodeUrl)
 	{
-		if (strlen(remote_settings->username) == 0 && strlen(remote_settings->password) == 0 &&
-			(remoteclient->clientType() == CLIENT_TYPE_WEBDAV || 
-			 (remoteclient->clientType() == CLIENT_TYPE_HTTP_SERVER && strcmp(remote_settings->http_server_type, HTTP_SERVER_GITHUB) != 0)))
+		if (remote_settings->type == CLIENT_TYPE_HTTP_SERVER && strcmp(remote_settings->http_server_type, HTTP_SERVER_GITHUB) == 0)
+		{
+			GithubClient *tmp_client = (GithubClient*) remoteclient;
+			return tmp_client->GetDownloadUrl(path);
+		}
+		if ( strlen(remote_settings->username) == 0 &&
+		     strlen(remote_settings->password) == 0 &&
+			 (remote_settings->type == CLIENT_TYPE_WEBDAV ||
+			   (remote_settings->type == CLIENT_TYPE_HTTP_SERVER && strcmp(remote_settings->http_server_type, HTTP_SERVER_ARCHIVEORG) == 0)
+			  )
+		   )
 		{
 			std::string full_url = WebDAVClient::GetHttpUrl(remote_settings->server + path);
 			size_t scheme_pos = full_url.find("://");
@@ -277,9 +287,8 @@ namespace INSTALLER
 		}
 		else
 		{
-			std::string encoded_path = httplib::detail::encode_url(path);
-			std::string encoded_site_name = httplib::detail::encode_url(remote_settings->site_name);
-			std::string full_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst/" + encoded_site_name + encoded_path;
+			std::string hash = StoreBgInstallHostData(remote_settings, path);
+			std::string full_url = std::string("http://127.0.0.1:") + std::to_string(http_int_server_port) + "/bg_install/" + hash;
 			return full_url;
 		}
 
@@ -910,7 +919,7 @@ namespace INSTALLER
 		}
 
 		std::string hash = Util::UrlHash(path);
-		std::string full_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/archive_inst/" + hash;
+		std::string full_url = std::string("http://127.0.0.1:") + std::to_string(http_server_port) + "/archive_inst/" + hash;
 		AddArchivePkgInstallData(hash, pkg_data);
 
 		OrbisBgftTaskProgress progress_info;
@@ -1097,7 +1106,7 @@ namespace INSTALLER
 		}
 
 		std::string hash = Util::UrlHash(path);
-		std::string full_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/split_inst/" + hash;
+		std::string full_url = std::string("http://127.0.0.1:") + std::to_string(http_server_port) + "/split_inst/" + hash;
 		AddSplitPkgInstallData(hash, pkg_data);
 
 		OrbisBgftTaskProgress progress_info;
@@ -1229,10 +1238,11 @@ namespace INSTALLER
 
 	std::string EzRemoteServerVersion()
 	{
-		httplib::Client client = httplib::Client(std::string("http://localhost:") + std::to_string(http_int_server_port));
-		client.set_connection_timeout(1);
+		httplib::Client tmp_client = httplib::Client("http://127.0.0.1:6701");
 
-		if (auto res = client.Get("/version"))
+		tmp_client.set_connection_timeout(1);
+
+		if (auto res = tmp_client.Get("/version"))
 		{
 			if (HTTP_SUCCESS(res->status))
 			{
@@ -1245,7 +1255,6 @@ namespace INSTALLER
 
 	int StartEzRemoteServer()
 	{
-		/*
 		char buffer[8192];
 		in_addr_t in_addr;
 		in_addr_t server_addr;
@@ -1255,10 +1264,7 @@ namespace INSTALLER
 		ssize_t read_return;
 		struct hostent *hostent;
 		struct sockaddr_in sockaddr_in;
-		unsigned short server_port = 9021;
-
-		if (!EzRemoteServerVersion().empty())
-			return 0;
+		unsigned short server_port = 9090;
 
 		filefd = open(SERVER_ELF_PATH, O_RDONLY);
 		if (filefd == -1)
@@ -1310,10 +1316,15 @@ namespace INSTALLER
 
 		close(filefd);
 		close(sockfd);
-		*/
 
 		return 0;
 	}
+
+	void StopEzRemoteServer()
+    {
+        httplib::Client tmp_client = httplib::Client("http://127.0.0.1:6701");
+        tmp_client.Get("/stop");
+    }
 
 	RemoteClient *GetRemoteClient(int site_idx)
 	{

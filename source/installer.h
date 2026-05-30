@@ -167,6 +167,7 @@ namespace INSTALLER
     bool InstallSplitPkg(const std::string &path, SplitPkgInstallData* pkg_data, bool bg = false);
     std::string EzRemoteServerVersion();
     int StartEzRemoteServer();
+    void StopEzRemoteServer();
     std::string StoreBgInstallHostData(RemoteSettings *remote_settings, const std::string &path);
     RemoteClient *GetRemoteClient(int site_idx);
     RemoteClient *GetRemoteClient(RemoteSettings *settings);

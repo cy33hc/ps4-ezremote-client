@@ -247,7 +247,7 @@ int NfsClient::Get(SplitFile *split_file, const std::string &ppath, uint64_t off
 
 	void *buff = malloc(BUF_SIZE);
 	int count = 0;
-	while ((count = nfs_read(nfs, nfsfh, BUF_SIZE, buff)) > 0)
+	while ((count = nfs_read(nfs, nfsfh, BUF_SIZE, buff)) != 0)
 	{
 		if (count < 0)
 		{
@@ -256,7 +256,13 @@ int NfsClient::Get(SplitFile *split_file, const std::string &ppath, uint64_t off
 			free((void *)buff);
 			return 0;
 		}
-		split_file->Write((char *)buff, count);
+		ret = split_file->Write((char *)buff, count);
+		if (ret < 0)
+		{
+			nfs_close(nfs, nfsfh);
+			free((void *)buff);
+			return 0;
+		}
 	}
 	nfs_close(nfs, nfsfh);
 	free((void *)buff);
@@ -343,10 +349,28 @@ int NfsClient::GetRange(void *fp, void *buffer, uint64_t size, uint64_t offset)
 		return 0;
 	}
 
-	int count = nfs_read(nfs, nfsfh, size, buffer);
-	if (count != size)
-		return 0;
+	size_t bytes_remaining = size;
+	char *buff = (char*)buffer;
+	int total = 0;
+	int count = 0;
+	do
+	{
+		count = nfs_read(nfs, nfsfh, bytes_remaining, buff);
+		if (count > 0)
+		{
+			bytes_remaining -= count;
+			buff += count;
+			total += count;
+		}
+		else
+		{
+			break;
+		}
+	} while (1);
 
+	if (total != size)
+		return 0;
+		
 	return 1;
 }
 
@@ -411,14 +435,14 @@ int NfsClient::Put(const std::string &inputfile, const std::string &ppath, uint6
 	}
 
 	void *buff = malloc(BUF_SIZE);
-	uint64_t count = 0;
+	int count = 0;
 	bytes_transfered = 0;
 	sceRtcGetCurrentTick(&prev_tick);
-	while ((count = FS::Read(in, buff, BUF_SIZE)) > 0)
+	while ((count = FS::Read(in, buff, BUF_SIZE)) != 0)
 	{
 		if (count < 0)
 		{
-			sprintf(response, "%s", lang_strings[STR_FAILED]);
+			snprintf(response, sizeof(response), "%s", lang_strings[STR_FAILED]);
 			FS::Close(in);
 			nfs_close(nfs, nfsfh);
 			free(buff);

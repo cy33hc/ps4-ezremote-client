@@ -897,7 +897,8 @@ int FtpClient::FtpXfer(SplitFile *split_file, const std::string &path, ftphandle
 	dbuf = static_cast<char *>(malloc(FTP_CLIENT_BUFSIZ));
 	while ((l = FtpRead(dbuf, FTP_CLIENT_BUFSIZ, nData)) > 0)
 	{
-		split_file->Write(dbuf, l);
+		if (split_file->Write(dbuf, l) < 0)
+			break;
 	}
 
 	free(dbuf);
@@ -1499,9 +1500,16 @@ int FtpClient::ParseDirEntry(char *line, DirEntry *dirEntry)
 			dirEntry->modified.minutes = (uint8_t)strtoul(token + 3, NULL, 10);
 
 			// The PM period covers the 12 hours from noon to midnight
+			// Correct 12-hour clock: 12:xx AM = 00:xx, 12:xx PM = 12:xx
 			if (strstr(token, "PM") != NULL)
 			{
-				dirEntry->modified.hours += 12;
+				if (dirEntry->modified.hours != 12)
+					dirEntry->modified.hours += 12;
+			}
+			else
+			{
+				if (dirEntry->modified.hours == 12)
+					dirEntry->modified.hours = 0;
 			}
 		}
 		else
@@ -1525,7 +1533,7 @@ int FtpClient::ParseDirEntry(char *line, DirEntry *dirEntry)
 		else
 		{
 			// Save the size of the file
-			dirEntry->file_size = strtoul(token, NULL, 10);
+			dirEntry->file_size = strtoull(token, NULL, 10);
 		}
 
 		// Read filename field
@@ -1547,8 +1555,8 @@ int FtpClient::ParseDirEntry(char *line, DirEntry *dirEntry)
 	// Unix listing format?
 	else
 	{
-		// Check file permissions
-		if (strchr(token, 'd') != NULL)
+		// Check file permissions — 'd' must be at position 0 of the permissions field
+		if (token[0] == 'd')
 		{
 			dirEntry->isDir = true;
 		}
@@ -1578,7 +1586,7 @@ int FtpClient::ParseDirEntry(char *line, DirEntry *dirEntry)
 			return -1;
 
 		// Save the size of the file
-		dirEntry->file_size = strtoul(token, NULL, 10);
+		dirEntry->file_size = strtoull(token, NULL, 10);
 
 		// Read modification time (month)
 		token = strtok_r(NULL, " ", &p);
@@ -1619,12 +1627,13 @@ int FtpClient::ParseDirEntry(char *line, DirEntry *dirEntry)
 			// The format of the year is yyyy
 			dirEntry->modified.year = (uint16_t)strtoul(token, NULL, 10);
 		}
-		else if (strlen(token) == 5)
+		else if (strchr(token, ':') != NULL)
 		{
-			// The format of the time hh:mm
-			token[2] = '\0';
+			// The format of the time is hh:mm or h:mm
+			char *colon = strchr(token, ':');
+			*colon = '\0';
 			dirEntry->modified.hours = (uint8_t)strtoul(token, NULL, 10);
-			dirEntry->modified.minutes = (uint8_t)strtoul(token + 3, NULL, 10);
+			dirEntry->modified.minutes = (uint8_t)strtoul(colon + 1, NULL, 10);
 			dirEntry->modified.year = cur_time.tm_year + 1900;
 		}
 		else
@@ -1639,6 +1648,11 @@ int FtpClient::ParseDirEntry(char *line, DirEntry *dirEntry)
 		if (token == NULL)
 			return -1;
 
+		// For symlinks, strip the " -> target" suffix (e.g. "linkname -> /some/target")
+		char *arrow = strstr(token, " -> ");
+		if (arrow != NULL)
+			*arrow = '\0';
+
 		// Retrieve the length of the filename
 		n = strlen(token);
 		// Limit the number of characters to copy
@@ -1650,6 +1664,10 @@ int FtpClient::ParseDirEntry(char *line, DirEntry *dirEntry)
 		dirEntry->name[n] = '\0';
 	}
 
+	// Exclude hidden files and folders (names starting with '.')
+	if (!show_hidden_files && dirEntry->name[0] == '.')
+		return -1;
+
 	// The directory entry is valid
 	return 1;
 }
@@ -1660,37 +1678,48 @@ int FtpClient::ParseMLSDDirEntry(char *line, DirEntry *dirEntry)
 	char *token;
 	char *facts;
 	char *keypair;
+	char *factsSave;
 	char key[128];
 	char value[128];
 
-	// Spilt string by space
+	// Split string by first space: facts portion and name portion
 	facts = strtok_r(line, " ", &p);
 
-	// path is the rest of the line after space
+	// path is the rest of the line after the space, strip trailing CR/LF
 	token = strtok_r(p, "\r\n", &p);
 	snprintf(dirEntry->name, 256, "%s", token);
 
-	// split properties by semi-colon and get the key value pair
-	while ((keypair = strtok_r(facts, ";", &facts)))
+	// Split facts by semicolon and parse each key=value pair
+	factsSave = NULL;
+	keypair = strtok_r(facts, ";", &factsSave);
+	while (keypair != NULL)
 	{
-		sscanf(keypair, "%[^=]=%s", key, value);
-		if (strcasecmp(key, "type") == 0)
+		key[0] = '\0';
+		value[0] = '\0';
+		if (sscanf(keypair, "%127[^=]=%127s", key, value) == 2)
 		{
-			dirEntry->isDir = false;
-			if (strcasecmp(value, "dir") == 0)
+			if (strcasecmp(key, "type") == 0)
 			{
-				dirEntry->isDir = true;
+				dirEntry->isDir = false;
+				// dir, cdir (current dir), and pdir (parent dir) are all directory types
+				if (strcasecmp(value, "dir") == 0 ||
+					strcasecmp(value, "cdir") == 0 ||
+					strcasecmp(value, "pdir") == 0)
+				{
+					dirEntry->isDir = true;
+				}
+			}
+			else if (strcasecmp(key, "size") == 0)
+			{
+				dirEntry->file_size = atoll(value);
+			}
+			else if (strcasecmp(key, "modify") == 0)
+			{
+				sscanf(value, "%4d%2d%2d%2d%2d%2d", &dirEntry->modified.year, &dirEntry->modified.month, &dirEntry->modified.day,
+					   &dirEntry->modified.hours, &dirEntry->modified.minutes, &dirEntry->modified.seconds);
 			}
 		}
-		else if (strcasecmp(key, "size") == 0)
-		{
-			dirEntry->file_size = atoll(value);
-		}
-		else if (strcasecmp(key, "modify") == 0)
-		{
-			sscanf(value, "%4d%2d%2d%2d%2d%2d", &dirEntry->modified.year, &dirEntry->modified.month, &dirEntry->modified.day,
-				   &dirEntry->modified.hours, &dirEntry->modified.minutes, &dirEntry->modified.seconds);
-		}
+		keypair = strtok_r(NULL, ";", &factsSave);
 	}
 	return 1;
 }

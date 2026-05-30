@@ -1004,7 +1004,7 @@ namespace HttpServer
             std::string post_data = std::string("code=") + auth_code +
                                                 "&client_id=" + gg_app.client_id +
                                                 "&client_secret=" + gg_app.client_secret +
-                                                "&redirect_uri=http%3A//localhost%3A" + std::to_string(http_server_port) + "/google_auth"
+                                                "&redirect_uri=http%3A//127.0.0.1%3A" + std::to_string(http_server_port) + "/google_auth"
                                                 "&grant_type=authorization_code";
                             
             if (auto result = client.Post(url, post_data.c_str(), post_data.length(),  "application/x-www-form-urlencoded"))
@@ -1376,7 +1376,7 @@ namespace HttpServer
 
                 if (!use_disk_cache)
                 {
-                    std::string remote_install_url = std::string("http://localhost:") + std::to_string(http_server_port) + "/rmt_inst/Site%2099/" + hash;
+                    std::string remote_install_url = std::string("http://127.0.0.1:") + std::to_string(http_server_port) + "/rmt_inst/Site%2099/" + hash;
                     int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header, title, false);
                     if (rc == 0)
                     {
@@ -1536,7 +1536,7 @@ namespace HttpServer
             json_object_object_add(params, "id", json_object_new_uint64(tick.mytick));
 
             const char *params_str = json_object_to_json_string(params);
-            httplib::Client tmp_client = httplib::Client(std::string("http://localhost:") + std::to_string(http_int_server_port));
+            httplib::Client tmp_client = httplib::Client(std::string("http://127.0.0.1:") + std::to_string(http_int_server_port));
 
             std::string download_req_url =  + "/download_url";
             if (auto resp = tmp_client.Post(download_req_url, params_str, strlen(params_str), "application/json"))
