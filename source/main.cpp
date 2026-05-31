@@ -331,7 +331,7 @@ int main()
 	HttpServer::Start();
 	if (INSTALLER::StartEzRemoteServer() < 0)
 	{
-		Util::Notify("Cloud not load ezRemote Server. It is needed for background install and download. Please ensure Bin loader is enabled");
+		Util::Notify("Cloud not load ezRemote Server. It is needed for background install and download. Please ensure Goldhen payload server is enabled");
 	}
 
 	GUI::RenderLoop(renderer);
