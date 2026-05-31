@@ -183,7 +183,7 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Stop Server",                                                                                    // STR_STOP_SERVER
 	"Warning",                                                                                        // STR_WARNING
 	"The version of ezRemote Server payload running does not match the required version needed by ezRemote Client.", // STR_WARNING_MSG_1
-	"If you are using an auto payload loader, then update the elf that comes with ezRemoteClient package.", // STR_WARNING_MSG_2
+	"If you are using Goldhen payload loader, then update the elf that comes with ezRemoteClient package.", // STR_WARNING_MSG_2
 	"You may goto the Global Settings and restart ezRemote Server with the version that came packaged.", // STR_WARNING_MSG_3
 	"Enable background download",                                                                     // STR_ENABLE_BG_DOWNLOAD
 	"Minimum background file size (bytes)",                                                           // STR_BG_DOWNLOAD_MIN_SIZE

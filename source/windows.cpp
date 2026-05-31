@@ -19,7 +19,6 @@
 #include "textures.h"
 #include "sfo.h"
 #include "system.h"
-#include "dbglogger.h"
 
 #define MAX_IMAGE_HEIGHT 980
 #define MAX_IMAGE_WIDTH 1820
@@ -142,7 +141,6 @@ namespace Windows
         std::string cur_version = INSTALLER::EzRemoteServerVersion();
         ezremote_server_version_match = cur_version.empty() || (cur_version.compare(EZREMOTE_SERVER_REQUIRED_VERSION) == 0);
         show_ezremote_server_warning = !ezremote_server_version_match;
-        dbglogger_log("verion=%s, show_warning=%d", cur_version.c_str(), show_ezremote_server_warning);
 
         Actions::RefreshLocalFiles(false);
     }

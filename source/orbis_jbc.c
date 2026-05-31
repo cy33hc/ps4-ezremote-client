@@ -62,13 +62,11 @@ int mount_large_fs(const char* device, const char* mountpoint, const char* fstyp
         build_iovec(&iov, &iovlen, "mask", mode, -1);
     }
 
-    dbglogger_log("##^  [I] Mounting %s \"%s\" to \"%s\"", fstype, device, mountpoint);
     ret = nmount(iov, iovlen, flags);
     if (ret < 0) {
         goto error;
     }
     else {
-        dbglogger_log("##^  [I] Success.");
     }
 
 error:

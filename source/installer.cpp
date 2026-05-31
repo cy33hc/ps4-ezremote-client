@@ -1238,6 +1238,9 @@ namespace INSTALLER
 
 	std::string EzRemoteServerVersion()
 	{
+		if (!IsPortOpen("127.0.0.1", 6701, 1))
+			return "";
+
 		httplib::Client tmp_client = httplib::Client("http://127.0.0.1:6701");
 
 		tmp_client.set_connection_timeout(1);
@@ -1253,6 +1256,68 @@ namespace INSTALLER
 		return "";
 	}
 
+	bool IsPortOpen(const char *ip, uint16_t port, int timeout_sec)
+	{
+		int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+		if (sockfd < 0)
+			return 0;
+
+		// Set socket to non-blocking mode
+		int flags = fcntl(sockfd, F_GETFL, 0);
+		fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+
+		struct sockaddr_in addr;
+		memset(&addr, 0, sizeof(addr));
+		addr.sin_family = AF_INET;
+		addr.sin_port = htons(port);
+		inet_pton(AF_INET, ip, &addr.sin_addr);
+
+		// Attempt connection
+		int res = connect(sockfd, (struct sockaddr *)&addr, sizeof(addr));
+
+		if (res < 0)
+		{
+			if (errno == EINPROGRESS)
+			{
+				// Wait for connection completion using select()
+				fd_set write_fds;
+				struct timeval timeout;
+
+				FD_ZERO(&write_fds);
+				FD_SET(sockfd, &write_fds);
+
+				timeout.tv_sec = timeout_sec;
+				timeout.tv_usec = 0;
+
+				res = select(sockfd + 1, NULL, &write_fds, NULL, &timeout);
+
+				if (res > 0)
+				{
+					// Check if connection succeeded or failed with an error
+					int so_error;
+					socklen_t len = sizeof(so_error);
+					getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &so_error, &len);
+
+					if (so_error == 0)
+					{
+						// Port is open! Clean up and return success
+						close(sockfd);
+						return 1;
+					}
+				}
+			}
+		}
+		else
+		{
+			// Connected instantly (e.g., local loopback)
+			close(sockfd);
+			return 1;
+		}
+
+		close(sockfd);
+		return 0; // Port is closed or timed out
+	}
+
 	int StartEzRemoteServer()
 	{
 		char buffer[8192];
@@ -1266,13 +1331,11 @@ namespace INSTALLER
 		struct sockaddr_in sockaddr_in;
 		unsigned short server_port = 9090;
 
-		/*
-		if (EzRemoteServerVersion().empty())
+		if (IsPortOpen("127.0.0.1", 6701, 1))
 		{
 			return 0;
 		}
-		*/
-	
+
 		filefd = open(SERVER_ELF_PATH, O_RDONLY);
 		if (filefd == -1)
 		{

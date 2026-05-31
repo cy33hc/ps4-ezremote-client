@@ -171,4 +171,5 @@ namespace INSTALLER
     std::string StoreBgInstallHostData(RemoteSettings *remote_settings, const std::string &path);
     RemoteClient *GetRemoteClient(int site_idx);
     RemoteClient *GetRemoteClient(RemoteSettings *settings);
+    bool IsPortOpen(const char *ip, uint16_t port, int timeout_sec);
 }

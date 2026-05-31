@@ -329,7 +329,10 @@ int main()
 	atexit(terminate);
 
 	HttpServer::Start();
-	INSTALLER::StartEzRemoteServer();
+	if (INSTALLER::StartEzRemoteServer() < 0)
+	{
+		Util::Notify("Cloud not load ezRemote Server. It is needed for background install and download. Please ensure Bin loader is enabled");
+	}
 
 	GUI::RenderLoop(renderer);
 	SDL_DestroyRenderer(renderer);
