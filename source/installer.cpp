@@ -1266,6 +1266,13 @@ namespace INSTALLER
 		struct sockaddr_in sockaddr_in;
 		unsigned short server_port = 9090;
 
+		/*
+		if (EzRemoteServerVersion().empty())
+		{
+			return 0;
+		}
+		*/
+	
 		filefd = open(SERVER_ELF_PATH, O_RDONLY);
 		if (filefd == -1)
 		{

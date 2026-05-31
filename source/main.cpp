@@ -294,7 +294,7 @@ int main()
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_AUDIOOUT) < 0 || sceAudioOutInit() != 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_NET) < 0 || sceNetInit() != 0) return 0;
 
-	sceNetPoolCreate("simple", NET_HEAP_SIZE, 0);
+	sceNetPoolCreate("ezremote_client", NET_HEAP_SIZE, 0);
 
 	if (INSTALLER::Init() < 0)
 		return 0;

@@ -909,6 +909,21 @@ namespace Windows
                 }
             }
         }
+
+        if (ImGui::IsKeyPressed(ImGuiKey_D) && !paused)
+        {
+            if (selected_browser & LOCAL_BROWSER)
+            {
+                selected_action = ACTION_REFRESH_LOCAL_FILES;
+            }
+            else if (selected_browser & REMOTE_BROWSER)
+            {
+                if (remoteclient != nullptr && remote_files.size() > 0)
+                {
+                    selected_action = ACTION_REFRESH_REMOTE_FILES;
+                }
+            }
+        }
     }
 
     void StatusPanel()
