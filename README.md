@@ -2,6 +2,24 @@
 
 ezRemote Client is an application that allows you to connect the PS4 to remote FTP/SFTP, SMB(Windows Share), NFS, WebDAV, HTTP servers and Google Drive to transfer files. The interface is inspired by Filezilla client which provides a commander like GUI.
 
+**NEW: As of version 2.00, You can download large file in the background.**
+  - You can enable/disable background download in the Global settings
+  - You can set the minimum file size where background download will use. Default is 1GB
+  - In Global Settings, you can show the background download progress of all requested downloads
+  - Does not support rest mode. Background downloads will stop in rest mode, but will be resumed when ezRemote Server is restarted.
+  - If PS4 is restarted, background downloads will resume when ezRemote Server is restarted.
+  - Updated the Web UI, so you can download files of File shares like mediafire, google shared link, pixeldrain, real-debrid and all-debrid or any direct links
+
+**NEW: As of version 2.00, PS4 pkgs can be installed in the background. Use ezRemote client to connect to remote server and select pkg to install. You can then close ezRemote Client app and the package will continue installing in background. This is archieved with a new payload called [ezRemote Server](https://github.com/cy33hc/ps4-ezremote-server) that is packaged together with exRemote Client. ezRemote Server runs in the background and acts as a proxy to the remote server. ezRemote Server must be started to enable backgroud installs.** 
+   - support background install from all remote servers that ezremote client supports
+   - support background install from file host like mediafire, google shared link, pixeldrain, real-debrid and all-debrid
+   - does not support background install using the options "Disk Cache" or PKGs inside zip files
+   - You can pause and resume installs
+   - After restarting PS4, you can resume installs by first reloading ezRemote Server
+   - From testing, background install continues even in rest mode (This isn't granteed). You may need to restart ezRemote Server payload before you can resume install
+   - ezRemote Server payload can be stop/restarted from ezRemote Client settngs dialog.
+   - Do not submit to many background installs, it can crash ezRemote Server.
+
 **New: As of version 1.19** 
 - Install PKG inside Zip files from both local hdd and remote servers.
 - Extact zip files directly from remote servers.
