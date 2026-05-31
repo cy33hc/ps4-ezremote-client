@@ -1292,6 +1292,7 @@ namespace HttpServer
             bool use_alldebrid = false;
             bool use_realdebrid = false;
             bool use_disk_cache = false;
+            bool enable_rpi = false;
 
             json_object *jobj = json_tokener_parse(req.body.c_str());
             if (jobj != nullptr)
@@ -1300,6 +1301,7 @@ namespace HttpServer
                 use_alldebrid  = json_object_get_boolean(json_object_object_get(jobj, "use_alldebrid"));
                 use_realdebrid = json_object_get_boolean(json_object_object_get(jobj, "use_realdebrid"));
                 use_disk_cache = json_object_get_boolean(json_object_object_get(jobj, "use_disk_cache"));
+                enable_rpi = json_object_get_boolean(json_object_object_get(jobj, "enable_rpi"));
 
                 if (url_param == nullptr)
                 {
@@ -1368,26 +1370,47 @@ namespace HttpServer
             }
             baseclient->Head(path, &header, sizeof(pkg_header));
 
+            FileHost::AddCacheDownloadUrl(hash, download_url);
+            std::string title = INSTALLER::GetRemotePkgTitle(baseclient, path, &header);
+
             if (BE32(header.pkg_magic) == 0x7F434E54)
             {
-                bytes_to_download = header.pkg_content_size;
-                FileHost::AddCacheDownloadUrl(hash, download_url);
-                std::string title = INSTALLER::GetRemotePkgTitle(baseclient, path, &header);
-
-                if (!use_disk_cache)
+                if (enable_rpi && !use_disk_cache)
                 {
-                    std::string remote_install_url = std::string("http://127.0.0.1:") + std::to_string(http_server_port) + "/rmt_inst/Site%2099/" + hash;
-                    int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header, title, false);
-                    if (rc == 0)
+                    json_object *history_item_obj = json_object_new_object();
+                    json_object_object_add(history_item_obj, "hash", json_object_new_string(hash.c_str()));
+                    json_object_object_add(history_item_obj, "url", json_object_new_string(host.c_str()));
+                    json_object_object_add(history_item_obj, "path", json_object_new_string(path.c_str()));
+                    json_object_object_add(history_item_obj, "username", json_object_new_string(""));
+                    json_object_object_add(history_item_obj, "password", json_object_new_string(""));
+                    json_object_object_add(history_item_obj, "type", json_object_new_int(CLIENT_TYPE_FILEHOST));
+
+                    const char *params_str = json_object_to_json_string(history_item_obj);
+
+                    Client tmp_client = Client(std::string("http://127.0.0.1:") + std::to_string(http_int_server_port));
+
+                    if (auto resp = tmp_client.Post("/store_bg_install_data", params_str, strlen(params_str), "application/json"))
                     {
-                        failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
-                        activity_inprogess = false;
-                        file_transfering = false;
-                        Windows::SetModalMode(false);
-                        return;
+                        if (HTTP_SUCCESS(resp->status))
+                        {
+                            std::string remote_install_url = std::string("http://localhost:") + std::to_string(http_int_server_port) + "/bg_install/" + hash;
+                            int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header, title);
+                            activity_inprogess = false;
+                            file_transfering = false;
+                            Windows::SetModalMode(false);
+                            sleep(2);
+                        }
+                        else
+                        {
+                            failed(res, 200, "Could not save host data for background install");
+                        }
+                    }
+                    else
+                    {
+                        failed(res, 200, "Could not save host data for background install");
                     }
                 }
-                else
+                else if (enable_rpi && use_disk_cache)
                 {
                     SplitPkgInstallData *install_data = (SplitPkgInstallData*) malloc(sizeof(SplitPkgInstallData));
                     memset(install_data, 0, sizeof(SplitPkgInstallData));
