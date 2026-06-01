@@ -167,6 +167,7 @@ Square - Mark file(s)/folder(s) for Delete/Rename/Upload/Download
 R1 - Navigate to the Remote list of files
 L1 - Navigate to the Local list of files
 L2 - To go up a directory from current directory
+R2 - Refresh the list of files in the curent directory
 TouchPad Button - Exit Application (versions prior to 1.06)
 Options Button - Exit Application (versions 1.06 and above)
 ```
