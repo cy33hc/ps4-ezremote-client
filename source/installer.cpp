@@ -266,7 +266,7 @@ namespace INSTALLER
 		if ( strlen(remote_settings->username) == 0 &&
 		     strlen(remote_settings->password) == 0 &&
 			 (remote_settings->type == CLIENT_TYPE_WEBDAV ||
-			   (remote_settings->type == CLIENT_TYPE_HTTP_SERVER && strcmp(remote_settings->http_server_type, HTTP_SERVER_ARCHIVEORG) == 0)
+			   (remote_settings->type == CLIENT_TYPE_HTTP_SERVER && strcmp(remote_settings->http_server_type, HTTP_SERVER_ARCHIVEORG) != 0)
 			  )
 		   )
 		{
