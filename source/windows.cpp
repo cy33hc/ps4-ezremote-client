@@ -138,7 +138,7 @@ namespace Windows
         overwrite_type = OVERWRITE_PROMPT;
         local_paste_files.clear();
         remote_paste_files.clear();
-        std::string cur_version = INSTALLER::EzRemoteServerVersion();
+        std::string cur_version = "";
         ezremote_server_version_match = cur_version.empty() || (cur_version.compare(EZREMOTE_SERVER_REQUIRED_VERSION) == 0);
         show_ezremote_server_warning = !ezremote_server_version_match;
 
