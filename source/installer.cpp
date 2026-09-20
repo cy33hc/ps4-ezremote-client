@@ -222,7 +222,7 @@ namespace INSTALLER
 		return title;
 	}
 
-	std::string StoreBgInstallHostData(RemoteSettings *settings, const std::string &path)
+	std::string StoreBgInstallHostData(RemoteSettings *settings, const std::string &path, uint64_t size)
 	{
 		std::string hash = Util::UrlHash(settings->server + path + settings->username + settings->password + std::to_string(settings->type));
 		json_object *history_item_obj = json_object_new_object();
@@ -232,6 +232,7 @@ namespace INSTALLER
 		json_object_object_add(history_item_obj, "username", json_object_new_string(settings->username));
 		json_object_object_add(history_item_obj, "password", json_object_new_string(settings->password));
 		json_object_object_add(history_item_obj, "type", json_object_new_int(settings->type));
+		json_object_object_add(history_item_obj, "file_size", json_object_new_uint64(size));
 
 		if (settings->type == CLIENT_TYPE_HTTP_SERVER)
 		{
@@ -256,7 +257,7 @@ namespace INSTALLER
 		return hash;
 	}
 
-	std::string getRemoteUrl(const std::string path, bool encodeUrl)
+	std::string getRemoteUrl(const std::string path, uint64_t size, bool encodeUrl)
 	{
 		if (remote_settings->type == CLIENT_TYPE_HTTP_SERVER && strcmp(remote_settings->http_server_type, HTTP_SERVER_GITHUB) == 0)
 		{
@@ -287,7 +288,7 @@ namespace INSTALLER
 		}
 		else
 		{
-			std::string hash = StoreBgInstallHostData(remote_settings, path);
+			std::string hash = StoreBgInstallHostData(remote_settings, path, size);
 			std::string full_url = std::string("http://127.0.0.1:") + std::to_string(http_int_server_port) + "/bg_install/" + hash;
 			return full_url;
 		}

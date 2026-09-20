@@ -149,7 +149,7 @@ namespace INSTALLER
     void Exit(void);
 
     bool canInstallRemotePkg(const std::string &url);
-    std::string getRemoteUrl(const std::string path, bool encodeUrl = false);
+    std::string getRemoteUrl(const std::string path, uint64_t size, bool encodeUrl = false);
     int InstallRemotePkg(const std::string &path, pkg_header *header, std::string title, bool prompt = false);
     int InstallLocalPkg(const std::string &path);
     int InstallLocalPkg(const std::string &path, pkg_header *header, bool remove_after_install = false);
@@ -168,7 +168,7 @@ namespace INSTALLER
     std::string EzRemoteServerVersion();
     int StartEzRemoteServer();
     void StopEzRemoteServer();
-    std::string StoreBgInstallHostData(RemoteSettings *remote_settings, const std::string &path);
+    std::string StoreBgInstallHostData(RemoteSettings *remote_settings, const std::string &path, uint64_t size);
     RemoteClient *GetRemoteClient(int site_idx);
     RemoteClient *GetRemoteClient(RemoteSettings *settings);
     bool IsPortOpen(const char *ip, uint16_t port, int timeout_sec);

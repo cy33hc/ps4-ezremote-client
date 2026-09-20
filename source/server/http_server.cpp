@@ -1293,6 +1293,7 @@ namespace HttpServer
             bool use_realdebrid = false;
             bool use_disk_cache = false;
             bool enable_rpi = false;
+            int64_t file_size;
 
             json_object *jobj = json_tokener_parse(req.body.c_str());
             if (jobj != nullptr)
@@ -1369,6 +1370,7 @@ namespace HttpServer
                 return;
             }
             baseclient->Head(path, &header, sizeof(pkg_header));
+            baseclient->Size(path, &file_size);
 
             FileHost::AddCacheDownloadUrl(hash, download_url);
             std::string title = INSTALLER::GetRemotePkgTitle(baseclient, path, &header);
@@ -1384,6 +1386,7 @@ namespace HttpServer
                     json_object_object_add(history_item_obj, "username", json_object_new_string(""));
                     json_object_object_add(history_item_obj, "password", json_object_new_string(""));
                     json_object_object_add(history_item_obj, "type", json_object_new_int(CLIENT_TYPE_FILEHOST));
+                    json_object_object_add(history_item_obj, "file_size", json_object_new_uint64(file_size));
 
                     const char *params_str = json_object_to_json_string(history_item_obj);
 

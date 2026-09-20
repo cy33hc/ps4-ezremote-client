@@ -751,7 +751,9 @@ namespace Actions
                                 }
                                 else
                                 {
-                                    std::string url = INSTALLER::getRemoteUrl(it->path, true);
+                                    int64_t file_size;
+                                    remoteclient->Size(it->path, &file_size);
+                                    std::string url = INSTALLER::getRemoteUrl(it->path, file_size, true);
                                     std::string title = INSTALLER::GetRemotePkgTitle(remoteclient, it->path, &header);
                                     if (INSTALLER::InstallRemotePkg(url, &header, title) == 0)
                                         failed++;
