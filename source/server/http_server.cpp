@@ -1043,127 +1043,6 @@ namespace HttpServer
             res.set_content(str.c_str(), "text/plain");
         });
 
-        svr->Get("/rmt_inst/Site (\\d+)(/)(.*)", [&](const Request &req, Response &res)
-        {
-            RemoteClient *tmp_client = nullptr;
-            RemoteSettings *tmp_settings;
-            auto site_idx = std::stoi(req.matches[1])-1;
-            std::string path;
-
-            if (site_idx != 98)
-            {
-                path = std::string("/") + std::string(req.matches[3]);
-            }
-            else
-            {
-                std::string hash = std::string(req.matches[3]);
-                std::string url = FileHost::GetCachedDownloadUrl(hash);
-                size_t scheme_pos = url.find("://");
-                size_t root_pos = url.find("/", scheme_pos + 3);
-                std::string host = url.substr(0, root_pos);
-                path = url.substr(root_pos);
-
-                tmp_client = new BaseClient();
-                tmp_client->Connect(host, "", "");
-            }
-
-            if (req.method == "HEAD")
-            {
-                int64_t file_size;
-                int ret;
-                if (site_idx != 98)
-                    tmp_client = GetRemoteClient(site_idx, true);
-
-                ret = tmp_client->Size(path, &file_size);
-                if (!ret)
-                {
-                    res.status = 500;
-                    DeleteRemoteClient(tmp_client, site_idx);
-                    return;
-                }
-
-                res.status = 204;
-                res.set_header("Content-Length", std::to_string(file_size));
-                res.set_header("Accept-Ranges", "bytes");
-                DeleteRemoteClient(tmp_client, site_idx);
-                return;
-            }
-
-            if (req.ranges.empty())
-            {
-                res.status = 200;
-                if (site_idx != 98)
-                    tmp_client = GetRemoteClient(site_idx, true);
-
-                res.set_content_provider(
-                    (1024*128), "application/octet-stream",
-                    [tmp_client, path](size_t offset, size_t length, DataSink &sink) {
-                        int ret = tmp_client->GetRange(path, sink, length, offset);
-                        return (ret == 1);
-                    },
-                    [tmp_client, path, site_idx](bool success) {
-                        DeleteRemoteClient(tmp_client, site_idx);
-                    });
-            }
-            else
-            {
-                res.status = 206;
-                size_t range_len = (req.ranges[0].second - req.ranges[0].first) + 1;
-                if (req.ranges[0].second >= 18000000000000000000ul)
-                {
-                    range_len = PKG_INITIAL_REQUEST_SIZE;
-                    res.set_header("Content-Length", std::to_string(range_len));
-                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+PKG_INITIAL_REQUEST_SIZE-1) + "/"+std::to_string(range_len));
-                    sceRtcGetCurrentTick(&prev_tick);
-                    if (site_idx != 98)
-                        tmp_client = GetRemoteClient(site_idx, true);
-                }
-                else
-                {
-                    if (site_idx != 98)
-                        tmp_client = GetRemoteClient(site_idx, false);
-                }
-
-                std::pair<ssize_t, ssize_t> range = req.ranges[0];
-                res.set_content_provider(
-                    range_len, "application/octet-stream",
-                    [tmp_client, path, range, range_len, site_idx](size_t offset, size_t length, DataSink &sink) {
-                        int ret;
-                        if (range_len == PKG_INITIAL_REQUEST_SIZE)
-                        {
-                            ret = tmp_client->GetRange(path, sink, range_len, range.first);
-                        }
-                        else if ((tmp_client->SupportedActions() & REMOTE_ACTION_RAW_READ) == 0)
-                        {
-                            ret = tmp_client->GetRange(path, sink, range_len, range.first);
-                        }
-                        else
-                        {
-                            std::map<std::string, void *>::iterator it = remote_data[site_idx].fp_handles.find(path);
-                            void *fp;
-                            if (it == remote_data[site_idx].fp_handles.end())
-                            {
-                                fp = tmp_client->Open(path, O_RDONLY);
-                                remote_data[site_idx].fp_handles[path] = fp;
-                            }
-                            else
-                            {
-                                fp = it->second;
-                            }
-                            ret = tmp_client->GetRange(fp, sink, range_len, range.first);
-                        }
-                        return (ret==1);
-                    },
-                    [tmp_client, path, range, site_idx](bool success) {
-                        if (range.second >= 18000000000000000000ul ||
-                            (tmp_client->clientType() == CLIENT_TYPE_HTTP_SERVER && site_idx == 98) ||
-                            tmp_client->clientType() == CLIENT_TYPE_FTP)
-                        {
-                            DeleteRemoteClient(tmp_client, site_idx);
-                        }
-                    });
-            } });
-
         svr->Get("/archive_inst/(.*)", [&](const Request &req, Response &res)
         {
             RemoteClient *tmp_client;
@@ -1184,7 +1063,7 @@ namespace HttpServer
             {
                 res.status = 200;
                 res.set_content_provider(
-                    131072, "application/octet-stream",
+                    pkg_data->archive_entry->filesize, "application/octet-stream",
                     [pkg_data](size_t offset, size_t length, DataSink &sink) {
                         char *buf = (char*) malloc(131072);
                         size_t bytes_read = pkg_data->split_file->Read(buf, 131072, offset);
@@ -1204,12 +1083,12 @@ namespace HttpServer
                 {
                     range_len = PKG_INITIAL_REQUEST_SIZE;
                     res.set_header("Content-Length", std::to_string(range_len));
-                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+PKG_INITIAL_REQUEST_SIZE-1) + "/"+std::to_string(range_len));
+                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+PKG_INITIAL_REQUEST_SIZE-1) + "/"+std::to_string(pkg_data->archive_entry->filesize));
                     sceRtcGetCurrentTick(&prev_tick);
                 }
                 std::pair<ssize_t, ssize_t> range = req.ranges[0];
                 res.set_content_provider(
-                    range_len, "application/octet-stream",
+                    pkg_data->archive_entry->filesize, "application/octet-stream",
                     [pkg_data, range, range_len](size_t offset, size_t length, DataSink &sink) {
                         char *buf = (char*) malloc(range_len);
                         size_t bytes_read = pkg_data->split_file->Read(buf, range_len, range.first);
@@ -1247,7 +1126,7 @@ namespace HttpServer
             {
                 res.status = 200;
                 res.set_content_provider(
-                    131072, "application/octet-stream",
+                    pkg_data->size, "application/octet-stream",
                     [pkg_data](size_t offset, size_t length, DataSink &sink) {
                         char *buf = (char*) malloc(131072);
                         size_t bytes_read = pkg_data->split_file->Read(buf, 131072, offset);
@@ -1267,12 +1146,12 @@ namespace HttpServer
                 {
                     range_len = PKG_INITIAL_REQUEST_SIZE;
                     res.set_header("Content-Length", std::to_string(range_len));
-                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+PKG_INITIAL_REQUEST_SIZE-1) + "/"+std::to_string(range_len));
+                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+PKG_INITIAL_REQUEST_SIZE-1) + "/"+std::to_string(pkg_data->size));
                     sceRtcGetCurrentTick(&prev_tick);
                 }
                 std::pair<ssize_t, ssize_t> range = req.ranges[0];
                 res.set_content_provider(
-                    range_len, "application/octet-stream",
+                    pkg_data->size, "application/octet-stream",
                     [pkg_data, range, range_len](size_t offset, size_t length, DataSink &sink) {
                         char *buf = (char*) malloc(range_len);
                         size_t bytes_read = pkg_data->split_file->Read(buf, range_len, range.first);

@@ -275,10 +275,12 @@ int main()
 {
 	// dbglogger_init();
 	// dbglogger_log("If you see this you've set up dbglogger correctly.");
+
 	int rc;
 	// No buffering
 	setvbuf(stdout, NULL, _IONBF, 0);
-
+	signal(SIGPIPE, SIG_IGN);
+	
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
 	{
 		return 0;
