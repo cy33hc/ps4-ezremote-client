@@ -141,6 +141,13 @@ struct SplitPkgInstallData
     bool delete_client;
 };
 
+struct DownloadPkgData
+{
+    RemoteClient *client;
+    pkg_header *header;
+    char *path;
+};
+
 static pthread_t bk_install_thid;
 
 namespace INSTALLER

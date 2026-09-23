@@ -1275,7 +1275,7 @@ namespace HttpServer
                     {
                         if (HTTP_SUCCESS(resp->status))
                         {
-                            std::string remote_install_url = std::string("http://localhost:") + std::to_string(http_int_server_port) + "/bg_install/" + hash;
+                            std::string remote_install_url = std::string("http://127.0.0.1:") + std::to_string(http_int_server_port) + "/bg_install/" + hash;
                             int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header, title);
                             activity_inprogess = false;
                             file_transfering = false;
@@ -1313,6 +1313,19 @@ namespace HttpServer
 
                     ret = INSTALLER::InstallSplitPkg(download_url, install_data, true);
 
+                    if (ret == 0)
+                    {
+                        failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
+                        activity_inprogess = false;
+                        file_transfering = false;
+                        Windows::SetModalMode(false);
+                        return;
+                    }
+                }
+                else
+                // Download and then install 
+                {
+                    int ret = Actions::DownloadAndInstallPkg(baseclient, path, &header);
                     if (ret == 0)
                     {
                         failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
@@ -1361,6 +1374,7 @@ namespace HttpServer
                     return;
                 }
             }
+
             success(res);
     
         });

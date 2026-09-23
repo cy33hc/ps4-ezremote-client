@@ -1886,6 +1886,73 @@ namespace Actions
         return INSTALLER::InstallLocalPkg(local_file, header, true);
     }
 
+    void *DownloadAndInstallPkgThread(void *argp)
+    {
+        DownloadPkgData* pkg_data = (DownloadPkgData*) argp;
+
+        int ret;
+        char local_file[2000];
+        OrbisDateTime now;
+        OrbisTick tick;
+        sceRtcGetCurrentClockLocalTime(&now);
+        sceRtcGetTick(&now, &tick);
+        sprintf(local_file, "%s/%lu.pkg", temp_folder, tick.mytick);
+
+        sprintf(activity_message, "%s %s to %s", lang_strings[STR_DOWNLOADING], pkg_data->path, local_file);
+        pkg_data->client->Size(pkg_data->path, &bytes_to_download);
+        bytes_transfered = 0;
+        sceRtcGetCurrentTick(&prev_tick);
+        file_transfering = true;
+
+        ret = pkg_data->client->Get(local_file, pkg_data->path);
+        if (ret == 0)
+        {
+            delete pkg_data->client;
+            free(pkg_data->header);
+            free(pkg_data->path);
+            free(pkg_data);
+
+            activity_inprogess = false;
+            file_transfering = false;
+            Windows::SetModalMode(false);
+            return NULL;
+        }
+
+        ret = INSTALLER::InstallLocalPkg(local_file, pkg_data->header, true);
+
+        delete pkg_data->client;
+        free(pkg_data->header);
+        free(pkg_data->path);
+        free(pkg_data);
+        activity_inprogess = false;
+        file_transfering = false;
+        Windows::SetModalMode(false);
+
+        return NULL;
+    }
+
+    int DownloadAndInstallPkg(RemoteClient *client, const std::string &path, pkg_header *header)
+    {
+        sprintf(status_message, "%s", "");
+        DownloadPkgData *pkg_data = (DownloadPkgData*) malloc(sizeof(DownloadPkgData));
+        pkg_data->header = (pkg_header*) malloc(sizeof(pkg_header));
+        pkg_data->path = (char*) malloc(2048);
+        pkg_data->client = client;
+        memcpy(pkg_data->header, header, sizeof(pkg_header));
+        snprintf(pkg_data->path, 2047, "%s", path.c_str());
+
+        int res = pthread_create(&bk_activity_thid, NULL, DownloadAndInstallPkgThread, pkg_data);
+        if (res != 0)
+        {
+            file_transfering = false;
+            activity_inprogess = false;
+            remote_paste_files.clear();
+            Windows::SetModalMode(false);
+            return 0;
+        }
+        return 1;
+    }
+
     void CreateLocalFile(char *filename)
     {
         std::string new_file = FS::GetPath(local_directory, filename);
