@@ -725,44 +725,55 @@ namespace Actions
                             }
                             else
                             {
-                                if (remote_settings->enable_disk_cache)
+                                bool can_install_via_rpi = INSTALLER::CanInstallViaRPI(it->path, &header);
+                                if (!can_install_via_rpi)
                                 {
-                                    SplitPkgInstallData *install_data = (SplitPkgInstallData*) malloc(sizeof(SplitPkgInstallData));
-                                    memset(install_data, 0, sizeof(SplitPkgInstallData));
-
-                                    OrbisTick tick;
-                                    sceRtcGetCurrentTick(&tick);
-                                    std::string install_pkg_path = std::string(temp_folder) + "/" + std::to_string(tick.mytick) + ".pkg";
-                                    SplitFile *sp = new SplitFile(install_pkg_path, INSTALL_ARCHIVE_PKG_SPLIT_SIZE/2);
-
-                                    install_data->split_file = sp;
-                                    install_data->remote_client = INSTALLER::GetRemoteClient(remote_settings);
-                                    install_data->path = it->path;
-                                    remoteclient->Size(it->path, &install_data->size);
-                                    install_data->stop_write_thread = false;
-                                    install_data->delete_client = true;
-
-                                    int ret = pthread_create(&install_data->thread, NULL, DownloadSplitPkg, install_data);
-
-                                    if (INSTALLER::InstallSplitPkg(it->path, install_data, false) == 0)
+                                    if (DownloadAndInstallPkg(it->path, &header) == 0)
                                         failed++;
                                     else
                                         success++;
                                 }
                                 else
                                 {
-                                    int64_t file_size;
-                                    remoteclient->Size(it->path, &file_size);
-                                    std::string url = INSTALLER::getRemoteUrl(it->path, file_size, true);
-                                    std::string title = INSTALLER::GetRemotePkgTitle(remoteclient, it->path, &header);
-                                    if (INSTALLER::InstallRemotePkg(url, &header, title) == 0)
-                                        failed++;
-                                    else
-                                        success++;
-
-                                    if (it != files.end())
+                                    if (remote_settings->enable_disk_cache)
                                     {
-                                        sleep(3);
+                                        SplitPkgInstallData *install_data = (SplitPkgInstallData*) malloc(sizeof(SplitPkgInstallData));
+                                        memset(install_data, 0, sizeof(SplitPkgInstallData));
+
+                                        OrbisTick tick;
+                                        sceRtcGetCurrentTick(&tick);
+                                        std::string install_pkg_path = std::string(temp_folder) + "/" + std::to_string(tick.mytick) + ".pkg";
+                                        SplitFile *sp = new SplitFile(install_pkg_path, INSTALL_ARCHIVE_PKG_SPLIT_SIZE/2);
+
+                                        install_data->split_file = sp;
+                                        install_data->remote_client = INSTALLER::GetRemoteClient(remote_settings);
+                                        install_data->path = it->path;
+                                        remoteclient->Size(it->path, &install_data->size);
+                                        install_data->stop_write_thread = false;
+                                        install_data->delete_client = true;
+
+                                        int ret = pthread_create(&install_data->thread, NULL, DownloadSplitPkg, install_data);
+
+                                        if (INSTALLER::InstallSplitPkg(it->path, install_data, false) == 0)
+                                            failed++;
+                                        else
+                                            success++;
+                                    }
+                                    else
+                                    {
+                                        int64_t file_size;
+                                        remoteclient->Size(it->path, &file_size);
+                                        std::string url = INSTALLER::getRemoteUrl(it->path, file_size, true);
+                                        std::string title = INSTALLER::GetRemotePkgTitle(remoteclient, it->path, &header);
+                                        if (INSTALLER::InstallRemotePkg(url, &header, title) == 0)
+                                            failed++;
+                                        else
+                                            success++;
+
+                                        if (it != files.end())
+                                        {
+                                            sleep(3);
+                                        }
                                     }
                                 }
                             }

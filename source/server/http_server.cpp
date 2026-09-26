@@ -1256,31 +1256,50 @@ namespace HttpServer
 
             if (BE32(header.pkg_magic) == 0x7F434E54)
             {
-                if (enable_rpi && !use_disk_cache)
+                if (enable_rpi)
                 {
-                    json_object *history_item_obj = json_object_new_object();
-                    json_object_object_add(history_item_obj, "hash", json_object_new_string(hash.c_str()));
-                    json_object_object_add(history_item_obj, "url", json_object_new_string(host.c_str()));
-                    json_object_object_add(history_item_obj, "path", json_object_new_string(path.c_str()));
-                    json_object_object_add(history_item_obj, "username", json_object_new_string(""));
-                    json_object_object_add(history_item_obj, "password", json_object_new_string(""));
-                    json_object_object_add(history_item_obj, "type", json_object_new_int(CLIENT_TYPE_FILEHOST));
-                    json_object_object_add(history_item_obj, "file_size", json_object_new_uint64(file_size));
-
-                    const char *params_str = json_object_to_json_string(history_item_obj);
-
-                    Client tmp_client = Client(std::string("http://127.0.0.1:") + std::to_string(http_int_server_port));
-
-                    if (auto resp = tmp_client.Post("/store_bg_install_data", params_str, strlen(params_str), "application/json"))
+                    if (!INSTALLER::CanInstallViaRPI(baseclient, path, &header))
                     {
-                        if (HTTP_SUCCESS(resp->status))
+                        int ret = Actions::DownloadAndInstallPkg(baseclient, path, &header);
+                        if (ret == 0)
                         {
-                            std::string remote_install_url = std::string("http://127.0.0.1:") + std::to_string(http_int_server_port) + "/bg_install/" + hash;
-                            int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header, title);
+                            failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
                             activity_inprogess = false;
                             file_transfering = false;
                             Windows::SetModalMode(false);
-                            sleep(2);
+                            return;
+                        }
+                    }
+                    else if (!use_disk_cache)
+                    {
+                        json_object *history_item_obj = json_object_new_object();
+                        json_object_object_add(history_item_obj, "hash", json_object_new_string(hash.c_str()));
+                        json_object_object_add(history_item_obj, "url", json_object_new_string(host.c_str()));
+                        json_object_object_add(history_item_obj, "path", json_object_new_string(path.c_str()));
+                        json_object_object_add(history_item_obj, "username", json_object_new_string(""));
+                        json_object_object_add(history_item_obj, "password", json_object_new_string(""));
+                        json_object_object_add(history_item_obj, "type", json_object_new_int(CLIENT_TYPE_FILEHOST));
+                        json_object_object_add(history_item_obj, "file_size", json_object_new_uint64(file_size));
+
+                        const char *params_str = json_object_to_json_string(history_item_obj);
+
+                        Client tmp_client = Client(std::string("http://127.0.0.1:") + std::to_string(http_int_server_port));
+
+                        if (auto resp = tmp_client.Post("/store_bg_install_data", params_str, strlen(params_str), "application/json"))
+                        {
+                            if (HTTP_SUCCESS(resp->status))
+                            {
+                                std::string remote_install_url = std::string("http://127.0.0.1:") + std::to_string(http_int_server_port) + "/bg_install/" + hash;
+                                int rc = INSTALLER::InstallRemotePkg(remote_install_url, &header, title);
+                                activity_inprogess = false;
+                                file_transfering = false;
+                                Windows::SetModalMode(false);
+                                sleep(2);
+                            }
+                            else
+                            {
+                                failed(res, 200, "Could not save host data for background install");
+                            }
                         }
                         else
                         {
@@ -1289,37 +1308,33 @@ namespace HttpServer
                     }
                     else
                     {
-                        failed(res, 200, "Could not save host data for background install");
-                    }
-                }
-                else if (enable_rpi && use_disk_cache)
-                {
-                    SplitPkgInstallData *install_data = (SplitPkgInstallData*) malloc(sizeof(SplitPkgInstallData));
-                    memset(install_data, 0, sizeof(SplitPkgInstallData));
+                        SplitPkgInstallData *install_data = (SplitPkgInstallData*) malloc(sizeof(SplitPkgInstallData));
+                        memset(install_data, 0, sizeof(SplitPkgInstallData));
 
-                    OrbisTick tick;
-                    sceRtcGetCurrentTick(&tick);
-                    std::string install_pkg_path = std::string(temp_folder) + "/" + std::to_string(tick.mytick) + ".pkg";
-                    SplitFile *sp = new SplitFile(install_pkg_path, INSTALL_ARCHIVE_PKG_SPLIT_SIZE/2);
+                        OrbisTick tick;
+                        sceRtcGetCurrentTick(&tick);
+                        std::string install_pkg_path = std::string(temp_folder) + "/" + std::to_string(tick.mytick) + ".pkg";
+                        SplitFile *sp = new SplitFile(install_pkg_path, INSTALL_ARCHIVE_PKG_SPLIT_SIZE/2);
 
-                    install_data->split_file = sp;
-                    install_data->remote_client = baseclient;
-                    install_data->path = path;
-                    baseclient->Size(path, &install_data->size);
-                    install_data->stop_write_thread = false;
-                    install_data->delete_client = true;
+                        install_data->split_file = sp;
+                        install_data->remote_client = baseclient;
+                        install_data->path = path;
+                        baseclient->Size(path, &install_data->size);
+                        install_data->stop_write_thread = false;
+                        install_data->delete_client = true;
 
-                    int ret = pthread_create(&install_data->thread, NULL, Actions::DownloadSplitPkg, install_data);
+                        int ret = pthread_create(&install_data->thread, NULL, Actions::DownloadSplitPkg, install_data);
 
-                    ret = INSTALLER::InstallSplitPkg(download_url, install_data, true);
+                        ret = INSTALLER::InstallSplitPkg(download_url, install_data, true);
 
-                    if (ret == 0)
-                    {
-                        failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
-                        activity_inprogess = false;
-                        file_transfering = false;
-                        Windows::SetModalMode(false);
-                        return;
+                        if (ret == 0)
+                        {
+                            failed(res, 200, lang_strings[STR_FAIL_INSTALL_FROM_URL_MSG]);
+                            activity_inprogess = false;
+                            file_transfering = false;
+                            Windows::SetModalMode(false);
+                            return;
+                        }
                     }
                 }
                 else

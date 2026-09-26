@@ -787,12 +787,22 @@ namespace INSTALLER
 		if (!remoteclient->Head(path, &tmp_hdr, sizeof(pkg_header)))
 			return false;
 
-		size_t entry_count = BE32(tmp_hdr.pkg_entry_count);
-		uint32_t entry_table_offset = BE32(tmp_hdr.pkg_table_offset);
+		return ExtractRemotePkg(path, &tmp_hdr, sfo_path, icon_path);
+	}
+
+	bool ExtractRemotePkg(const std::string &path, pkg_header *pkg_header, const std::string sfo_path, const std::string icon_path)
+	{
+		return ExtractRemotePkg(remoteclient, path, pkg_header, sfo_path, icon_path);
+	}
+
+	bool ExtractRemotePkg(RemoteClient *client, const std::string &path, pkg_header *pkg_header, const std::string sfo_path, const std::string icon_path)
+	{
+		size_t entry_count = BE32(pkg_header->pkg_entry_count);
+		uint32_t entry_table_offset = BE32(pkg_header->pkg_table_offset);
 		uint64_t entry_table_size = entry_count * sizeof(pkg_table_entry);
 		void *entry_table_data = malloc(entry_table_size);
 
-		if (!remoteclient->GetRange(path, entry_table_data, entry_table_size, entry_table_offset))
+		if (!client->GetRange(path, entry_table_data, entry_table_size, entry_table_offset))
 			return false;
 
 		pkg_table_entry *entries = (pkg_table_entry *)entry_table_data;
@@ -830,7 +840,7 @@ namespace INSTALLER
 		{
 			param_sfo_data = malloc(param_sfo_size);
 			FILE *out = FS::Create(sfo_path);
-			if (!remoteclient->GetRange(path, param_sfo_data, param_sfo_size, param_sfo_offset))
+			if (!client->GetRange(path, param_sfo_data, param_sfo_size, param_sfo_offset))
 			{
 				FS::Close(out);
 				return false;
@@ -844,7 +854,7 @@ namespace INSTALLER
 		{
 			icon0_png_data = malloc(icon0_png_size);
 			FILE *out = FS::Create(icon_path);
-			if (!remoteclient->GetRange(path, icon0_png_data, icon0_png_size, icon0_png_offset))
+			if (!client->GetRange(path, icon0_png_data, icon0_png_size, icon0_png_offset))
 			{
 				FS::Close(out);
 				return false;
@@ -1454,5 +1464,24 @@ namespace INSTALLER
 		tmp_client->Connect(settings->server, settings->username, settings->password, false);
 
 		return tmp_client;
+	}
+
+	bool CanInstallViaRPI(const std::string &path, pkg_header *pkg_header)
+	{
+		return CanInstallViaRPI(remoteclient, path, pkg_header);
+	}
+	
+    bool CanInstallViaRPI(RemoteClient *client, const std::string &path, pkg_header *pkg_header)
+	{
+		ExtractRemotePkg(client, path, pkg_header, TMP_SFO_PATH, TMP_ICON_PATH);
+		std::vector<char> sfo = FS::Load(TMP_SFO_PATH);
+		const char *category = SFO::GetString(sfo.data(), sfo.size(), "CATEGORY");
+
+		if (strcmp(category, "ac") == 0 && (BE64(pkg_header->pkg_body_size) < (1024*1024) || BE32(pkg_header->pkg_entry_count) < 20))
+		{
+			return false;
+		}
+
+		return true;
 	}
 }
