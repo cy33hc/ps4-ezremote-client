@@ -1477,7 +1477,7 @@ namespace INSTALLER
 		std::vector<char> sfo = FS::Load(TMP_SFO_PATH);
 		const char *category = SFO::GetString(sfo.data(), sfo.size(), "CATEGORY");
 
-		if (strcmp(category, "ac") == 0 && (BE64(pkg_header->pkg_body_size) < (1024*1024) || BE32(pkg_header->pkg_entry_count) < 20))
+		if (strcmp(category, "ac") == 0 && BE64(pkg_header->pkg_size) == 0)
 		{
 			return false;
 		}

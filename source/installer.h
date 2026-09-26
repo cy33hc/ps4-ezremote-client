@@ -54,7 +54,7 @@
 
 typedef struct
 {
-    uint32_t pkg_magic;                 // 0x000 - 0x7F434E54
+    uint32_t pkg_magic;                 // 0x000
     uint32_t pkg_type;                  // 0x004
     uint32_t pkg_0x008;                 // 0x008
     uint32_t pkg_file_count;            // 0x00C
@@ -82,30 +82,30 @@ typedef struct
     uint32_t pkg_iro_tag;               // 0x098
     uint32_t pkg_drm_type_version;      // 0x09C
     
-    unsigned char unknown1[0x60];            // 0x0A0 -> Ends at 0x100
+    unsigned char unknown1[0x60];            // 0x0A0
     unsigned char digest_entries1[0x20];     // 0x100
     unsigned char digest_entries2[0x20];     // 0x120
     unsigned char digest_table_digest[0x20]; // 0x140
-    unsigned char digest_body_digest[0x20];  // 0x160 -> Ends at 0x180
+    unsigned char digest_body_digest[0x20];  // 0x160
     
-    unsigned char unknown2[0x280];         // 0x180 -> FIXED (bridges to 0x400)
-    uint32_t pfs_image_count;              // 0x400 -> Accurate PFS start offset
-    uint32_t pad_0x404;                    // 0x404 -> Explicit 4-byte structural pad
+    unsigned char unknown2[0x280];         // 0x180
+    uint32_t pfs_image_count;              // 0x400
+    uint32_t pad_0x404;                    // 0x404
     uint64_t pfs_image_flags;              // 0x408
     uint64_t pfs_image_offset;             // 0x410
     uint64_t pfs_image_size;               // 0x418
     uint64_t mount_image_offset;           // 0x420
     uint64_t mount_image_size;             // 0x428
-    uint64_t pkg_size;                     // 0x430 -> Matches exact offset
+    uint64_t pkg_size;                     // 0x430
     uint32_t pfs_signed_size;              // 0x438
     uint32_t pfs_cache_size;               // 0x43C
     unsigned char pfs_image_digest[0x20];  // 0x440
     unsigned char pfs_signed_digest[0x20]; // 0x460
     uint64_t pfs_split_size_nth_0;         // 0x480
-    uint64_t pfs_split_size_nth_1;         // 0x488 -> Ends at 0x490
+    uint64_t pfs_split_size_nth_1;         // 0x488
     
-    unsigned char unknown3[0xB48];         // 0x490 -> FIXED (bridges gap to 0xFE0)
-    unsigned char pkg_digest[0x20];        // 0xFE0 -> Ends exactly at 0x1000 (4096 bytes)
+    unsigned char unknown3[0xB50];         // 0x490
+    unsigned char pkg_digest[0x20];        // 0xFE0
 } pkg_header;
 
 typedef struct
