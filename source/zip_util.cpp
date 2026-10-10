@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <minizip/unzip.h>
 #include <minizip/zip.h>
@@ -375,13 +376,26 @@ namespace ZipUtil
     {
         char *pathname, *realpathname;
         mode_t filetype;
+        const char *entry_pathname;
+        bool is_dir;
 
-        if ((pathname = pathdup(archive_entry_pathname(e))) == NULL)
+        entry_pathname = archive_entry_pathname(e);
+
+        if ((pathname = pathdup(entry_pathname)) == NULL)
         {
             archive_read_data_skip(a);
             return;
         }
         filetype = archive_entry_filetype(e);
+
+        /*
+         * libarchive reports some directory entries as regular files. A
+         * trailing '/' is the archive convention for a directory, so trust
+         * that as well: if such an entry is extracted as a file, every entry
+         * below that folder fails with ENOTDIR and nothing is extracted.
+         */
+        is_dir = S_ISDIR(filetype) ||
+                 (entry_pathname != NULL && entry_pathname[0] != '\0' && entry_pathname[strlen(entry_pathname) - 1] == '/');
 
         /* sanity checks */
         if (pathname[0] == '/' ||
@@ -394,7 +408,7 @@ namespace ZipUtil
         }
 
         /* I don't think this can happen in a zipfile.. */
-        if (!S_ISDIR(filetype) && !S_ISREG(filetype) && !S_ISLNK(filetype))
+        if (!is_dir && !S_ISREG(filetype) && !S_ISLNK(filetype))
         {
             archive_read_data_skip(a);
             free(pathname);
@@ -406,7 +420,7 @@ namespace ZipUtil
         /* ensure that parent directory exists */
         FS::MkDirs(realpathname, true);
 
-        if (S_ISDIR(filetype))
+        if (is_dir)
             extract_dir(a, e, realpathname);
         else
         {
@@ -509,11 +523,11 @@ namespace ZipUtil
         }
         else if (whence == SEEK_CUR)
         {
-            data->offset = data->offset + offset - 1;
+            data->offset = data->offset + offset;
         }
         else if (whence == SEEK_END)
         {
-            data->offset = data->size - 1;
+            data->offset = data->size + offset;
         }
         else
             return ARCHIVE_FATAL;
@@ -525,7 +539,7 @@ namespace ZipUtil
     {
         RemoteArchiveData *data = (RemoteArchiveData *)client_data;
 
-        data->offset = data->offset + request - 1;
+        data->offset = data->offset + request;
 
         return request;
     }
@@ -543,7 +557,10 @@ namespace ZipUtil
         uintmax_t total_size, file_count, error_count;
 
         if ((a = archive_read_new()) == NULL)
+        {
             sprintf(status_message, "%s", "archive_read_new failed");
+            return 0;
+        }
 
         archive_read_support_format_all(a);
         archive_read_support_filter_all(a);
@@ -589,15 +606,30 @@ namespace ZipUtil
 
             ret = archive_read_next_header(a, &e);
 
+            if (ret == ARCHIVE_EOF)
+                break;
+
+            if (ret == ARCHIVE_RETRY)
+                continue;
+
+            /*
+             * ARCHIVE_WARN only means this entry had a problem (bsdtar keeps
+             * going as well). Aborting here made a single questionable entry
+             * fail the whole extraction.
+             */
+            if (ret == ARCHIVE_WARN)
+            {
+                const char *err = archive_error_string(a);
+                sprintf(status_message, "%s", err != NULL ? err : "");
+                continue;
+            }
+
             if (ret < ARCHIVE_OK)
             {
                 sprintf(status_message, "%s", "archive_read_next_header failed");
                 archive_read_free(a);
                 return 0;
             }
-
-            if (ret == ARCHIVE_EOF)
-                break;
 
             extract(a, e, basepath);
         }
@@ -664,16 +696,23 @@ namespace ZipUtil
         {
             ret = archive_read_next_header(a, &e);
 
+            if (ret == ARCHIVE_EOF)
+            {
+                break;
+            }
+
+            /* ARCHIVE_WARN is not fatal; skip the entry and keep looking. */
+            if (ret == ARCHIVE_WARN || ret == ARCHIVE_RETRY)
+            {
+                archive_read_data_skip(a);
+                continue;
+            }
+
             if (ret < ARCHIVE_OK)
             {
                 sprintf(status_message, "%s", "archive_read_next_header failed");
                 archive_read_free(a);
                 return nullptr;
-            }
-
-            if (ret == ARCHIVE_EOF)
-            {
-                break;
             }
 
             if ((pathname = pathdup(archive_entry_pathname(e))) == NULL)
@@ -740,15 +779,22 @@ namespace ZipUtil
         {
             ret = archive_read_next_header(a, &e);
 
+            if (ret == ARCHIVE_EOF)
+                break;
+
+            /* ARCHIVE_WARN is not fatal; skip the entry and keep looking. */
+            if (ret == ARCHIVE_WARN || ret == ARCHIVE_RETRY)
+            {
+                archive_read_data_skip(a);
+                continue;
+            }
+
             if (ret < ARCHIVE_OK)
             {
                 sprintf(status_message, "%s", "archive_read_next_header failed");
                 archive_read_free(a);
                 return nullptr;
             }
-
-            if (ret == ARCHIVE_EOF)
-                break;
 
             if ((pathname = pathdup(archive_entry_pathname(e))) == NULL)
             {
