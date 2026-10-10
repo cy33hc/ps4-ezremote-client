@@ -123,3 +123,10 @@ add_custom_target(package
   COMMAND cp ${PROJECT_SOURCE_DIR}/ps4-ezremote-server/data/eboot.md5 ${PROJECT_SOURCE_DIR}/data/daemon/daemon.md5
   COMMAND cp ${PROJECT_SOURCE_DIR}/ps4-ezremote-server/data/sce_sys/param.sfo ${PROJECT_SOURCE_DIR}/data/daemon/param
 )
+
+set(PS4_FTP_URL "ftp://192.168.100.70:2121/data/pkg" CACHE STRING "PS4 FTP folder the package is uploaded to")
+add_custom_target(upload
+  DEPENDS ezremote_client_pkg
+  COMMAND cd ${CMAKE_BINARY_DIR} && for pkg in IV0001-*.pkg \; do curl -sS --fail --ftp-create-dirs -T \"$$pkg\" \"${PS4_FTP_URL}/$$pkg\" || exit 1 \; done
+  COMMENT "Uploading IV0001-*.pkg to ${PS4_FTP_URL}"
+)

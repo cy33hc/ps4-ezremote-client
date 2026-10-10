@@ -1327,36 +1327,40 @@ int FtpClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, 
 	}
 
 	char *buf = (char*) malloc(FTP_CLIENT_BUFSIZ);
+	if (buf == NULL)
+	{
+		FtpClose(nData);
+		mp_ftphandle->offset = 0;
+		return 0;
+	}
+
 	int count = 0;
 	size_t bytes_remaining = size;
 
-	do
+	while (bytes_remaining > 0)
 	{
 		size_t bytes_to_read = std::min<size_t>(FTP_CLIENT_BUFSIZ, bytes_remaining);
 		count = FtpRead(buf, bytes_to_read, nData);
-		if (count > 0)
-		{
-			bytes_remaining -= count;
-			bool ok = sink.write((char *)buf, count);
-			if (!ok)
-			{
-				FtpClose(nData);
-				free(buf);
-				mp_ftphandle->offset = 0;
-				return 0;
-			}
-		}
-		else
-		{
+		if (count <= 0)
 			break;
+
+		bytes_remaining -= count;
+		bool ok = sink.write((char *)buf, count);
+		if (!ok)
+		{
+			FtpClose(nData);
+			free(buf);
+			mp_ftphandle->offset = 0;
+			return 0;
 		}
-	} while (1);
+	}
 
 	FtpClose(nData);
 	free(buf);
 	mp_ftphandle->offset = 0;
 
-	return 1;
+	/* Fail if the server stopped sending before the whole range arrived */
+	return bytes_remaining == 0;
 }
 
 int FtpClient::GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset)
@@ -1369,21 +1373,24 @@ int FtpClient::GetRange(const std::string &path, void *buffer, uint64_t size, ui
 	}
 
 	char *buf = (char*) malloc(8192);
+	if (buf == NULL)
+	{
+		FtpClose(nData);
+		mp_ftphandle->offset = 0;
+		return 0;
+	}
+
 	int l = 0;
 	uint64_t remaining = size;
 	char *p = (char *)buffer;
-	while ((l = FtpRead(buf, 8192, nData)) > 0)
+
+	while (remaining > 0 && (l = FtpRead(buf, 8192, nData)) > 0)
 	{
-		if (l <= remaining)
-		{
-			memcpy(p, buf, l);
-			p += l;
-		}
-		else
-		{
-			memcpy(p, buf, remaining);
-			break;
-		}
+		if ((uint64_t)l > remaining)
+			l = (int)remaining;
+
+		memcpy(p, buf, l);
+		p += l;
 		remaining -= l;
 	}
 
@@ -1391,7 +1398,8 @@ int FtpClient::GetRange(const std::string &path, void *buffer, uint64_t size, ui
 	free(buf);
 	mp_ftphandle->offset = 0;
 
-	return 1;
+	/* Fail if the server stopped sending before the whole range arrived */
+	return remaining == 0;
 }
 
 /*
@@ -1863,10 +1871,12 @@ void FtpClient::Close(void *fp)
 
 int FtpClient::GetRange(void *fp, DataSink &sink, uint64_t size, uint64_t offset)
 {
-	return -1;
+	sprintf(mp_ftphandle->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+	return 0;
 }
 
 int FtpClient::GetRange(void *fp, void *buffer, uint64_t size, uint64_t offset)
 {
-	return -1;
+	sprintf(mp_ftphandle->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
+	return 0;
 }

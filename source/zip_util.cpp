@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <new>
 #include <unistd.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -12,6 +13,7 @@
 #include <unrar.h>
 #include <archive.h>
 #include <archive_entry.h>
+#include <orbis/SystemService.h>
 
 #include "clients/remote_client.h"
 #include "config.h"
@@ -438,22 +440,33 @@ namespace ZipUtil
      */
     static const char *passphrase_callback(struct archive *a, void *_client_data)
     {
-        Dialog::initImeDialog(lang_strings[STR_PASSWORD], password, 127, ORBIS_TYPE_DEFAULT, 560, 200);
-        int ime_result = Dialog::updateImeDialog();
-        if (ime_result == IME_DIALOG_RESULT_FINISHED || ime_result == IME_DIALOG_RESULT_CANCELED)
+        memset(password, 0, sizeof(password));
+
+        /* Extraction runs on a worker thread. An IME dialog can only be pumped
+         * from the UI thread, and if one is already open (e.g. the user is
+         * editing something) we must not terminate it from here and use its
+         * text as the archive password. */
+        while (Dialog::isImeDialogRunning())
         {
-            if (ime_result == IME_DIALOG_RESULT_FINISHED)
-            {
-                snprintf(password, 127, "%s", (char *)Dialog::getImeDialogInputText());
+            /* Let the user cancel the extraction while waiting */
+            if (stop_activity)
                 return password;
-            }
-            else
-            {
-                memset(password, 0, sizeof(password));
-            }
+
+            sceKernelUsleep(10000);
         }
 
-        memset(password, 0, sizeof(password));
+        if (Dialog::initImeDialog(lang_strings[STR_PASSWORD], password, 127, ORBIS_TYPE_DEFAULT, 560, 200) < 0)
+        {
+            /* Dialog could not be started; return an empty passphrase so
+             * libarchive reports the failure instead of hanging. */
+            return password;
+        }
+
+        if (Dialog::updateImeDialog() == IME_DIALOG_RESULT_FINISHED)
+        {
+            snprintf(password, sizeof(password) - 1, "%s", (char *)Dialog::getImeDialogInputText());
+        }
+
         return password;
     }
 
@@ -461,13 +474,19 @@ namespace ZipUtil
     {
         RemoteArchiveData *data;
 
-        data = (RemoteArchiveData *)malloc(sizeof(RemoteArchiveData));
-        memset(data, 0, sizeof(RemoteArchiveData));
+        /* RemoteArchiveData holds a std::string, so it must be created with new
+         * (malloc/memset would leave the string uninitialized). */
+        data = new (std::nothrow) RemoteArchiveData;
+        if (data == nullptr)
+            return nullptr;
 
-        data->offset = 0;
-        client->Size(file, &data->size);
+        data->fp = nullptr;
         data->client = client;
         data->path = file;
+        data->size = 0;
+        data->offset = 0;
+
+        client->Size(file, &data->size);
         if (client->SupportedActions() & REMOTE_ACTION_RAW_READ)
         {
             data->fp = client->Open(file, O_RDONLY);
@@ -508,7 +527,7 @@ namespace ZipUtil
             RemoteArchiveData *data = (RemoteArchiveData *)client_data;
             if (data->client->SupportedActions() & REMOTE_ACTION_RAW_READ)
                 data->client->Close(data->fp);
-            free(client_data);
+            delete data;
         }
         return 0;
     }
@@ -572,6 +591,7 @@ namespace ZipUtil
             if (ret < ARCHIVE_OK)
             {
                 sprintf(status_message, "%s", "archive_read_open_filename failed");
+                archive_read_free(a);
                 return 0;
             }
         }
@@ -581,6 +601,7 @@ namespace ZipUtil
             if (client_data == nullptr)
             {
                 sprintf(status_message, "%s", "archive_read_open_filename failed");
+                archive_read_free(a);
                 return 0;
             }
 
@@ -588,6 +609,10 @@ namespace ZipUtil
             if (ret < ARCHIVE_OK)
             {
                 sprintf(status_message, "archive_read_set_seek_callback failed - %s", archive_error_string(a));
+                /* The archive was never opened, so its close callback will not
+                 * release the client data. */
+                delete client_data;
+                archive_read_free(a);
                 return 0;
             }
 
@@ -595,6 +620,7 @@ namespace ZipUtil
             if (ret < ARCHIVE_OK)
             {
                 sprintf(status_message, "%s", "archive_read_open failed");
+                archive_read_free(a);
                 return 0;
             }
         }
@@ -665,6 +691,7 @@ namespace ZipUtil
             if (ret < ARCHIVE_OK)
             {
                 sprintf(status_message, "%s", "archive_read_open_filename failed");
+                archive_read_free(a);
                 return nullptr;
             }
         }
@@ -674,6 +701,7 @@ namespace ZipUtil
             if (client_data == nullptr)
             {
                 sprintf(status_message, "%s", "archive_read_open_filename failed");
+                archive_read_free(a);
                 return nullptr;
             }
 
@@ -681,13 +709,18 @@ namespace ZipUtil
             if (ret < ARCHIVE_OK)
             {
                 sprintf(status_message, "archive_read_set_seek_callback failed - %s", archive_error_string(a));
-                return 0;
+                /* The archive was never opened, so its close callback will not
+                 * release the client data. */
+                delete client_data;
+                archive_read_free(a);
+                return nullptr;
             }
 
             ret = archive_read_open2(a, client_data, NULL, ReadRemoteArchive, SkipRemoteArchive, CloseRemoteArchive);
             if (ret < ARCHIVE_OK)
             {
                 sprintf(status_message, "%s", "archive_read_open_filename failed");
+                archive_read_free(a);
                 return nullptr;
             }
         }

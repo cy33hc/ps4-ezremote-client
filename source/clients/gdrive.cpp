@@ -362,7 +362,6 @@ int GDriveClient::Get(SplitFile *split_file, const std::string &path, uint64_t o
 
 int GDriveClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset)
 {
-    size_t bytes_read = 0;
     std::string id = GetValue(path_id_map, path);
     std::string drive_id = GetDriveId(path);
 
@@ -371,28 +370,61 @@ int GDriveClient::GetRange(const std::string &path, DataSink &sink, uint64_t siz
         url += "&supportsAllDrives=true";
     Headers headers;
     headers.insert(std::make_pair("Range", "bytes=" + std::to_string(offset) + "-" + std::to_string(offset + size - 1)));
-    if (auto res = client->Get(url, headers,
-                               [&](const char *data, size_t data_length)
-                               {
-                                   bytes_read += data_length;
-                                   bool ok = sink.write(data, data_length);
-                                   return ok;
-                               }))
-    {
-        return bytes_read == size;
-    }
-    else
-    {
-        sprintf(this->response, "%s", httplib::to_string(res.error()).c_str());
-    }
-    return 0;
 
+    size_t written = 0;
+    bool can_serve = true;
+
+    auto res = client->Get(url, headers,
+                           [&](const httplib::Response &response)
+                           {
+                               if (response.status == 206)
+                               {
+                                   /* Make sure the server returned the range we asked for */
+                                   std::string content_range = response.get_header_value("Content-Range");
+                                   unsigned long long start = 0, end = 0;
+                                   if (sscanf(content_range.c_str(), "bytes %llu-%llu", &start, &end) == 2 && start != offset)
+                                   {
+                                       can_serve = false;
+                                       return false;
+                                   }
+                               }
+                               else if (offset != 0)
+                               {
+                                   /* The server ignored the Range header and sent the file from
+                                    * the start, so a non-zero offset cannot be served from it. */
+                                   can_serve = false;
+                                   return false;
+                               }
+                               return true;
+                           },
+                           [&](const char *data, size_t data_length)
+                           {
+                               if (!can_serve)
+                                   return false;
+
+                               size_t copy = MIN(data_length, (size_t)(size - written));
+                               if (copy > 0 && !sink.write(data, copy))
+                               {
+                                   can_serve = false;
+                                   return false;
+                               }
+                               written += copy;
+
+                               /* Stop as soon as the requested range has been received */
+                               return written < size;
+                           });
+
+    if (written == size)
+        return 1;
+
+    if (!res)
+        sprintf(this->response, "%s", httplib::to_string(res.error()).c_str());
+
+    return 0;
 }
 
 int GDriveClient::GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset)
 {
-    size_t bytes_read = 0;
-    std::vector<char> body;
     std::string id = GetValue(path_id_map, path);
     std::string drive_id = GetDriveId(path);
 
@@ -401,27 +433,56 @@ int GDriveClient::GetRange(const std::string &path, void *buffer, uint64_t size,
         url += "&supportsAllDrives=true";
     Headers headers;
     headers.insert(std::make_pair("Range", "bytes=" + std::to_string(offset) + "-" + std::to_string(offset + size - 1)));
-    if (auto res = client->Get(url, headers,
-                               [&](const char *data, size_t data_length)
-                               {
-                                   body.insert(body.end(), data, data + data_length);
-                                   bytes_read += data_length;
-                                   if (bytes_read > size)
-                                       return false;
-                                   return true;
-                               }))
-    {
-        if (body.size() != size)
-            return 0;
-        memcpy(buffer, body.data(), size);
-        return 1;
-    }
-    else
-    {
-        sprintf(this->response, "%s", httplib::to_string(res.error()).c_str());
-    }
-    return 0;
 
+    unsigned char *out = (unsigned char *)buffer;
+    size_t copied = 0;
+    bool can_serve = true;
+
+    /* Write straight into the caller's buffer instead of buffering the whole
+     * response body in memory first. */
+    auto res = client->Get(url, headers,
+                           [&](const httplib::Response &response)
+                           {
+                               if (response.status == 206)
+                               {
+                                   /* Make sure the server returned the range we asked for */
+                                   std::string content_range = response.get_header_value("Content-Range");
+                                   unsigned long long start = 0, end = 0;
+                                   if (sscanf(content_range.c_str(), "bytes %llu-%llu", &start, &end) == 2 && start != offset)
+                                   {
+                                       can_serve = false;
+                                       return false;
+                                   }
+                               }
+                               else if (offset != 0)
+                               {
+                                   /* The server ignored the Range header and sent the file from
+                                    * the start, so a non-zero offset cannot be served from it. */
+                                   can_serve = false;
+                                   return false;
+                               }
+                               return true;
+                           },
+                           [&](const char *data, size_t data_length)
+                           {
+                               if (!can_serve)
+                                   return false;
+
+                               size_t copy = MIN(data_length, (size_t)(size - copied));
+                               memcpy(out + copied, data, copy);
+                               copied += copy;
+
+                               /* Stop as soon as the requested range has been received */
+                               return copied < size;
+                           });
+
+    if (copied == size)
+        return 1;
+
+    if (!res)
+        sprintf(this->response, "%s", httplib::to_string(res.error()).c_str());
+
+    return 0;
 }
 
 int GDriveClient::Update(const std::string &inputfile, const std::string &path)
