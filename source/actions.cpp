@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <json-c/json.h>
+#include "json_object_ref.h"
 #include <lexbor/html/parser.h>
 #include <lexbor/dom/interfaces/element.h>
 #include <minizip/unzip.h>
@@ -494,6 +495,7 @@ namespace Actions
     {
         uint64_t id = Util::GetTick();
         json_object *params = json_object_new_object();
+        JsonObjectRef params_ref(params);
         json_object_object_add(params, "type", json_object_new_int(remote_settings->type));
         json_object_object_add(params, "url", json_object_new_string(remote_settings->server));
         json_object_object_add(params, "username", json_object_new_string(remote_settings->username));
@@ -1250,6 +1252,7 @@ namespace Actions
     void *InstallRpiUrlPkgThread(void *argp)
     {
         json_object *params = json_object_new_object();
+        JsonObjectRef params_ref(params);
         json_object_object_add(params, "url", json_object_new_string(install_pkg_url.url));
         json_object_object_add(params, "use_alldebrid", json_object_new_boolean(install_pkg_url.enable_alldebrid));
         json_object_object_add(params, "use_realdebrid", json_object_new_boolean(install_pkg_url.enable_realdebrid));
@@ -1271,6 +1274,7 @@ namespace Actions
         if (res != nullptr && HTTP_SUCCESS(res->status))
         {
             json_object *jobj = json_tokener_parse(res->body.c_str());
+            JsonObjectRef jobj_ref(jobj);
             if (jobj != nullptr)
             {
                 json_object *result = json_object_object_get(jobj, "result");
@@ -1279,8 +1283,8 @@ namespace Actions
                     bool success = json_object_get_boolean(json_object_object_get(result, "success"));
                     if (!success)
                     {
-                        const char* error_message = json_object_get_string(json_object_object_get(result, "error"));
-                        sprintf(status_message, "%s", error_message);
+                        std::string error_message = JsonGetString(result, "error");
+                        sprintf(status_message, "%s", error_message.c_str());
                         activity_inprogess = false;
                         Windows::SetModalMode(false);
                     }
@@ -2025,7 +2029,8 @@ namespace Actions
                 bg_download_progress.clear();
 
                 json_object *jobj = json_tokener_parse(res->body.c_str());
-                if (jobj != nullptr)
+                JsonObjectRef jobj_ref(jobj);
+                if (jobj != nullptr && json_object_get_type(jobj) == json_type_array)
                 {
                     struct array_list *progress_list = json_object_get_array(jobj);
 
@@ -2034,7 +2039,7 @@ namespace Actions
                         DownloadProgress progress;
 
                         json_object *progress_obj = (json_object *)array_list_get_idx(progress_list, idx);
-                        progress.path = json_object_get_string(json_object_object_get(progress_obj, "path"));
+                        progress.path = JsonGetString(progress_obj, "path");
                         progress.bytes_transfered = json_object_get_uint64(json_object_object_get(progress_obj, "bytes_transfered"));
                         progress.file_size = json_object_get_uint64(json_object_object_get(progress_obj, "file_size"));
                         progress.state = state_strings[json_object_get_int(json_object_object_get(progress_obj, "state"))];
@@ -2042,7 +2047,6 @@ namespace Actions
 
                         bg_download_progress.push_back(progress);
                     }
-                    json_object_put(jobj);
                 }
             }
             else

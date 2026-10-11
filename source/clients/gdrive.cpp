@@ -2,6 +2,7 @@
 #include <lexbor/html/parser.h>
 #include <lexbor/dom/interfaces/element.h>
 #include <json-c/json.h>
+#include "json_object_ref.h"
 #include "config.h"
 #include "common.h"
 #include "server/http_server.h"
@@ -57,6 +58,7 @@ int RefreshAccessToken()
         if (HTTP_SUCCESS(res->status))
         {
             json_object *jobj = json_tokener_parse(res->body.c_str());
+            JsonObjectRef jobj_ref(jobj);
             enum json_type type;
             json_object_object_foreach(jobj, key, val)
             {
@@ -190,6 +192,7 @@ int GDriveClient::Connect(const std::string &url, const std::string &user, const
         if (HTTP_SUCCESS(res->status))
         {
             json_object *jobj = json_tokener_parse(res->body.c_str());
+            JsonObjectRef jobj_ref(jobj);
             json_object *drives = json_object_object_get(jobj, "drives");
             if (json_object_get_type(drives) == json_type_array)
             {
@@ -813,6 +816,7 @@ int GDriveClient::Size(const std::string &path, int64_t *size)
         if (HTTP_SUCCESS(res->status))
         {
             json_object *jobj = json_tokener_parse(res->body.c_str());
+            JsonObjectRef jobj_ref(jobj);
             *size = json_object_get_uint64(json_object_object_get(jobj, "size"));
         }
         else
@@ -867,6 +871,7 @@ int GDriveClient::Mkdir(const std::string &path)
         if (HTTP_SUCCESS(res->status))
         {
             json_object *jobj = json_tokener_parse(res->body.c_str());
+            JsonObjectRef jobj_ref(jobj);
             const char *id = json_object_get_string(json_object_object_get(jobj, "id"));
             path_id_map.insert(std::make_pair(path, id));
         }
@@ -985,6 +990,7 @@ std::vector<DirEntry> GDriveClient::ListDir(const std::string &path)
             if (HTTP_SUCCESS(res->status))
             {
                 json_object *jobj = json_tokener_parse(res->body.c_str());
+                JsonObjectRef jobj_ref(jobj);
                 json_object *drives = json_object_object_get(jobj, "drives");
                 if (json_object_get_type(drives) == json_type_array)
                 {
@@ -1051,6 +1057,7 @@ std::vector<DirEntry> GDriveClient::ListDir(const std::string &path)
             if (HTTP_SUCCESS(res->status))
             {
                 json_object *jobj = json_tokener_parse(res->body.c_str());
+                JsonObjectRef jobj_ref(jobj);
                 json_object *next_page_token = json_object_object_get(jobj, "nextPageToken");
                 json_object *files = json_object_object_get(jobj, "files");
                 if (json_object_get_type(files) == json_type_array)

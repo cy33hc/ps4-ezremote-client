@@ -6,6 +6,7 @@
 #include <sys/time.h>
 #include <arpa/inet.h>
 #include <json-c/json.h>
+#include "json_object_ref.h"
 #include <orbis/libkernel.h>
 #include <orbis/Bgft.h>
 #include <orbis/AppInstUtil.h>
@@ -226,6 +227,7 @@ namespace INSTALLER
 	{
 		std::string hash = Util::UrlHash(settings->server + path + settings->username + settings->password + std::to_string(settings->type));
 		json_object *history_item_obj = json_object_new_object();
+		JsonObjectRef history_item_ref(history_item_obj);
 		json_object_object_add(history_item_obj, "hash", json_object_new_string(hash.c_str()));
 		json_object_object_add(history_item_obj, "url", json_object_new_string(settings->server));
 		json_object_object_add(history_item_obj, "path", json_object_new_string(path.c_str()));

@@ -1,5 +1,6 @@
 #include <http/httplib.h>
 #include <json-c/json.h>
+#include "json_object_ref.h"
 
 #include "config.h"
 #include "common.h"
@@ -23,9 +24,10 @@ bool AllDebridHost::IsValidUrl()
     if (HTTP_SUCCESS(res->status))
     {
         json_object *jobj = json_tokener_parse(res->body.c_str());
+        JsonObjectRef jobj_ref(jobj);
         const char *status = json_object_get_string(json_object_object_get(jobj, "status"));
 
-        if (strcmp(status, "success") == 0)
+        if (status != nullptr && strcmp(status, "success") == 0)
             return true;
     }
     
@@ -46,13 +48,12 @@ std::string AllDebridHost::GetDownloadUrl()
     if (HTTP_SUCCESS(res->status))
     {
         json_object *jobj = json_tokener_parse(res->body.c_str());
+        JsonObjectRef jobj_ref(jobj);
         const char *status = json_object_get_string(json_object_object_get(jobj, "status"));
 
         if (status != nullptr && strcmp(status, "success") == 0)
         {
-            json_object *data = json_object_object_get(jobj, "data");
-            const char *link = json_object_get_string(json_object_object_get(data, "link"));
-            return std::string(link);
+            return JsonGetString(json_object_object_get(jobj, "data"), "link");
         }
         else
         {

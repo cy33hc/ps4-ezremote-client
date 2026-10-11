@@ -1,4 +1,5 @@
 #include <json-c/json.h>
+#include "json_object_ref.h"
 #include <fstream>
 #include <algorithm>
 #include "common.h"
@@ -194,6 +195,7 @@ bool GithubClient::ParseReleases()
             if (HTTP_SUCCESS(res->status))
             {
                 json_object *jobj = json_tokener_parse(res->body.c_str());
+                JsonObjectRef jobj_ref(jobj);
                 struct array_list *areleases = json_object_get_array(jobj);
 
                 for (size_t release_idx = 0; release_idx < areleases->length; ++release_idx)
@@ -201,8 +203,8 @@ bool GithubClient::ParseReleases()
                     GitRelease release_entry;
 
                     json_object *release = (json_object *)array_list_get_idx(areleases, release_idx);
-                    release_entry.name = std::string(json_object_get_string(json_object_object_get(release, "tag_name")));
-                    std::string date_time = std::string(json_object_get_string(json_object_object_get(release, "published_at")));
+                    release_entry.name = JsonGetString(release, "tag_name");
+                    std::string date_time = JsonGetString(release, "published_at");
 
                     auto date_time_array = Util::Split(date_time, "T");
                     auto date_array = Util::Split(date_time_array[0], "-");
@@ -225,10 +227,10 @@ bool GithubClient::ParseReleases()
                             GitAsset asset_entry;
 
                             json_object *asset = (json_object *)array_list_get_idx(aassets, asset_idx);
-                            asset_entry.name = std::string(json_object_get_string(json_object_object_get(asset, "name")));
+                            asset_entry.name = JsonGetString(asset, "name");
                             asset_entry.size = json_object_get_uint64(json_object_object_get(asset, "size"));
-                            std::string date_time = std::string(json_object_get_string(json_object_object_get(asset, "updated_at")));
-                            asset_entry.url = std::string(json_object_get_string(json_object_object_get(asset, "browser_download_url")));
+                            std::string date_time = JsonGetString(asset, "updated_at");
+                            asset_entry.url = JsonGetString(asset, "browser_download_url");
                             Util::ReplaceAll(asset_entry.url, "https://github.com", "");
 
                             auto date_time_array = Util::Split(date_time, "T");
