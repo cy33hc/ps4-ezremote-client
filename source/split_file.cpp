@@ -1,15 +1,27 @@
 #include <stdio.h>
 #include <stdio.h>
 #include <string>
+#include <time.h>
 
 #include "common.h"
 #include "split_file.h"
 
-SplitFile::SplitFile(const std::string &path, size_t block_size)
+static const double SPLIT_FILE_READ_SPEED_WINDOW_SECS = 1.0;
+static const double SPLIT_FILE_WRITE_SPEEDUP = 1.5;
+static const double SPLIT_FILE_WRITE_MAX_SLEEP_SECS = 0.1;
+static const long SPLIT_FILE_WRITE_STARTUP_WAIT_NSEC = 10 * 1000 * 1000; // 10ms
+
+static double TimespecDiffSecs(const struct timespec &start, const struct timespec &end)
+{
+    return (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1000000000.0;
+}
+
+SplitFile::SplitFile(const std::string &path, size_t block_size, size_t write_throttle_distance)
 {
     this->block_size = block_size;
     this->path = path;
     this->complete = false;
+    this->write_throttle_distance = write_throttle_distance;
     sem_init(&this->block_ready, 0, 0);
 }
 
@@ -157,7 +169,107 @@ size_t SplitFile::Read(char *buf, size_t buf_size, size_t offset)
     }
 
     this->read_offset = offset + total_bytes_read;
+    this->read_bytes_total += total_bytes_read;
     return total_bytes_read;
+}
+
+double SplitFile::GetReadSpeed()
+{
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    size_t total = this->read_bytes_total;
+
+    if (!this->read_speed_sampling)
+    {
+        // first call: start sampling, no rate yet
+        this->read_speed_sampling = true;
+        this->read_speed_sample_time = now;
+        this->read_speed_sample_bytes = total;
+        return 0.0;
+    }
+
+    double elapsed = TimespecDiffSecs(this->read_speed_sample_time, now);
+    if (elapsed < SPLIT_FILE_READ_SPEED_WINDOW_SECS)
+        return this->read_speed;
+
+    size_t bytes = (total >= this->read_speed_sample_bytes) ? total - this->read_speed_sample_bytes : 0;
+
+    this->read_speed = bytes / elapsed;
+    this->read_speed_sample_bytes = total;
+    this->read_speed_sample_time = now;
+
+    return this->read_speed;
+}
+
+size_t SplitFile::GetReadBytes()
+{
+    return this->read_bytes_total;
+}
+
+void SplitFile::ThrottleWrite(size_t pending_write_offset)
+{
+    if (this->write_throttle_distance == 0)
+        return;
+
+    for (;;)
+    {
+        // Close() was called: the reader is gone, do not block the writer for ever
+        if (this->complete)
+            return;
+
+        size_t ahead = (pending_write_offset > this->read_offset) ? pending_write_offset - this->read_offset : 0;
+        if (ahead <= this->write_throttle_distance)
+        {
+            // back within the allowed distance: start a new measurement
+            this->write_throttle_sampling = false;
+            return;
+        }
+
+        double read_speed = this->GetReadSpeed();
+        if (read_speed <= 0.0)
+        {
+            // The reader has not started yet, wait for it instead of racing ahead
+            struct timespec nap = {0, SPLIT_FILE_WRITE_STARTUP_WAIT_NSEC};
+            nanosleep(&nap, NULL);
+            continue;
+        }
+
+        // Bytes per second the writer is allowed to do
+        double target = SPLIT_FILE_WRITE_SPEEDUP * read_speed;
+
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+
+        if (!this->write_throttle_sampling)
+        {
+            // first time over the distance: start measuring from here
+            this->write_throttle_sampling = true;
+            this->write_throttle_sample_time = now;
+            this->write_throttle_sample_offset = pending_write_offset;
+            return;
+        }
+
+        double elapsed = TimespecDiffSecs(this->write_throttle_sample_time, now);
+        double written = (double)(pending_write_offset - this->write_throttle_sample_offset);
+        double allowed = target * elapsed;
+
+        if (written <= allowed)
+            return;
+
+        // Over the 2x budget: sleep for the time we are ahead by, then measure again
+        double wait = (written - allowed) / target;
+        if (wait > SPLIT_FILE_WRITE_MAX_SLEEP_SECS)
+            wait = SPLIT_FILE_WRITE_MAX_SLEEP_SECS;
+
+        struct timespec nap;
+        nap.tv_sec = (time_t)wait;
+        nap.tv_nsec = (long)((wait - (double)nap.tv_sec) * 1000000000.0);
+        nanosleep(&nap, NULL);
+
+        clock_gettime(CLOCK_MONOTONIC, &this->write_throttle_sample_time);
+        this->write_throttle_sample_offset = pending_write_offset;
+    }
 }
 
 ssize_t SplitFile::Write(char *buf, size_t buf_size)
@@ -175,6 +287,9 @@ ssize_t SplitFile::Write(char *buf, size_t buf_size)
 
     while (remaining_to_write > 0 && !this->complete)
     {
+        // Do not let the writer run away from the reader
+        this->ThrottleWrite(this->write_offset + total_bytes_written);
+
         block_space_remaining = this->block_size - block_in_progress->size;
         bytes_to_write = MIN(remaining_to_write, block_space_remaining);
 

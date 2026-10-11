@@ -207,7 +207,7 @@ int BaseClient::Get(SplitFile *split_file, const std::string &path, uint64_t off
 int BaseClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset)
 {
     char range_header[64];
-    sprintf(range_header, "bytes=%llu-%llu", offset, offset + size - 1);
+    sprintf(range_header, "bytes=%lu-%lu", offset, offset + size - 1);
     Headers headers = {{"Range", range_header}};
     SetCookies(headers);
 
@@ -266,7 +266,7 @@ int BaseClient::GetRange(const std::string &path, DataSink &sink, uint64_t size,
 int BaseClient::GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset)
 {
     char range_header[64];
-    sprintf(range_header, "bytes=%llu-%llu", offset, offset + size - 1);
+    sprintf(range_header, "bytes=%lu-%lu", offset, offset + size - 1);
     Headers headers = {{"Range", range_header}};
     SetCookies(headers);
 
