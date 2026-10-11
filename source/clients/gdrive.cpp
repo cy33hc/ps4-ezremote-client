@@ -218,11 +218,9 @@ int GDriveClient::Rename(const std::string &src, const std::string &dst)
         return 0;
 
     std::string src_id = GetValue(path_id_map, src);
-    std::string dst_id = GetValue(path_id_map, dst);
     std::string src_drive_id = GetDriveId(src);
-    std::string dst_drive_id = GetDriveId(dst);
 
-    if (src_id.compare("root") == 0 || dst_id.compare("root") == 0 || src_id.compare(src_drive_id) == 0 || dst_id.compare(dst_drive_id) == 0)
+    if (src_id.compare("root") == 0 || src_id.compare(src_drive_id) == 0)
         return 0;
 
     std::string url = std::string("/drive/v3/files/") + BaseClient::Escape(src_id);
@@ -230,6 +228,7 @@ int GDriveClient::Rename(const std::string &src, const std::string &dst)
         url += "?supportsAllDrives=true";
     std::string filename = dst.substr(dst.find_last_of("/") + 1);
     std::string body = "{\"name\" : \"" + filename + "\"}";
+
     if (auto res = client->Patch(url, body.c_str(), body.length(), "application/json; charset=UTF-8"))
     {
         sprintf(response, "%d", res->status);
@@ -243,7 +242,7 @@ int GDriveClient::Rename(const std::string &src, const std::string &dst)
     }
     else
     {
-        sprintf(response, "%s", to_string(res.error()).c_str());
+        snprintf(response, 512, "%s", to_string(res.error()).c_str());
         return 0;
     }
     return 1;
@@ -1011,7 +1010,6 @@ std::vector<DirEntry> GDriveClient::ListDir(const std::string &path)
                         const char *name = json_object_get_string(json_object_object_get(drive, "name"));
                         sprintf(entry.name, "%s", name);
                         sprintf(entry.path, "/%s", name);
-                        shared_drive_map.insert(std::make_pair(entry.path, id));
                         path_id_map.insert(std::make_pair(entry.path, id));
                         out.push_back(entry);
                     }
