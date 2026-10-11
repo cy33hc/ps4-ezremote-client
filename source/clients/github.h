@@ -19,7 +19,7 @@ public:
     int GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset);
     int GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset);
     int Head(const std::string &path, void *buffer, uint64_t len);
-    std::string GetDownloadUrl(const std::string &path);
+    std::string GetRedirectUrl(const std::string &path);
 
 private:
     struct GitAsset

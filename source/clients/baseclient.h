@@ -45,6 +45,7 @@ public:
     int Quit();
     ClientType clientType();
     uint32_t SupportedActions();
+    void SetClientPathEncoding(bool enabled);
     static std::string Escape(const std::string &url);
     static std::string UnEscape(const std::string &url);
 

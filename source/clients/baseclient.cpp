@@ -519,3 +519,8 @@ int BaseClient::GetRange(void *fp, void *buffer, uint64_t size, uint64_t offset)
     sprintf(this->response, "%s", lang_strings[STR_UNSUPPORTED_OPERATION_MSG]);
     return 0;
 }
+
+void BaseClient::SetClientPathEncoding(bool enabled)
+{
+    this->client->set_url_encode(enabled);
+}

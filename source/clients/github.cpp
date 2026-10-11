@@ -22,16 +22,17 @@ int GithubClient::Connect(const std::string &url, const std::string &username, c
     this->base_path = "/repos" + url.substr(18);
     Util::Rtrim(this->base_path, "/");
     this->base_path += "/releases";
-    this->m_download_url = "https://github.com";
+    this->m_download_url = "https://release-assets.githubusercontent.com";
 
     client = new httplib::Client(this->host_url);
     if (username.length() > 0)
         client->set_basic_auth(username, password);
-    client->set_follow_location(true);
+    client->set_follow_location(false);
     client->set_connection_timeout(10);
     client->set_read_timeout(30);
     client->enable_server_certificate_verification(false);
-    m_client.Connect("https://github.com", username, password);
+    m_client.Connect(this->m_download_url, "", "");
+    m_client.SetClientPathEncoding(false);
 
     if (!send_ping)
         this->connected = true;
@@ -123,7 +124,7 @@ int GithubClient::Head(const std::string &path, void *buffer, uint64_t len)
         return 0;
     }
 
-    return m_client.Head(m_assets[path_parts[0]][path_parts[1]].url, buffer, len);
+    return m_client.Head(GetRedirectUrl(path), buffer, len);
 }
 
 int GithubClient::Get(const std::string &outputfile, const std::string &path, uint64_t offset)
@@ -138,7 +139,8 @@ int GithubClient::Get(const std::string &outputfile, const std::string &path, ui
         return 0;
     }
 
-    return m_client.Get(outputfile, m_assets[path_parts[0]][path_parts[1]].url, offset);  
+    std::string url = GetRedirectUrl(path);
+    return m_client.Get(outputfile, url, offset);  
 }
 
 int GithubClient::Get(SplitFile *split_file, const std::string &path, uint64_t offset)
@@ -153,7 +155,7 @@ int GithubClient::Get(SplitFile *split_file, const std::string &path, uint64_t o
         return 0;
     }
 
-    return m_client.Get(split_file, m_assets[path_parts[0]][path_parts[1]].url, offset);  
+    return m_client.Get(split_file, GetRedirectUrl(path), offset);  
 }
 
 int GithubClient::GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset)
@@ -168,7 +170,7 @@ int GithubClient::GetRange(const std::string &path, void *buffer, uint64_t size,
         return 0;
     }
 
-    return m_client.GetRange(m_assets[path_parts[0]][path_parts[1]].url, buffer, size, offset);  
+    return m_client.GetRange(GetRedirectUrl(path), buffer, size, offset);  
 }
 
 int GithubClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset)
@@ -183,7 +185,7 @@ int GithubClient::GetRange(const std::string &path, DataSink &sink, uint64_t siz
         return 0;
     }
 
-    return m_client.GetRange(m_assets[path_parts[0]][path_parts[1]].url, sink, size, offset);  
+    return m_client.GetRange(GetRedirectUrl(path), sink, size, offset);  
 }
 
 bool GithubClient::ParseReleases()
@@ -262,7 +264,7 @@ bool GithubClient::ParseReleases()
     return 1;
 }
 
-std::string GithubClient::GetDownloadUrl(const std::string &path)
+std::string GithubClient::GetRedirectUrl(const std::string &path)
 {
     if (!ParseReleases())
         return "";
@@ -274,5 +276,23 @@ std::string GithubClient::GetDownloadUrl(const std::string &path)
         return "";
     }
 
-    return this->m_download_url + Escape(m_assets[path_parts[0]][path_parts[1]].url);
+    httplib::Client *tmp_client = new httplib::Client("https://github.com");
+    tmp_client->set_follow_location(false);
+    tmp_client->set_connection_timeout(10);
+    tmp_client->set_read_timeout(30);
+    tmp_client->enable_server_certificate_verification(false);
+
+    std::string redirect_url = "";
+    if (auto res = tmp_client->Get(m_assets[path_parts[0]][path_parts[1]].url))
+    {
+        if (res->status == 302 || res->status == 301)
+        {
+            redirect_url = res->get_header_value("Location");
+            size_t slash_pos = redirect_url.find('/', 8);
+            redirect_url = redirect_url.substr(slash_pos);
+        }
+    }
+
+    delete(tmp_client);
+    return redirect_url;
 }

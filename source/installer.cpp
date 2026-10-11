@@ -230,7 +230,14 @@ namespace INSTALLER
 		json_object *history_item_obj = json_object_new_object();
 		JsonObjectRef history_item_ref(history_item_obj);
 		json_object_object_add(history_item_obj, "hash", json_object_new_string(hash.c_str()));
-		json_object_object_add(history_item_obj, "url", json_object_new_string(settings->server));
+		if (settings->type == CLIENT_TYPE_HTTP_SERVER && strcmp(remote_settings->http_server_type, HTTP_SERVER_GITHUB) == 0)
+		{
+			json_object_object_add(history_item_obj, "url", json_object_new_string("https://release-assets.githubusercontent.com"));
+		}
+		else
+		{
+			json_object_object_add(history_item_obj, "url", json_object_new_string(settings->server));
+		}
 		json_object_object_add(history_item_obj, "path", json_object_new_string(path.c_str()));
 		json_object_object_add(history_item_obj, "username", json_object_new_string(settings->username));
 		json_object_object_add(history_item_obj, "password", json_object_new_string(settings->password));
@@ -262,16 +269,16 @@ namespace INSTALLER
 
 	std::string getRemoteUrl(const std::string path, uint64_t size, bool encodeUrl)
 	{
-		if (remote_settings->type == CLIENT_TYPE_HTTP_SERVER && strcmp(remote_settings->http_server_type, HTTP_SERVER_GITHUB) == 0)
-		{
-			GithubClient *tmp_client = (GithubClient*) remoteclient;
-			return tmp_client->GetDownloadUrl(path);
-		}
+		std::string _path = path;
+
 		if ( strlen(remote_settings->username) == 0 &&
 		     strlen(remote_settings->password) == 0 &&
-			 (remote_settings->type == CLIENT_TYPE_WEBDAV ||
-			   (remote_settings->type == CLIENT_TYPE_HTTP_SERVER && strcmp(remote_settings->http_server_type, HTTP_SERVER_ARCHIVEORG) != 0)
-			  )
+			 ( remote_settings->type == CLIENT_TYPE_WEBDAV ||
+			   ( remote_settings->type == CLIENT_TYPE_HTTP_SERVER &&
+				 strcmp(remote_settings->http_server_type, HTTP_SERVER_ARCHIVEORG) != 0&&
+			     strcmp(remote_settings->http_server_type, HTTP_SERVER_GITHUB) != 0
+			   )
+			 )
 		   )
 		{
 			std::string full_url = WebDAVClient::GetHttpUrl(remote_settings->server + path);
@@ -284,14 +291,20 @@ namespace INSTALLER
 
 			if (encodeUrl)
 			{
-				path = httplib::detail::encode_url(path);
+				_path = httplib::detail::encode_url(path);
 			}
 
-			return host + path;
+			return host + _path;
 		}
 		else
 		{
-			std::string hash = StoreBgInstallHostData(remote_settings, path, size);
+			if (remote_settings->type == CLIENT_TYPE_HTTP_SERVER && strcmp(remote_settings->http_server_type, HTTP_SERVER_GITHUB) == 0)
+			{
+				GithubClient *tmp_client = (GithubClient*) remoteclient;
+				_path = tmp_client->GetRedirectUrl(path);
+			}
+
+			std::string hash = StoreBgInstallHostData(remote_settings, _path, size);
 			std::string full_url = std::string("http://127.0.0.1:") + std::to_string(http_int_server_port) + "/bg_install/" + hash;
 			return full_url;
 		}
