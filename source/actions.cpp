@@ -749,17 +749,31 @@ namespace Actions
 
                                         install_data->split_file = sp;
                                         install_data->remote_client = INSTALLER::GetRemoteClient(remote_settings);
-                                        install_data->path = it->path;
-                                        remoteclient->Size(it->path, &install_data->size);
-                                        install_data->stop_write_thread = false;
-                                        install_data->delete_client = true;
-
-                                        int ret = pthread_create(&install_data->thread, NULL, DownloadSplitPkg, install_data);
-
-                                        if (INSTALLER::InstallSplitPkg(it->path, install_data, false) == 0)
+                                        if (install_data->remote_client == nullptr)
+                                        {
+                                            /* No usable client for this site: fail instead of
+                                             * handing a NULL client to the download thread */
+                                            sprintf(status_message, "%s %s", lang_strings[STR_INSTALL_FAILED], it->name);
+                                            delete sp;
+                                            free(install_data);
                                             failed++;
+                                        }
                                         else
-                                            success++;
+                                        {
+                                            install_data->path = it->path;
+                                            remoteclient->Size(it->path, &install_data->size);
+                                            install_data->stop_write_thread = false;
+                                            /* The Google Drive client is shared with the UI, the
+                                             * download thread must not delete it */
+                                            install_data->delete_client = (install_data->remote_client != remoteclient);
+
+                                            int ret = pthread_create(&install_data->thread, NULL, DownloadSplitPkg, install_data);
+
+                                            if (INSTALLER::InstallSplitPkg(it->path, install_data, false) == 0)
+                                                failed++;
+                                            else
+                                                success++;
+                                        }
                                     }
                                     else
                                     {

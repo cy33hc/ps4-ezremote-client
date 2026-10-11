@@ -28,6 +28,7 @@
 #include "clients/nginx.h"
 #include "clients/npxserve.h"
 #include "clients/rclone.h"
+#include "clients/gdrive.h"
 
 #include "server/http_server.h"
 #include "installer.h"
@@ -1462,8 +1463,15 @@ namespace INSTALLER
 		{
 			tmp_client = new NfsClient();
 		}
+		else if (settings->type == CLIENT_TYPE_GOOGLE)
+		{
+			tmp_client = new GDriveClient();
+		}
 
-		tmp_client->Connect(settings->server, settings->username, settings->password, false);
+		if (tmp_client != nullptr)
+		{
+			tmp_client->Connect(settings->server, settings->username, settings->password, false);
+		}
 
 		return tmp_client;
 	}
