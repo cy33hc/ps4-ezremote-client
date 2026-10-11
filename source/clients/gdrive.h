@@ -34,6 +34,8 @@ public:
     int Delete(const std::string &path);
     bool FileExists(const std::string &path);
     void SetAccessToken(const std::string &token);
+    std::string GetAccesToken();
+    std::string GetDownloadUrl(const std::string &path);
     std::vector<DirEntry> ListDir(const std::string &path);
     void *Open(const std::string &path, int flags);
     void Close(void *fp);
@@ -46,6 +48,7 @@ public:
 
 private:
     int RequestAuthorization();
+    std::string access_token;
     std::string GetDriveId(const std::string path);
     std::map<std::string, std::string> path_id_map;
     std::map<std::string, std::string> shared_drive_map;

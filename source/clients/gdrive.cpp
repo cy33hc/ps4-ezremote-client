@@ -305,6 +305,17 @@ int GDriveClient::Head(const std::string &path, void *buffer, uint64_t len)
     return 0;
 }
 
+std::string GDriveClient::GetDownloadUrl(const std::string &path)
+{
+    std::string id = GetValue(path_id_map, path);
+    std::string drive_id = GetDriveId(path);
+    std::string url = std::string("/drive/v3/files/") + BaseClient::Escape(id) + "?alt=media";
+    if (!drive_id.empty())
+        url += "&supportsAllDrives=true";
+
+    return url;
+}
+
 int GDriveClient::Get(const std::string &outputfile, const std::string &path, uint64_t offset)
 {
     std::ofstream file_stream(outputfile, std::ios::binary);
@@ -1195,8 +1206,14 @@ int GDriveClient::Quit()
 
 void GDriveClient::SetAccessToken(const std::string &token)
 {
+    this->access_token = token;
     if (this->client != nullptr)
         this->client->set_bearer_token_auth(token);
+}
+
+std::string GDriveClient::GetAccesToken()
+{
+    return this->access_token;
 }
 
 void *GDriveClient::Open(const std::string &path, int flags)
