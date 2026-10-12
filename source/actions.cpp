@@ -496,14 +496,49 @@ namespace Actions
         uint64_t id = Util::GetTick();
         json_object *params = json_object_new_object();
         JsonObjectRef params_ref(params);
+        std::string _src = std::string(src);
+
         json_object_object_add(params, "type", json_object_new_int(remote_settings->type));
-        json_object_object_add(params, "url", json_object_new_string(remote_settings->server));
         json_object_object_add(params, "username", json_object_new_string(remote_settings->username));
-        json_object_object_add(params, "password", json_object_new_string(remote_settings->password));
-        json_object_object_add(params, "src_path", json_object_new_string(src));
         json_object_object_add(params, "dest_path", json_object_new_string(dest));
         json_object_object_add(params, "size", json_object_new_uint64(file_size));
         json_object_object_add(params, "id", json_object_new_uint64(id));
+
+        if (remote_settings->type == CLIENT_TYPE_HTTP_SERVER && strcmp(remote_settings->http_server_type, HTTP_SERVER_GITHUB) == 0)
+        {
+            GithubClient *tmp_client = (GithubClient*) remoteclient;
+            _src = tmp_client->GetRedirectUrl(src);
+        }
+        else if (remote_settings->type == CLIENT_TYPE_GOOGLE)
+        {
+            GDriveClient *tmp_client = (GDriveClient*) remoteclient;
+            _src = tmp_client->GetDownloadUrl(src);
+        }
+        json_object_object_add(params, "src_path", json_object_new_string(_src.c_str()));
+
+        if (remote_settings->type == CLIENT_TYPE_HTTP_SERVER && strcmp(remote_settings->http_server_type, HTTP_SERVER_GITHUB) == 0)
+		{
+			json_object_object_add(params, "url", json_object_new_string("https://release-assets.githubusercontent.com"));
+		}
+		else if (remote_settings->type == CLIENT_TYPE_GOOGLE)
+		{
+			json_object_object_add(params, "url", json_object_new_string(GOOGLE_API_URL));
+		}
+		else
+		{
+			json_object_object_add(params, "url", json_object_new_string(remote_settings->server));
+		}
+
+		if (remote_settings->type == CLIENT_TYPE_GOOGLE && (remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_GOOGLE))
+		{
+			GDriveClient* tmp_client = (GDriveClient*) remoteclient;
+			json_object_object_add(params, "password", json_object_new_string(tmp_client->GetAccesToken().c_str()));
+		}
+		else
+		{
+			json_object_object_add(params, "password", json_object_new_string(remote_settings->password));
+		}
+
         if (remote_settings->type == CLIENT_TYPE_HTTP_SERVER)
         {
             json_object_object_add(params, "http_server_type", json_object_new_string(remote_settings->http_server_type));
