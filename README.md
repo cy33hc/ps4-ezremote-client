@@ -2,6 +2,9 @@
 
 ezRemote Client is an application that allows you to connect the PS4 to remote FTP/SFTP, SMB(Windows Share), NFS, WebDAV, HTTP servers and Google Drive to transfer files. The interface is inspired by Filezilla client which provides a commander like GUI.
 
+## **Requirement: You need to enable "BIN Loader" in Goldhen for the Background Install/Doanload. ezRemote client needs "BIN Loader" so that it can start the payload ezRemote Server which is a background process that handles the instals**
+<br/>
+
 **NEW: As of version 2.00, You can download large file in the background.**
   - You can enable/disable background download in the Global settings
   - You can set the minimum file size where background download will use. Default is 1GB
