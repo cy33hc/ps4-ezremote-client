@@ -823,7 +823,7 @@ namespace Actions
 
                                         if (it != files.end())
                                         {
-                                            sleep(3);
+                                            sleep(1);
                                         }
                                     }
                                 }
