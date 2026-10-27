@@ -499,10 +499,18 @@ namespace Actions
         std::string _src = std::string(src);
 
         json_object_object_add(params, "type", json_object_new_int(remote_settings->type));
-        json_object_object_add(params, "username", json_object_new_string(remote_settings->username));
         json_object_object_add(params, "dest_path", json_object_new_string(dest));
         json_object_object_add(params, "size", json_object_new_uint64(file_size));
         json_object_object_add(params, "id", json_object_new_uint64(id));
+
+        if (remote_settings->type == CLIENT_TYPE_GOOGLE)
+        {
+            json_object_object_add(params, "username", json_object_new_string(gg_app.client_id));
+        }
+        else
+        {
+            json_object_object_add(params, "username", json_object_new_string(remote_settings->username));
+        }
 
         if (remote_settings->type == CLIENT_TYPE_HTTP_SERVER && strcmp(remote_settings->http_server_type, HTTP_SERVER_GITHUB) == 0)
         {
@@ -532,7 +540,8 @@ namespace Actions
 		if (remote_settings->type == CLIENT_TYPE_GOOGLE && (remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_GOOGLE))
 		{
 			GDriveClient* tmp_client = (GDriveClient*) remoteclient;
-			json_object_object_add(params, "password", json_object_new_string(tmp_client->GetAccesToken().c_str()));
+			json_object_object_add(params, "password", json_object_new_string(gg_app.client_secret));
+			json_object_object_add(params, "refresh_token", json_object_new_string(remote_settings->gg_account.refresh_token));
 		}
 		else
 		{

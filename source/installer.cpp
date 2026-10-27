@@ -245,15 +245,23 @@ namespace INSTALLER
 
 		if (settings->type == CLIENT_TYPE_GOOGLE && (remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_GOOGLE))
 		{
-			GDriveClient* tmp_client = (GDriveClient*) remoteclient;
-			json_object_object_add(history_item_obj, "password", json_object_new_string(tmp_client->GetAccesToken().c_str()));
+			json_object_object_add(history_item_obj, "password", json_object_new_string(gg_app.client_secret));
+			json_object_object_add(history_item_obj, "refresh_token", json_object_new_string(remote_settings->gg_account.refresh_token));
 		}
 		else
 		{
 			json_object_object_add(history_item_obj, "password", json_object_new_string(settings->password));
 		}
+
+		if (settings->type == CLIENT_TYPE_GOOGLE && (remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_GOOGLE))
+		{
+			json_object_object_add(history_item_obj, "username", json_object_new_string(gg_app.client_id));
+		}
+		else
+		{
+			json_object_object_add(history_item_obj, "username", json_object_new_string(settings->username));
+		}
 		json_object_object_add(history_item_obj, "path", json_object_new_string(path.c_str()));
-		json_object_object_add(history_item_obj, "username", json_object_new_string(settings->username));
 		json_object_object_add(history_item_obj, "type", json_object_new_int(settings->type));
 		json_object_object_add(history_item_obj, "file_size", json_object_new_uint64(size));
 
