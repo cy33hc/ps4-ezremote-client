@@ -25,6 +25,7 @@
 #include "windows.h"
 #include "util.h"
 #include "zip_util.h"
+#include "activity.h"
 
 namespace ZipUtil
 {
@@ -74,10 +75,9 @@ namespace ZipUtil
         memset(&zi, 0, sizeof(zip_fileinfo));
         convertToZipTime(file_stat.st_mtim.tv_sec, &zi.tmz_date);
 
-        bytes_transfered = 0;
-        sceRtcGetCurrentTick(&prev_tick);
+        uint64_t copied = 0;
 
-        bytes_to_download = file_stat.st_size;
+        const uint64_t total_size = file_stat.st_size;
 
         // Large file?
         int use_zip64 = (file_stat.st_size >= 0xFFFFFFFF);
@@ -106,6 +106,16 @@ namespace ZipUtil
 
         while (1)
         {
+            // Cancelled mid-file: close the entry so the archive stays readable
+            // and leave the partial archive for the user to delete.
+            if (Activities::Stopped())
+            {
+                free(buf);
+                FS::Close(fd);
+                zipCloseFileInZip(zf);
+                return 0;
+            }
+
             int read = FS::Read(fd, buf, ARCHIVE_TRANSFER_SIZE);
             if (read < 0)
             {
@@ -128,7 +138,8 @@ namespace ZipUtil
             }
 
             seek += written;
-            bytes_transfered += read;
+            copied += read;
+            Activities::ProgressCurrent(copied, total_size);
         }
 
         free(buf);
@@ -186,7 +197,7 @@ namespace ZipUtil
             do
             {
                 dirent = readdir(dfd);
-                if (stop_activity)
+                if (Activities::Stopped())
                     return 1;
                 if (dirent != NULL && strcmp(dirent->d_name, ".") != 0 && strcmp(dirent->d_name, "..") != 0)
                 {
@@ -294,12 +305,18 @@ namespace ZipUtil
     {
         ssize_t len;
         unsigned char *buffer = (unsigned char *)malloc(ARCHIVE_TRANSFER_SIZE);
-        bytes_transfered = 0;
-        sceRtcGetCurrentTick(&prev_tick);
 
         /* loop over file contents and write to fd */
         for (int n = 0;; n++)
         {
+            // Cancelled mid-file: stop here and keep what was written, the way
+            // Explorer leaves a partly extracted file.
+            if (Activities::Stopped())
+            {
+                free(buffer);
+                return 0;
+            }
+
             len = archive_read_data(a, buffer, ARCHIVE_TRANSFER_SIZE);
 
             if (len == 0)
@@ -314,8 +331,6 @@ namespace ZipUtil
                 free(buffer);
                 return 0;
             }
-            bytes_transfered += len;
-
             if (write(fd, buffer, len) != len)
             {
                 sprintf(status_message, "error write('%s')", pathname.c_str());
@@ -358,7 +373,7 @@ namespace ZipUtil
             return;
         }
 
-        bytes_to_download = archive_entry_size(e);
+        const uint64_t total_size = archive_entry_size(e);
         if ((fd = open(path.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0777)) < 0)
         {
             sprintf(status_message, "error open('%s')", path.c_str());
@@ -427,6 +442,11 @@ namespace ZipUtil
         else
         {
             snprintf(activity_message, 255, "%s: %s", lang_strings[STR_EXTRACTING], pathname);
+            
+            /* ensure that parent directory exists */
+            FS::MkDirs(realpathname, true);
+
+            Activities::Item(Activities::CurrentId(), pathname);
             extract_file(a, e, realpathname);
         }
 
@@ -449,7 +469,7 @@ namespace ZipUtil
         while (Dialog::isImeDialogRunning())
         {
             /* Let the user cancel the extraction while waiting */
-            if (stop_activity)
+            if (Activities::Stopped())
                 return password;
 
             sceKernelUsleep(10000);
@@ -486,7 +506,9 @@ namespace ZipUtil
         data->size = 0;
         data->offset = 0;
 
-        client->Size(file, &data->size);
+        uint64_t remote_size = 0;
+        client->Size(file, &remote_size);
+        data->size = (ssize_t) remote_size;
         if (client->SupportedActions() & REMOTE_ACTION_RAW_READ)
         {
             data->fp = client->Open(file, O_RDONLY);
@@ -516,6 +538,9 @@ namespace ZipUtil
         if (ret == 0)
             return -1;
         data->offset = data->offset + to_read;
+
+        // Archive-level progress: bytes consumed of the whole archive.
+        Activities::ProgressCurrent(data->offset, data->size);
 
         return to_read;
     }
@@ -625,9 +650,15 @@ namespace ZipUtil
             }
         }
 
+        FS::MkDirs(basepath.c_str());
+
+        uint64_t archive_total = 0;
+        if (client == nullptr)
+            archive_total = (uint64_t) FS::GetSize(file.path);
+
         for (;;)
         {
-            if (stop_activity)
+            if (Activities::Stopped())
                 break;
 
             ret = archive_read_next_header(a, &e);
@@ -658,6 +689,9 @@ namespace ZipUtil
             }
 
             extract(a, e, basepath);
+
+            if (client == nullptr && archive_total > 0)
+                Activities::ProgressCurrent((uint64_t) archive_filter_bytes(a, 0), archive_total);
         }
 
         archive_read_free(a);

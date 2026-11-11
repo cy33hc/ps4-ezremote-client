@@ -1,4 +1,5 @@
 #include "fs.h"
+#include "activity.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -252,6 +253,7 @@ namespace FS
         entry.file_size = 0;
         entry.isDir = true;
         entry.selectable = false;
+        sprintf(entry.rights, "%s", "rwxrwxrwx");
         out.push_back(entry);
 
         DIR *fd = opendir(path.c_str());
@@ -316,6 +318,10 @@ namespace FS
                 entry.modified.seconds = lt.second;
                 entry.file_size = file_stat.st_size;
 
+                for (int i = 0; i < 9; i++)
+                    entry.rights[i] = (file_stat.st_mode & (S_IRUSR >> i)) ? "rwx"[i % 3] : '-';
+                entry.rights[9] = '\0';
+               
                 if (dirent->d_type & DT_DIR)
                 {
                     entry.isDir = true;
@@ -393,8 +399,8 @@ namespace FS
 
     int RmRecursive(const std::string &path)
     {
-        if (stop_activity)
-            return 1;
+        if (Activities::Stopped())
+            return 0;
 
         DIR *dfd = opendir(path.c_str());
         if (dfd != NULL)
@@ -411,7 +417,15 @@ namespace FS
                 char new_path[512];
                 snprintf(new_path, 512, "%s%s%s", path.c_str(), hasEndSlash(path.c_str()) ? "" : "/", dir->d_name);
 
-                if (dir->d_type & DT_DIR)
+                bool is_dir = (dir->d_type & DT_DIR) != 0;
+                if (dir->d_type == DT_UNKNOWN)
+                {
+                    struct stat st;
+                    if (stat(new_path, &st) == 0 && S_ISDIR(st.st_mode))
+                        is_dir = true;
+                }
+
+                if (is_dir)
                 {
                     int ret = RmRecursive(new_path);
                     if (ret <= 0)
@@ -432,11 +446,11 @@ namespace FS
                         return ret;
                     }
                 }
-            } while (dir != NULL && !stop_activity);
+            } while (dir != NULL && !Activities::Stopped());
 
             closedir(dfd);
 
-            if (stop_activity)
+            if (Activities::Stopped())
                 return 0;
 
             int ret = rmdir(path.c_str());
@@ -486,6 +500,11 @@ namespace FS
 
     bool Copy(const std::string &from, const std::string &to)
     {
+        return Copy(from, to, nullptr);
+    }
+
+    bool Copy(const std::string &from, const std::string &to, bool (*cancelled)())
+    {
         MkDirs(to, true);
         if (from.compare(to) == 0)
             return true;
@@ -502,7 +521,7 @@ namespace FS
             return false;
         }
 
-        bytes_to_download = file_stat.st_size;
+        uint64_t total_size = file_stat.st_size;
 
         FILE *dest = fopen(to.c_str(), "wb");
         if (!dest)
@@ -512,9 +531,7 @@ namespace FS
         }
 
         size_t bytes_read = 0;
-        bytes_transfered = 0;
-        sceRtcGetCurrentTick(&prev_tick);
-
+        uint64_t copied = 0;
         const size_t buf_size = 0x10000;
         unsigned char *buf = new unsigned char[buf_size];
 
@@ -538,8 +555,18 @@ namespace FS
                 return false;
             }
 
-            bytes_transfered += bytes_read;
-        } while (bytes_transfered < bytes_to_download);
+            copied += bytes_read;
+            Activities::ProgressCurrent(copied, total_size);
+
+            if (cancelled != nullptr && cancelled())
+            {
+                delete[] buf;
+                fclose(src);
+                fclose(dest);
+                // Like Explorer: keep what was copied so far, drop the rest.
+                return false;
+            }
+        } while (copied < total_size);
 
         delete[] buf;
         fclose(src);
@@ -549,20 +576,32 @@ namespace FS
 
     bool Move(const std::string &from, const std::string &to)
     {
+        return Move(from, to, nullptr);
+    }
+
+    bool Move(const std::string &from, const std::string &to, bool (*cancelled)())
+    {
         if (from.compare(to) == 0)
             return true;
 
         errno = 0;
         int ret = rename(from.c_str(), to.c_str());
-        if (ret != 0 && (errno == EXDEV || errno == EEXIST))
-        {
-            bool res = Copy(from, to);
-            if (res)
-                Rm(from);
-            else
-                return res;
-        }
+        if (ret == 0)
+            return true;
 
+        if (errno != EXDEV && errno != EEXIST)
+            return true;
+
+        // Different filesystem: copy, then drop the source. A cancel leaves the
+        // source untouched and only abandons the destination copy.
+        if (cancelled != nullptr && cancelled())
+            return false;
+
+        bool res = Copy(from, to, cancelled);
+        if (!res)
+            return false;
+
+        Rm(from);
         return true;
     }
 }

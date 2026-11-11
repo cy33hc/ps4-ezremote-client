@@ -17,6 +17,7 @@ namespace HttpServer
     void *ServerThread(void *argp);
     void Start();
     void Stop();
+    bool AnyTransferRunning();
 }
 
 #endif

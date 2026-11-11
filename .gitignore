@@ -12,3 +12,24 @@ _deps
 .vscode
 build
 data/daemon
+
+# local port working dirs
+.sdk/
+build2/
+.tmp_compare/
+
+web/node_modules/
+web/tsconfig.tsbuildinfo
+
+# local build/test artifacts
+build*/
+*.pkg
+*.log
+.klog*
+.split*.log
+.inst.pkg
+.sfo
+.idx.html
+.master_http.cpp
+.orig_auth.txt
+.tmp_*

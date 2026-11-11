@@ -30,8 +30,14 @@ namespace FS
     void Rename(const std::string &from, const std::string &to);
 
     bool Copy(const std::string &from, const std::string &to);
+    // Same, but abandons the copy when cancelled() returns true. The partial
+    // file is left in place, matching what Windows Explorer does.
+    bool Copy(const std::string &from, const std::string &to, bool (*cancelled)());
 
     bool Move(const std::string &from, const std::string &to);
+    // Same, but a cross-device move can be cancelled: only the destination
+    // copy is abandoned, the source is removed only once the copy finished.
+    bool Move(const std::string &from, const std::string &to, bool (*cancelled)());
 
     // creates file (if it exists, truncates size to 0)
     FILE *Create(const std::string &path);

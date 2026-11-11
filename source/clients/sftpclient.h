@@ -18,7 +18,7 @@ public:
     int Mkdir(const std::string &path);
     int Rmdir(const std::string &path, bool recursive);
     int Rmdir(const std::string &path);
-    int Size(const std::string &path, int64_t *size);
+    int Size(const std::string &path, uint64_t *size);
     int Get(const std::string &outputfile, const std::string &path, uint64_t offset=0);
     int Get(SplitFile *split_file, const std::string &path, uint64_t offset=0);
     int GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset);
@@ -44,6 +44,10 @@ public:
     uint32_t SupportedActions();
 
 protected:
+    // SCP upload path. Returns 1 on success, 0 on failure, -1 when the server
+    // does not accept SCP so the caller can fall back to SFTP.
+    int PutScp(const std::string &inputfile, const std::string &path, uint64_t total);
+
     LIBSSH2_SESSION *session;
     LIBSSH2_SFTP *sftp_session;
     int sock;

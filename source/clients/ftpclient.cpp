@@ -15,6 +15,7 @@
 #include "clients/ftpclient.h"
 #include "util.h"
 #include "windows.h"
+#include "activity.h"
 
 #define FTP_CLIENT_BUFSIZ 1048576
 #define ACCEPT_TIMEOUT 30
@@ -855,6 +856,9 @@ int FtpClient::FtpXfer(const std::string &localfile, const std::string &path, ft
 	{
 		while ((l = fread(dbuf, 1, FTP_CLIENT_BUFSIZ, local)) > 0)
 		{
+			// Cancel closes the data connection instead of finishing the file.
+			if (Activities::Stopped())
+				break;
 			if ((c = FtpWrite(dbuf, l, nData)) < l)
 			{
 				break;
@@ -865,6 +869,8 @@ int FtpClient::FtpXfer(const std::string &localfile, const std::string &path, ft
 	{
 		while ((l = FtpRead(dbuf, FTP_CLIENT_BUFSIZ, nData)) > 0)
 		{
+			if (Activities::Stopped())
+				break;
 			if (fwrite(dbuf, 1, l, local) <= 0)
 			{
 				break;
@@ -1220,14 +1226,14 @@ int FtpClient::Rmdir(const std::string &path)
  */
 int FtpClient::Rmdir(const std::string &path, bool recursive)
 {
-	if (stop_activity)
+	if (Activities::Stopped())
 		return 1;
 
 	std::vector<DirEntry> list = ListDir(path);
 	int ret;
 	for (int i = 0; i < list.size(); i++)
 	{
-		if (stop_activity)
+		if (Activities::Stopped())
 			return 1;
 
 		if (list[i].isDir && recursive)
@@ -1261,7 +1267,7 @@ int FtpClient::Rmdir(const std::string &path, bool recursive)
  *
  * return 1 if successful, 0 otherwise
  */
-int FtpClient::Size(const std::string &path, int64_t *size)
+int FtpClient::Size(const std::string &path, uint64_t *size)
 {
 	char cmd[512];
 	int resp, rv = 1;
@@ -1289,7 +1295,7 @@ int FtpClient::Size(const std::string &path, int64_t *size)
 
 bool FtpClient::FileExists(const std::string &path)
 {
-	int64_t filesize;
+	uint64_t filesize;
 	return Size(path, &filesize);
 }
 
@@ -1301,6 +1307,10 @@ bool FtpClient::FileExists(const std::string &path)
 
 int FtpClient::Get(const std::string &outputfile, const std::string &path, uint64_t offset)
 {
+	uint64_t transfer_total = 0;
+	if (Size(path, &transfer_total))
+		SetTotalBytes(transfer_total);
+	ResetTransferredBytes();
 	mp_ftphandle->offset = offset;
 	if (offset == 0)
 		return FtpXfer(outputfile, path, mp_ftphandle, FtpClient::fileread, FtpClient::transfermode::image);
@@ -1339,6 +1349,9 @@ int FtpClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, 
 
 	while (bytes_remaining > 0)
 	{
+		if (Activities::Stopped())
+			break;
+
 		size_t bytes_to_read = std::min<size_t>(FTP_CLIENT_BUFSIZ, bytes_remaining);
 		count = FtpRead(buf, bytes_to_read, nData);
 		if (count <= 0)
@@ -1410,6 +1423,10 @@ int FtpClient::GetRange(const std::string &path, void *buffer, uint64_t size, ui
 
 int FtpClient::Put(const std::string &inputfile, const std::string &path, uint64_t offset)
 {
+	int64_t transfer_total = FS::GetSize(inputfile);
+	if (transfer_total > 0)
+		SetTotalBytes((uint64_t) transfer_total);
+	ResetTransferredBytes();
 	mp_ftphandle->offset = offset;
 	if (offset == 0)
 		return FtpXfer(inputfile, path, mp_ftphandle, FtpClient::filewrite, FtpClient::transfermode::image);

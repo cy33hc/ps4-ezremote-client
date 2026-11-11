@@ -39,6 +39,8 @@ struct DirEntry
     bool isLink;
     DateTime modified;
     bool selectable;
+    // "rwxr-xr-x" (the leading type character is not stored).
+    char rights[11];
 
     friend bool operator<(DirEntry const &a, DirEntry const &b)
     {

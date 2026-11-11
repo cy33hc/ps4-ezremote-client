@@ -134,6 +134,7 @@ struct ArchivePkgInstallData
     ArchiveEntry *archive_entry;
     pthread_t thread;
     bool stop_write_thread;
+    uint64_t activity_id; // progress is reported to the calling install
 };
 
 struct SplitPkgInstallData
@@ -141,7 +142,7 @@ struct SplitPkgInstallData
     SplitFile *split_file;
     RemoteClient *remote_client;
     std::string path;
-    int64_t size;
+    uint64_t size;
     pthread_t thread;
     bool stop_write_thread;
     bool delete_client;
@@ -163,6 +164,11 @@ namespace INSTALLER
 
     bool canInstallRemotePkg(const std::string &url);
     std::string getRemoteUrl(const std::string path, uint64_t size, bool encodeUrl = false);
+    // Same, for a specific site instead of the active one; the web UI can
+    // install for a site that is not the console's current selection.
+    std::string getRemoteUrl(RemoteSettings *settings, RemoteClient *client, const std::string path, uint64_t size, bool encodeUrl = false);
+    std::string StoreFileHostBgData(const std::string &hash, const std::string &host,
+                                    const std::string &path, uint64_t size);
     int InstallRemotePkg(const std::string &path, pkg_header *header, std::string title, bool prompt = false);
     int InstallLocalPkg(const std::string &path);
     int InstallLocalPkg(const std::string &path, pkg_header *header, bool remove_after_install = false);
@@ -170,6 +176,10 @@ namespace INSTALLER
     bool ExtractRemotePkg(const std::string &path, const std::string sfo_path, const std::string icon_path);
     bool ExtractRemotePkg(const std::string &path, pkg_header *pkg_header, const std::string sfo_path, const std::string icon_path);
     bool ExtractRemotePkg(RemoteClient *client, const std::string &path, pkg_header *pkg_header, const std::string sfo_path, const std::string icon_path);
+    // PS5 pkg extraction also carries param.json; PS4 pkg has none, so the
+    // wrapper keeps the same API for the shared web server.
+    bool ExtractRemotePkg(RemoteClient *client, const std::string &path, const std::string sfo_path, const std::string icon_path);
+    bool IsDirectPackageInstallerEnabled();
     std::string GetRemotePkgTitle(RemoteClient *client, const std::string &path, pkg_header *header);
     std::string GetLocalPkgTitle(const std::string &path, pkg_header *header);
     ArchivePkgInstallData *GetArchivePkgInstallData(const std::string &hash);

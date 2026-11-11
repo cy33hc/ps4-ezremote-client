@@ -104,6 +104,7 @@
 	FUNC(STR_CUT)                           \
 	FUNC(STR_COPY)                          \
 	FUNC(STR_PASTE)                         \
+	FUNC(STR_MOVE)                          \
 	FUNC(STR_MOVING)                        \
 	FUNC(STR_COPYING)                       \
 	FUNC(STR_FAIL_MOVE_MSG)                 \
@@ -182,7 +183,21 @@
 	FUNC(STR_ENABLE_BG_DOWNLOAD)            \
 	FUNC(STR_BG_DOWNLOAD_MIN_SIZE)          \
 	FUNC(STR_BG_DOWNLOAD_PROGRESS)          \
+	FUNC(STR_STATE_RUNNING)                 \
+	FUNC(STR_STATE_DONE)                    \
+	FUNC(STR_STATE_FAILED)                  \
+	FUNC(STR_STATE_CANCELLED)               \
+	FUNC(STR_STATE_PARTIAL)                 \
 	FUNC(STR_SHOW_BG_DOWNLOAD_PROGRESS)     \
+	FUNC(STR_ORIGIN_NATIVE)                 \
+	FUNC(STR_ORIGIN_WEB)                    \
+	FUNC(STR_ACTIVITIES)                    \
+	FUNC(STR_CLEAR_COMPLETED)               \
+	FUNC(STR_CLEAR_HISTORY)                 \
+	FUNC(STR_SHOW_ACTIVITIES_DIALOG)        \
+	FUNC(STR_SKIP)                          \
+	FUNC(STR_ALWAYS_OVERWRITE)              \
+	FUNC(STR_CANCELLING)                    \
 
 #define GET_VALUE(x) x,
 #define GET_STRING(x) #x,
@@ -192,11 +207,24 @@ enum
 	FOREACH_STR(GET_VALUE)
 };
 
-#define LANG_STRINGS_NUM 179
+#define LANG_STRINGS_NUM 194
 #define LANG_ID_SIZE 64
 #define LANG_STR_SIZE 384
 extern char lang_identifiers[LANG_STRINGS_NUM][LANG_ID_SIZE];
 extern char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE];
+	namespace Lang
+	{
+		// Ask for the table to be reloaded; applied by the render loop so no
+		// request thread rewrites lang_strings while the UI is reading it.
+		void RequestReload();
+		// Applies a pending reload; call once per frame from the UI thread.
+		// True when it reloaded, so the caller can rebuild the font atlas.
+		bool ApplyPendingReload();
+		void SetSystemLangIndex(int32_t lang_idx);
+		// Raises the reload flag when CONFIG's "language" differs from the one
+		// currently applied. Both front ends go through SaveGlobalConfig.
+		void SyncRequest();
+	}
 extern bool needs_extended_font;
 
 namespace Lang

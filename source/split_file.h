@@ -2,7 +2,7 @@
 #define EZ_SPLIT_FILE_H
 
 #include <string>
-#include <vector>
+#include <deque>
 #include <mutex>
 #include <time.h>
 #include <semaphore.h>
@@ -46,7 +46,7 @@ public:
     size_t GetReadBytes();   // total bytes returned by Read()
 
 private:
-    std::vector<FileBlock*> file_blocks;
+    std::deque<FileBlock*> file_blocks;
     size_t write_offset = 0;
     size_t block_size;
     size_t read_offset = 0;

@@ -95,7 +95,7 @@ std::vector<DirEntry> GithubClient::ListDir(const std::string &path)
     return out;
 }
 
-int GithubClient::Size(const std::string &path, int64_t *size)
+int GithubClient::Size(const std::string &path, uint64_t *size)
 {
     if (!ParseReleases())
         return 0;

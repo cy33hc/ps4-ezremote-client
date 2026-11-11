@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Download Status Tracker</title>
+    <style>
+        :root {
+            --bg: #1b1b1c;
+            --panel: #252526;
+            --panel-alt: #2d2d30;
+            --line: #333337;
+            --line-strong: #4e4e4e;
+            --text: #e4e4e4;
+            --muted: #979797;
+            --bright: #fff;
+            --accent: #1d97ec;
+            --accent-soft: #9ad4f6;
+            --mint: #57a64a;
+            --amber: #d7ba7d;
+            --rose: #f14c4c;
+        }
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            margin: 32px;
+            background-color: var(--bg);
+            color: var(--text);
+        }
+        h2 {
+            color: var(--bright);
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            margin: 0 0 4px;
+        }
+        .refresh-indicator {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background-color: var(--panel);
+            border: 1px solid var(--line-strong);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--line);
+        }
+        th {
+            background-color: var(--panel-alt);
+            color: var(--muted);
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+        }
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+        td {
+            font-size: 0.875rem;
+        }
+        code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.8rem;
+            color: var(--accent-soft);
+        }
+        .status-badge {
+            padding: 3px 8px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            font-weight: 600;
+            font-size: 0.72rem;
+            display: inline-block;
+        }
+        .queued { background-color: var(--panel-alt); border-color: var(--line); color: var(--muted); }
+        .in-progress { background-color: rgba(29, 151, 236, 0.15); border-color: rgba(29, 151, 236, 0.35); color: var(--accent-soft); }
+        .resumed { background-color: rgba(215, 186, 125, 0.15); border-color: rgba(215, 186, 125, 0.35); color: var(--amber); }
+        .failed { background-color: rgba(241, 76, 76, 0.15); border-color: rgba(241, 76, 76, 0.35); color: var(--rose); }
+        .completed { background-color: rgba(87, 166, 74, 0.15); border-color: rgba(87, 166, 74, 0.35); color: var(--mint); }
+        .unknown { background-color: var(--panel-alt); border-color: var(--line); color: var(--muted); }
+
+        .error-message {
+            color: var(--rose);
+            font-weight: 600;
+        }
+        .page-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .clear-button {
+            flex-shrink: 0;
+            border: 1px solid rgba(29, 151, 236, 0.4);
+            background-color: rgba(29, 151, 236, 0.15);
+            color: var(--accent-soft);
+            font: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+        }
+        .clear-button:hover:not(:disabled) {
+            background-color: rgba(29, 151, 236, 0.28);
+            border-color: rgba(29, 151, 236, 0.7);
+            color: var(--bright);
+        }
+        .clear-button:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+        .empty {
+            text-align: center;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="page-header">
+        <div>
+            <h2>Live File Download Dashboard</h2>
+            <div class="refresh-indicator" id="refresh-text">Connecting to server...</div>
+        </div>
+        <button class="clear-button" id="clear-button" type="button">Clear history</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>File Path</th>
+                <th>File Size</th>
+                <th>Transferred</th>
+                <th>Download Status</th>
+                <th>Progress</th>
+            </tr>
+        </thead>
+        <tbody id="table-body">
+            <tr>
+                <td colspan="6" class="empty">Waiting for data array...</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script>
+        const API_BASE = "http://localhost:6701";
+        const STATE_URL = API_BASE + "/get_download_state";
+        const CLEAR_URL = API_BASE + "/clear_download_history";
+
+        const STATE_MAP = {
+            0: { text: "Queued", cssClass: "queued" },
+            1: { text: "In Progress", cssClass: "in-progress" },
+            2: { text: "Resumed", cssClass: "resumed" },
+            3: { text: "Failed", cssClass: "failed" },
+            4: { text: "Completed", cssClass: "completed" }
+        };
+
+        function formatEpoch(epochSeconds) {
+            const date = new Date(epochSeconds * 1000);
+            const day = String(date.getDate()).padStart(2, '0');
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const month = months[date.getMonth()];
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${day} ${month} ${year} ${hours}:${minutes}`;
+        }
+
+        // Converts raw byte integers to clean readable units like KB, MB, GB
+        function formatBytes(bytes) {
+            if (bytes === 0 || !bytes) return "0 Bytes";
+            const k = 1024;
+            const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+        }
+
+        function calculatePercentage(transferred, total) {
+            if (!total || total === 0) return "0%";
+            const percentage = (transferred / total) * 100;
+            return percentage.toFixed(1) + "%";
+        }
+
+        async function fetchTableData() {
+            const tbody = document.getElementById("table-body");
+            const refreshText = document.getElementById("refresh-text");
+
+            try {
+                const response = await fetch(STATE_URL);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const dataArray = await response.json();
+                
+                if (!Array.isArray(dataArray)) {
+                    throw new TypeError("Expected an array of items from API");
+                }
+
+                tbody.innerHTML = ""; 
+
+                if (dataArray.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="empty">No active downloads found.</td></tr>`;
+                } else {
+                    dataArray.forEach(data => {
+                        const row = document.createElement("tr");
+                        const formattedDate = formatEpoch(data.timestamp);
+                        const progressPercent = calculatePercentage(data.bytes_transfered, data.file_size);
+                        
+                        // Parse values into clean file size formats
+                        const readableFileSize = formatBytes(data.file_size);
+                        const readableTransferred = formatBytes(data.bytes_transfered);
+                        
+                        const rawState = data.state;
+                        const numericState = parseInt(rawState, 10);
+                        const lookupKey = !isNaN(numericState) ? numericState : String(rawState).toLowerCase().trim();
+                        
+                        const mappedState = STATE_MAP[lookupKey] || { text: `Unknown (${rawState})`, cssClass: "unknown" };
+
+                        row.innerHTML = `
+                            <td>${formattedDate}</td>
+                            <td><code>${data.path}</code></td>
+                            <td>${readableFileSize}</td>
+                            <td>${readableTransferred}</td>
+                            <td><span class="status-badge ${mappedState.cssClass}">${mappedState.text}</span></td>
+                            <td><strong>${progressPercent}</strong></td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+
+                const now = new Date();
+                refreshText.innerHTML = `Last updated: ${now.toLocaleTimeString()}`;
+
+            } catch (error) {
+                console.error("Fetch failure:", error);
+                refreshText.innerHTML = `<span class="error-message">Connection failed (${error.message}). Retrying...</span>`;
+            }
+        }
+
+        async function clearHistory() {
+            const button = document.getElementById("clear-button");
+            const refreshText = document.getElementById("refresh-text");
+            button.disabled = true;
+            try {
+                const response = await fetch(CLEAR_URL, { method: "POST" });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                await fetchTableData();
+            } catch (error) {
+                console.error("Clear failure:", error);
+                refreshText.innerHTML = `<span class="error-message">Clear failed (${error.message}).</span>`;
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        document.getElementById("clear-button").addEventListener("click", clearHistory);
+
+        fetchTableData();
+        setInterval(fetchTableData, 2000);
+    </script>
+</body>
+</html>

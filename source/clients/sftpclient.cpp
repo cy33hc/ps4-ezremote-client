@@ -4,6 +4,7 @@
 #include <netdb.h>
 #include <time.h>
 #include "common.h"
+#include "activity.h"
 #include "clients/remote_client.h"
 #include "clients/sftpclient.h"
 #include "fs.h"
@@ -201,14 +202,14 @@ int SFTPClient::Mkdir(const std::string &path)
 
 int SFTPClient::Rmdir(const std::string &path, bool recursive)
 {
-    if (stop_activity)
+    if (Activities::Stopped())
         return 1;
 
     std::vector<DirEntry> list = ListDir(path);
     int ret;
     for (int i = 0; i < list.size(); i++)
     {
-        if (stop_activity)
+        if (Activities::Stopped())
             return 1;
 
         if (list[i].isDir && recursive)
@@ -247,7 +248,7 @@ int SFTPClient::Rmdir(const std::string &path)
     return 1;
 }
 
-int SFTPClient::Size(const std::string &path, int64_t *size)
+int SFTPClient::Size(const std::string &path, uint64_t *size)
 {
     LIBSSH2_SFTP_ATTRIBUTES attrs;
     int rc = libssh2_sftp_stat(sftp_session, path.c_str(), &attrs);
@@ -262,10 +263,12 @@ int SFTPClient::Size(const std::string &path, int64_t *size)
 
 int SFTPClient::Get(const std::string &outputfile, const std::string &path, uint64_t offset)
 {
-    if (!Size(path, &bytes_to_download))
+    uint64_t transfer_total = 0;
+    if (!Size(path, &transfer_total))
     {
         return 0;
     }
+    SetTotalBytes(transfer_total);
 
     LIBSSH2_SFTP_HANDLE *sftp_handle = libssh2_sftp_open(sftp_session, path.c_str(), LIBSSH2_FXF_READ, 0);
     if (!sftp_handle)
@@ -283,15 +286,17 @@ int SFTPClient::Get(const std::string &outputfile, const std::string &path, uint
 
     char *buff = (char *)malloc(FTP_CLIENT_BUFSIZ);
     int rc, count = 0;
-    bytes_transfered = 0;
-    sceRtcGetCurrentTick(&prev_tick);
+    ResetTransferredBytes();
 
     do
     {
+        if (Activities::Stopped())
+            break;
         rc = libssh2_sftp_read(sftp_handle, buff, FTP_CLIENT_BUFSIZ);
         if (rc > 0)
         {
-            bytes_transfered += rc;
+            AddTransferredBytes(rc);
+            Activities::ProgressCurrent(TransferredBytes(), TotalBytes());
             FS::Write(out, buff, rc);
         }
         else
@@ -320,6 +325,8 @@ int SFTPClient::Get(SplitFile *split_file, const std::string &path, uint64_t off
 
     do
     {
+        if (Activities::Stopped())
+            break;
         rc = libssh2_sftp_read(sftp_handle, buff, FTP_CLIENT_BUFSIZ);
         if (rc > 0)
         {
@@ -387,7 +394,7 @@ int SFTPClient::GetRange(void *fp, DataSink &sink, uint64_t size, uint64_t offse
 
 int SFTPClient::GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset)
 {
-    int64_t filesize;
+    uint64_t filesize;
     if (!Size(path.c_str(), &filesize))
     {
         return 0;
@@ -419,11 +426,13 @@ int SFTPClient::GetRange(void *fp, void *buffer, uint64_t size, uint64_t offset)
 
 int SFTPClient::Put(const std::string &inputfile, const std::string &path, uint64_t offset)
 {
+    uint64_t transfer_total = 0;
     char *ptr, *buff;
     int rc;
 
-    bytes_to_download = FS::GetSize(inputfile);
-    if (bytes_to_download < 0)
+    transfer_total = FS::GetSize(inputfile);
+    SetTotalBytes(transfer_total);
+    if (transfer_total < 0)
     {
         sprintf(response, "%s", lang_strings[STR_FAILED]);
         return 0;
@@ -449,11 +458,12 @@ int SFTPClient::Put(const std::string &inputfile, const std::string &path, uint6
 
     buff = (char *)malloc(FTP_CLIENT_BUFSIZ);
     int nread, count = 0;
-    bytes_transfered = 0;
-    sceRtcGetCurrentTick(&prev_tick);
+    ResetTransferredBytes();
 
     do
     {
+        if (Activities::Stopped())
+            break;
         nread = FS::Read(in, buff, FTP_CLIENT_BUFSIZ);
         if (nread <= 0)
         {
@@ -471,9 +481,10 @@ int SFTPClient::Put(const std::string &inputfile, const std::string &path, uint6
                 break;
             ptr += rc;
             nread -= rc;
-            bytes_transfered += rc;
-        } while (nread);
-    } while (rc > 0);
+            AddTransferredBytes(rc);
+            Activities::ProgressCurrent(TransferredBytes(), TotalBytes());
+        } while (nread && !Activities::Stopped());
+    } while (rc > 0 && !Activities::Stopped());
 
     libssh2_sftp_close(sftp_handle);
     FS::Close(in);
@@ -516,7 +527,8 @@ int SFTPClient::Move(const std::string &from, const std::string &to)
 
 int SFTPClient::Head(const std::string &path, void *buffer, uint64_t len)
 {
-    if (!Size(path.c_str(), &bytes_to_download))
+    uint64_t transfer_total = 0;
+    if (!Size(path.c_str(), &transfer_total))
     {
         return 0;
     }
@@ -537,7 +549,7 @@ int SFTPClient::Head(const std::string &path, void *buffer, uint64_t len)
 
 bool SFTPClient::FileExists(const std::string &path)
 {
-    int64_t file_size;
+    uint64_t file_size;
     return Size(path, &file_size);
 }
 

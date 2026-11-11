@@ -13,6 +13,7 @@
 #include "util.h"
 #include "windows.h"
 #include "system.h"
+#include "activity.h"
 
 #define GOOGLE_BUF_SIZE 262144
 
@@ -145,6 +146,18 @@ int GDriveClient::RequestAuthorization()
 
     return 1;
 }
+std::string GDriveClient::ResolvePathId(const std::string &path)
+{
+    std::string id = GetValue(path_id_map, path);
+    if (!id.empty())
+        return id;
+
+    // Web transfers start on a fresh client without a prior ListDir, so the
+    // path -> file-id map is empty. Walk the parent once to populate it.
+    if (FileExists(path))
+        id = GetValue(path_id_map, path);
+    return id;
+}
 
 std::string GDriveClient::GetDriveId(const std::string path)
 {
@@ -275,7 +288,7 @@ int GDriveClient::Head(const std::string &path, void *buffer, uint64_t len)
 {
     size_t bytes_read = 0;
     std::vector<char> body;
-    std::string id = GetValue(path_id_map, path);
+    std::string id = ResolvePathId(path);
     std::string drive_id = GetDriveId(path);
 
     std::string url = std::string("/drive/v3/files/") + BaseClient::Escape(id) + "?alt=media";
@@ -307,7 +320,7 @@ int GDriveClient::Head(const std::string &path, void *buffer, uint64_t len)
 
 std::string GDriveClient::GetDownloadUrl(const std::string &path)
 {
-    std::string id = GetValue(path_id_map, path);
+    std::string id = ResolvePathId(path);
     std::string drive_id = GetDriveId(path);
     std::string url = std::string("/drive/v3/files/") + BaseClient::Escape(id) + "?alt=media";
     if (!drive_id.empty())
@@ -318,11 +331,15 @@ std::string GDriveClient::GetDownloadUrl(const std::string &path)
 
 int GDriveClient::Get(const std::string &outputfile, const std::string &path, uint64_t offset)
 {
+    if (Activities::Stopped())
+        return 0;
     std::ofstream file_stream(outputfile, std::ios::binary);
-    bytes_transfered = 0;
-    sceRtcGetCurrentTick(&prev_tick);
+    ResetTransferredBytes();
+    uint64_t total = 0;
+    if (Size(path, &total))
+        SetTotalBytes(total);
 
-    std::string id = GetValue(path_id_map, path);
+    std::string id = ResolvePathId(path);
     std::string drive_id = GetDriveId(path);
     std::string url = std::string("/drive/v3/files/") + BaseClient::Escape(id) + "?alt=media";
     if (!drive_id.empty())
@@ -330,8 +347,11 @@ int GDriveClient::Get(const std::string &outputfile, const std::string &path, ui
     if (auto res = client->Get(url,
                                [&](const char *data, size_t data_length)
                                {
+                                   if (Activities::Stopped())
+                                       return false;
                                    file_stream.write(data, data_length);
-                                   bytes_transfered += data_length;
+                                   AddTransferredBytes(data_length);
+                                   Activities::ProgressCurrent(TransferredBytes(), TotalBytes());
                                    return true;
                                }))
     {
@@ -347,7 +367,7 @@ int GDriveClient::Get(const std::string &outputfile, const std::string &path, ui
 
 int GDriveClient::Get(SplitFile *split_file, const std::string &path, uint64_t offset)
 {
-    std::string id = GetValue(path_id_map, path);
+    std::string id = ResolvePathId(path);
     std::string drive_id = GetDriveId(path);
     std::string url = std::string("/drive/v3/files/") + BaseClient::Escape(id) + "?alt=media";
     if (!drive_id.empty())
@@ -355,9 +375,13 @@ int GDriveClient::Get(SplitFile *split_file, const std::string &path, uint64_t o
     if (auto res = client->Get(url,
                                [&](const char *data, size_t data_length)
                                {
+                                   if (Activities::Stopped())
+                                       return false;
                                    if (!split_file->IsClosed())
                                    {
                                         split_file->Write((char*)data, data_length);
+                                        AddTransferredBytes(data_length);
+                                        Activities::ProgressCurrent(TransferredBytes(), TotalBytes());
                                         return true;
                                    }
                                    else
@@ -375,7 +399,7 @@ int GDriveClient::Get(SplitFile *split_file, const std::string &path, uint64_t o
 
 int GDriveClient::GetRange(const std::string &path, DataSink &sink, uint64_t size, uint64_t offset)
 {
-    std::string id = GetValue(path_id_map, path);
+    std::string id = ResolvePathId(path);
     std::string drive_id = GetDriveId(path);
 
     std::string url = std::string("/drive/v3/files/") + BaseClient::Escape(id) + "?alt=media";
@@ -412,8 +436,11 @@ int GDriveClient::GetRange(const std::string &path, DataSink &sink, uint64_t siz
                            },
                            [&](const char *data, size_t data_length)
                            {
-                               if (!can_serve)
+                               if (!can_serve || Activities::Stopped())
+                               {
+                                   can_serve = false;
                                    return false;
+                               }
 
                                size_t copy = MIN(data_length, (size_t)(size - written));
                                if (copy > 0 && !sink.write(data, copy))
@@ -438,7 +465,7 @@ int GDriveClient::GetRange(const std::string &path, DataSink &sink, uint64_t siz
 
 int GDriveClient::GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset)
 {
-    std::string id = GetValue(path_id_map, path);
+    std::string id = ResolvePathId(path);
     std::string drive_id = GetDriveId(path);
 
     std::string url = std::string("/drive/v3/files/") + BaseClient::Escape(id) + "?alt=media";
@@ -478,8 +505,11 @@ int GDriveClient::GetRange(const std::string &path, void *buffer, uint64_t size,
                            },
                            [&](const char *data, size_t data_length)
                            {
-                               if (!can_serve)
+                               if (!can_serve || Activities::Stopped())
+                               {
+                                   can_serve = false;
                                    return false;
+                               }
 
                                size_t copy = MIN(data_length, (size_t)(size - copied));
                                memcpy(out + copied, data, copy);
@@ -500,12 +530,14 @@ int GDriveClient::GetRange(const std::string &path, void *buffer, uint64_t size,
 
 int GDriveClient::Update(const std::string &inputfile, const std::string &path)
 {
-    bytes_to_download = FS::GetSize(inputfile);
-    bytes_transfered = 0;
-    sceRtcGetCurrentTick(&prev_tick);
+    if (Activities::Stopped())
+        return 0;
+    uint64_t total = FS::GetSize(inputfile);
+    SetTotalBytes(total);
+    ResetTransferredBytes();
 
     std::ifstream file_stream(inputfile, std::ios::binary);
-    std::string id = GetValue(path_id_map, path);
+    std::string id = ResolvePathId(path);
     std::string drive_id = GetDriveId(path);
 
     std::string url = "/upload/drive/v3/files/" + BaseClient::Escape(id) + "?uploadType=resumable";
@@ -513,7 +545,7 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
         url += "&supportsAllDrives=true";
     Headers headers;
     headers.insert(std::make_pair("X-Upload-Content-Type", "application/octet-stream"));
-    headers.insert(std::make_pair("X-Upload-Content-Length", std::to_string(bytes_to_download)));
+    headers.insert(std::make_pair("X-Upload-Content-Length", std::to_string(total)));
     char *buf = new char[GOOGLE_BUF_SIZE];
 
     if (auto res = client->Patch(url))
@@ -523,22 +555,26 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
             std::string upload_uri = res->get_header_value("location");
             upload_uri = std::regex_replace(upload_uri, std::regex(GOOGLE_API_URL), "");
             Headers headers;
-            headers.insert(std::make_pair("Content-Length", std::to_string(bytes_to_download)));
-            std::string range_value = "bytes 0-" + std::to_string(bytes_to_download - 1) + "/" + std::to_string(bytes_to_download);
+            headers.insert(std::make_pair("Content-Length", std::to_string(total)));
+            std::string range_value = "bytes 0-" + std::to_string(total - 1) + "/" + std::to_string(total);
             headers.insert(std::make_pair("Content-Range", range_value));
 
             if (auto res = client->Put(
-                    upload_uri, bytes_to_download,
-                    [&file_stream, &buf](size_t offset, size_t length, DataSink &sink)
+                    upload_uri, total,
+                    [this, &file_stream, &buf](size_t offset, size_t length, DataSink &sink)
                     {
                         uint64_t count = 0;
                         uint64_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
                         do
                         {
+                            if (Activities::Stopped())
+                                return false;
                             file_stream.read(buf, bytes_to_transfer);
-                            sink.write(buf, bytes_to_transfer);
+                            if (!sink.write(buf, bytes_to_transfer))
+                                return false;
                             count += bytes_to_transfer;
-                            bytes_transfered += bytes_to_transfer;
+                            AddTransferredBytes(bytes_to_transfer);
+                                                Activities::ProgressCurrent(TransferredBytes(), TotalBytes());
                             bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
                         } while (count < length);
                         return true;
@@ -575,14 +611,14 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
                             uint64_t resume_offset = std::stol(Util::Split(Util::Split(range_val, "=")[1], "-")[1]);
 
                             Headers headers;
-                            headers.insert(std::make_pair("Content-Length", std::to_string(bytes_to_download-resume_offset)));
-                            std::string range_value = "bytes " + std::to_string(resume_offset + 1) + "_" + std::to_string(bytes_to_download-1);
+                            headers.insert(std::make_pair("Content-Length", std::to_string(total-resume_offset)));
+                            std::string range_value = "bytes " + std::to_string(resume_offset + 1) + "_" + std::to_string(total-1);
                             headers.insert(std::make_pair("Content-Range", range_value));
                             file_stream.seekg(resume_offset+1);
 
 
-                            if (res = client->Put(upload_uri, bytes_to_download-resume_offset,
-                                    [&file_stream, &buf](size_t offset, size_t length, DataSink &sink)
+                            if (res = client->Put(upload_uri, total-resume_offset,
+                                    [this, &file_stream, &buf](size_t offset, size_t length, DataSink &sink)
                                     {
                                         uint64_t count = 0;
                                         uint64_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
@@ -592,7 +628,8 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
                                             if (sink.write(buf, bytes_to_transfer))
                                             {
                                                 count += bytes_to_transfer;
-                                                bytes_transfered += bytes_to_transfer;
+                                                AddTransferredBytes(bytes_to_transfer);
+                                                Activities::ProgressCurrent(TransferredBytes(), TotalBytes());
                                                 bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
                                             }
                                             else
@@ -619,6 +656,12 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
                             return 0;
                         }
 
+                        if (Activities::Stopped())
+                        {
+                            delete[] buf;
+                            file_stream.close();
+                            return 0;
+                        }
                         // pause 5s before retrying
                         sceKernelUsleep(5000000);
                     }
@@ -645,15 +688,17 @@ int GDriveClient::Update(const std::string &inputfile, const std::string &path)
 
 int GDriveClient::Put(const std::string &inputfile, const std::string &path, uint64_t offset)
 {
+    if (Activities::Stopped())
+        return 0;
     if (path.find("/" + shared_with_me) != std::string::npos || path.compare("/") == 0)
         return 0;
 
     if (FileExists(path))
         return Update(inputfile, path);
 
-    bytes_to_download = FS::GetSize(inputfile);
-    bytes_transfered = 0;
-    sceRtcGetCurrentTick(&prev_tick);
+    uint64_t total = FS::GetSize(inputfile);
+    SetTotalBytes(total);
+    ResetTransferredBytes();
 
     std::ifstream file_stream(inputfile, std::ios::binary);
     size_t path_pos = path.find_last_of("/");
@@ -676,7 +721,7 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
                                         "\"parents\": [\"" + parent_id + "\"]}";
     Headers headers;
     headers.insert(std::make_pair("X-Upload-Content-Type", "application/octet-stream"));
-    headers.insert(std::make_pair("X-Upload-Content-Length", std::to_string(bytes_to_download)));
+    headers.insert(std::make_pair("X-Upload-Content-Length", std::to_string(total)));
     char *buf = new char[GOOGLE_BUF_SIZE];
 
     httplib::Result res;
@@ -687,23 +732,26 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
             std::string upload_uri = res->get_header_value("location");
             upload_uri = std::regex_replace(upload_uri, std::regex(GOOGLE_API_URL), "");
             Headers headers;
-            headers.insert(std::make_pair("Content-Length", std::to_string(bytes_to_download)));
-            std::string range_value = "bytes 0-" + std::to_string(bytes_to_download - 1) + "/" + std::to_string(bytes_to_download);
+            headers.insert(std::make_pair("Content-Length", std::to_string(total)));
+            std::string range_value = "bytes 0-" + std::to_string(total - 1) + "/" + std::to_string(total);
             headers.insert(std::make_pair("Content-Range", range_value));
 
             if (auto res = client->Put(
-                    upload_uri, bytes_to_download,
-                    [&file_stream, &buf](size_t offset, size_t length, DataSink &sink)
+                    upload_uri, total,
+                    [this, &file_stream, &buf](size_t offset, size_t length, DataSink &sink)
                     {
                         uint64_t count = 0;
                         uint64_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
                         do
                         {
+                            if (Activities::Stopped())
+                                return false;
                             file_stream.read(buf, bytes_to_transfer);
                             if (sink.write(buf, bytes_to_transfer))
                             {
                                 count += bytes_to_transfer;
-                                bytes_transfered += bytes_to_transfer;
+                                AddTransferredBytes(bytes_to_transfer);
+                                                Activities::ProgressCurrent(TransferredBytes(), TotalBytes());
                                 bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
                             }
                             else
@@ -746,13 +794,13 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
                             uint64_t resume_offset = std::stol(Util::Split(Util::Split(range_val, "=")[1], "-")[1]);
 
                             Headers headers;
-                            headers.insert(std::make_pair("Content-Length", std::to_string(bytes_to_download-resume_offset)));
-                            std::string range_value = "bytes " + std::to_string(resume_offset + 1) + "_" + std::to_string(bytes_to_download-1);
+                            headers.insert(std::make_pair("Content-Length", std::to_string(total-resume_offset)));
+                            std::string range_value = "bytes " + std::to_string(resume_offset + 1) + "_" + std::to_string(total-1);
                             headers.insert(std::make_pair("Content-Range", range_value));
                             file_stream.seekg(resume_offset+1);
 
-                            if (res = client->Put(upload_uri, bytes_to_download-resume_offset,
-                                    [&file_stream, &buf](size_t offset, size_t length, DataSink &sink)
+                            if (res = client->Put(upload_uri, total-resume_offset,
+                                    [this, &file_stream, &buf](size_t offset, size_t length, DataSink &sink)
                                     {
                                         uint64_t count = 0;
                                         uint64_t bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
@@ -762,7 +810,8 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
                                             if (sink.write(buf, bytes_to_transfer))
                                             {
                                                 count += bytes_to_transfer;
-                                                bytes_transfered += bytes_to_transfer;
+                                                AddTransferredBytes(bytes_to_transfer);
+                                                Activities::ProgressCurrent(TransferredBytes(), TotalBytes());
                                                 bytes_to_transfer = MIN(GOOGLE_BUF_SIZE, length - count);
                                             }
                                             else
@@ -789,6 +838,12 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
                             return 0;
                         }
 
+                        if (Activities::Stopped())
+                        {
+                            delete[] buf;
+                            file_stream.close();
+                            return 0;
+                        }
                         // pause 5s before retrying
                         sceKernelUsleep(5000000);
                     }
@@ -813,9 +868,9 @@ int GDriveClient::Put(const std::string &inputfile, const std::string &path, uin
     return 1;
 }
 
-int GDriveClient::Size(const std::string &path, int64_t *size)
+int GDriveClient::Size(const std::string &path, uint64_t *size)
 {
-    std::string id = GetValue(path_id_map, path);
+    std::string id = ResolvePathId(path);
     std::string drive_id = GetDriveId(path);
     std::string url = std::string("/drive/v3/files/") + BaseClient::Escape(id) + "?fields=size";
     if (!drive_id.empty())
@@ -905,7 +960,7 @@ int GDriveClient::Rmdir(const std::string &path, bool recursive)
     if (path.find("/" + shared_with_me) != std::string::npos)
         return 0;
 
-    std::string id = GetValue(path_id_map, path);
+    std::string id = ResolvePathId(path);
     std::string drive_id = GetDriveId(path);
 
     if (id.compare("root") == 0 || id.compare(drive_id) == 0)
@@ -930,7 +985,7 @@ int GDriveClient::Rmdir(const std::string &path, bool recursive)
 
 int GDriveClient::Delete(const std::string &path)
 {
-    std::string id = GetValue(path_id_map, path);
+    std::string id = ResolvePathId(path);
     std::string drive_id = GetDriveId(path);
     if (strcmp(id.c_str(), "root") == 0)
         return 0;

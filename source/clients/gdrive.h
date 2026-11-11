@@ -13,6 +13,9 @@ static pthread_t refresh_token_thid;
 static bool refresh_token_running = false;
 extern int login_state;
 
+std::string GetRedirectUrl();
+std::string GetScopes();
+
 class GDriveClient : public BaseClient
 {
 public:
@@ -28,7 +31,7 @@ public:
     int Put(const std::string &inputfile, const std::string &path, uint64_t offset=0);
     int Head(const std::string &path, void *buffer, uint64_t len);
     int Update(const std::string &inputfile, const std::string &path);
-    int Size(const std::string &path, int64_t *size);
+    int Size(const std::string &path, uint64_t *size);
     int Mkdir(const std::string &path);
     int Rmdir(const std::string &path, bool recursive);
     int Delete(const std::string &path);
@@ -50,6 +53,7 @@ private:
     int RequestAuthorization();
     std::string access_token;
     std::string GetDriveId(const std::string path);
+    std::string ResolvePathId(const std::string &path);
     std::map<std::string, std::string> path_id_map;
     std::map<std::string, std::string> shared_drive_map;
 };

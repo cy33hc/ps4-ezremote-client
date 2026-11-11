@@ -12,6 +12,7 @@
 #include <orbis/Net.h>
 #include "fs.h"
 #include "lang.h"
+#include "activity.h"
 #include "clients/nfsclient.h"
 #include "windows.h"
 #include "util.h"
@@ -140,14 +141,14 @@ int NfsClient::_Rmdir(const std::string &ppath)
  */
 int NfsClient::Rmdir(const std::string &path, bool recursive)
 {
-	if (stop_activity)
+	if (Activities::Stopped())
 		return 1;
 
 	std::vector<DirEntry> list = ListDir(path);
 	int ret;
 	for (int i = 0; i < list.size(); i++)
 	{
-		if (stop_activity)
+		if (Activities::Stopped())
 			return 1;
 
 		if (list[i].isDir && recursive)
@@ -190,11 +191,13 @@ int NfsClient::Rmdir(const std::string &path, bool recursive)
 
 int NfsClient::Get(const std::string &outputfile, const std::string &ppath, uint64_t offset)
 {
-	if (!Size(ppath.c_str(), &bytes_to_download))
+	uint64_t transfer_total = 0;
+	if (!Size(ppath.c_str(), &transfer_total))
 	{
 		sprintf(response, "%s", nfs_get_error(nfs));
 		return 0;
 	}
+	SetTotalBytes(transfer_total);
 
 	struct nfsfh *nfsfh = nullptr;
 	int ret = nfs_open(nfs, ppath.c_str(), 0400, &nfsfh);
@@ -213,9 +216,8 @@ int NfsClient::Get(const std::string &outputfile, const std::string &ppath, uint
 
 	void *buff = malloc(BUF_SIZE);
 	int count = 0;
-	bytes_transfered = 0;
-	sceRtcGetCurrentTick(&prev_tick);
-	while ((count = nfs_read(nfs, nfsfh, BUF_SIZE, buff)) > 0)
+	ResetTransferredBytes();
+	while (!Activities::Stopped() && (count = nfs_read(nfs, nfsfh, BUF_SIZE, buff)) > 0)
 	{
 		if (count < 0)
 		{
@@ -226,7 +228,8 @@ int NfsClient::Get(const std::string &outputfile, const std::string &ppath, uint
 			return 0;
 		}
 		FS::Write(out, buff, count);
-		bytes_transfered += count;
+		AddTransferredBytes(count);
+		Activities::ProgressCurrent(TransferredBytes(), TotalBytes());
 	}
 	FS::Close(out);
 	nfs_close(nfs, nfsfh);
@@ -405,8 +408,10 @@ bool NfsClient::FileExists(const std::string &ppath)
  */
 int NfsClient::Put(const std::string &inputfile, const std::string &ppath, uint64_t offset)
 {
-	bytes_to_download = FS::GetSize(inputfile);
-	if (bytes_to_download < 0)
+    uint64_t transfer_total = 0;
+	transfer_total = FS::GetSize(inputfile);
+	SetTotalBytes(transfer_total);
+	if (transfer_total < 0)
 	{
 		sprintf(response, "%s", lang_strings[STR_FAILED]);
 		return 0;
@@ -436,9 +441,8 @@ int NfsClient::Put(const std::string &inputfile, const std::string &ppath, uint6
 
 	void *buff = malloc(BUF_SIZE);
 	int count = 0;
-	bytes_transfered = 0;
-	sceRtcGetCurrentTick(&prev_tick);
-	while ((count = FS::Read(in, buff, BUF_SIZE)) != 0)
+	ResetTransferredBytes();
+	while (!Activities::Stopped() && (count = FS::Read(in, buff, BUF_SIZE)) != 0)
 	{
 		if (count < 0)
 		{
@@ -458,7 +462,8 @@ int NfsClient::Put(const std::string &inputfile, const std::string &ppath, uint6
 			free(buff);
 			return 0;
 		}
-		bytes_transfered += count;
+		AddTransferredBytes(count);
+    Activities::ProgressCurrent(TransferredBytes(), TotalBytes());
 	}
 	FS::Close(in);
 	nfs_close(nfs, nfsfh);
@@ -489,7 +494,7 @@ int NfsClient::Delete(const std::string &ppath)
 	return 1;
 }
 
-int NfsClient::Size(const std::string &ppath, int64_t *size)
+int NfsClient::Size(const std::string &ppath, uint64_t *size)
 {
 	nfs_stat_64 st;
 	int ret = nfs_stat64(nfs, ppath.c_str(), &st);

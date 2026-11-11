@@ -2,13 +2,15 @@
 #define EZ_ACTIONS_H
 
 #include <pthread.h>
-#include "installer.h"
 #include "common.h"
+#include "installer.h"
 
 #define CONFIRM_NONE -1
 #define CONFIRM_WAIT 0
 #define CONFIRM_YES 1
 #define CONFIRM_NO 2
+#define CONFIRM_ALL 3
+#define CONFIRM_CANCEL 4
 
 enum ACTIONS
 {
@@ -73,6 +75,9 @@ static pthread_t ftp_keep_alive_thid;
 namespace Actions
 {
 
+    // Creates the client that matches a site's URL scheme, without connecting.
+    RemoteClient *CreateRemoteClient(RemoteSettings *settings);
+
     void RefreshLocalFiles(bool apply_filter);
     void RefreshRemoteFiles(bool apply_filter);
     void HandleChangeLocalDirectory(const DirEntry entry);
@@ -113,18 +118,29 @@ namespace Actions
     void MoveLocalFiles();
     void *CopyLocalFilesThread(void *argp);
     void CopyLocalFiles();
+    std::string UniqueLocalName(const std::string &dir, const std::string &name);
     void *MoveRemoteFilesThread(void *argp);
     void MoveRemoteFiles();
     void *CopyRemoteFilesThread(void *argp);
     void CopyRemoteFiles();
+    int DownloadAndInstallPkg(const std::string &filename, pkg_header *header, RemoteClient *client);
     int DownloadAndInstallPkg(const std::string &filename, pkg_header *header);
     int DownloadAndInstallPkg(RemoteClient *client, const std::string &path, pkg_header *header);
+    int InstallPkgByDownload(RemoteClient *client, const std::string &path, pkg_header *header);
+    int InstallPkgByStreaming(RemoteClient *stream_client, const std::string &stream_path,
+                              const std::string &cache_key);
+    int InstallPkgByProxy(const std::string &url, pkg_header *header, const std::string &title);
+    bool DeleteRemoteTree(RemoteClient *client, const std::string &path, int depth = 0);
+    int InstallRemotePkgFile(RemoteSettings *settings, RemoteClient *client, const std::string &path,
+                             pkg_header *header, uint64_t file_size);
     void CreateLocalFile(char *filename);
     void CreateRemoteFile(char *filename);
     void *ExtractArchivePkg(void *argp);
     void *DownloadSplitPkg(void *argp);
     void RestartServer();
+    void StopServer();
     void GetBackgroundDownloadProgress();
+    int ClearDownloadHistory();
 }
 
 #endif

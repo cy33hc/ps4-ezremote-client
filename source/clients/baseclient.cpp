@@ -1,6 +1,7 @@
 #include <fstream>
 #include <curl/curl.h>
 #include "common.h"
+#include "activity.h"
 #include "clients/remote_client.h"
 #include "clients/baseclient.h"
 #include "lang.h"
@@ -103,7 +104,7 @@ int BaseClient::Rmdir(const std::string &path, bool recursive)
     return 0;
 }
 
-int BaseClient::Size(const std::string &path, int64_t *size)
+int BaseClient::Size(const std::string &path, uint64_t *size)
 {
     Headers headers;
     SetCookies(headers);
@@ -155,8 +156,10 @@ int BaseClient::Size(const std::string &path, int64_t *size)
 int BaseClient::Get(const std::string &outputfile, const std::string &path, uint64_t offset)
 {
     std::ofstream file_stream(outputfile, std::ios::binary);
-    bytes_transfered = 0;
-    sceRtcGetCurrentTick(&prev_tick);
+    ResetTransferredBytes();
+    uint64_t transfer_total = 0;
+    if (Size(path, &transfer_total))
+        SetTotalBytes(transfer_total);
     Headers headers;
     SetCookies(headers);
 
@@ -164,8 +167,9 @@ int BaseClient::Get(const std::string &outputfile, const std::string &path, uint
                                [&](const char *data, size_t data_length)
                                {
                                    file_stream.write(data, data_length);
-                                   bytes_transfered += data_length;
-                                   return true;
+                                   AddTransferredBytes(data_length);
+                                   Activities::ProgressCurrent(TransferredBytes(), TotalBytes());
+                                   return !Activities::Stopped();
                                }))
     {
         file_stream.close();
@@ -186,7 +190,7 @@ int BaseClient::Get(SplitFile *split_file, const std::string &path, uint64_t off
     if (auto res = client->Get(GetFullPath(path), headers,
                                [&](const char *data, size_t data_length)
                                {
-                                   if (!split_file->IsClosed())
+                                   if (!split_file->IsClosed() && !Activities::Stopped())
                                    {
                                         split_file->Write((char*)data, data_length);
                                         return true;
@@ -239,7 +243,7 @@ int BaseClient::GetRange(const std::string &path, DataSink &sink, uint64_t size,
                            },
                            [&](const char *data, size_t data_length)
                            {
-                               if (!can_serve)
+                               if (!can_serve || Activities::Stopped())
                                    return false;
 
                                size_t copy = MIN(data_length, (size_t)(size - written));
@@ -301,7 +305,7 @@ int BaseClient::GetRange(const std::string &path, void *buffer, uint64_t size, u
                            },
                            [&](const char *data, size_t data_length)
                            {
-                               if (!can_serve)
+                               if (!can_serve || Activities::Stopped())
                                    return false;
 
                                size_t copy = MIN(data_length, (size_t)(size - copied));
@@ -384,7 +388,7 @@ int BaseClient::Head(const std::string &path, void *buffer, uint64_t len)
 
 bool BaseClient::FileExists(const std::string &path)
 {
-    int64_t file_size;
+    uint64_t file_size;
     return Size(path, &file_size);
 }
 

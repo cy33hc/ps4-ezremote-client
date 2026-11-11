@@ -15,9 +15,6 @@
 
 extern int view_mode;
 extern bool handle_updates;
-extern int64_t bytes_transfered;
-extern int64_t bytes_to_download;
-extern OrbisTick prev_tick;
 extern std::vector<DirEntry> local_files;
 extern std::vector<DirEntry> remote_files;
 extern std::set<DirEntry> multi_selected_local_files;
@@ -36,12 +33,15 @@ extern char local_filter[];
 extern char remote_filter[];
 extern char activity_message[];
 extern char confirm_message[];
-extern bool activity_inprogess;
-extern bool stop_activity;
 extern int confirm_state;
+// Which button set the confirmation dialog shows.
+#define CONFIRM_KIND_YESNO 0
+#define CONFIRM_KIND_OVERWRITE 1
+extern int confirm_kind;
 extern int overwrite_type;
+extern bool dont_prompt_overwrite;
+extern bool dont_prompt_overwrite_cb;
 extern ACTIONS action_to_take;
-extern bool file_transfering;
 extern char extract_zip_folder[];
 extern char zip_file_path[];
 extern std::vector<std::string> edit_buffer;

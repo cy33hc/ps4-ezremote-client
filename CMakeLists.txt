@@ -48,9 +48,11 @@ add_executable(ezremote_client
   source/filehost/pixeldrain.cpp
   source/server/http_server.cpp
   source/actions.cpp
+  source/activity.cpp
   source/config.cpp
   source/crypt.c
   source/fs.cpp
+  source/fonts.cpp
   source/gui.cpp
   source/getentropy.c
   source/ime_dialog.cpp
@@ -66,6 +68,8 @@ add_executable(ezremote_client
   source/zip_util.cpp
   source/split_file.cpp
   source/mem_file.cpp
+  source/file_stream.cpp
+  source/remote_pool.cpp
 )
 
 target_link_libraries(ezremote_client
@@ -116,13 +120,6 @@ target_link_libraries(ezremote_client
 
 add_self(ezremote_client)
 add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "02.09" 32 0)
-
-add_custom_target(package
-  COMMAND mkdir -p ${PROJECT_SOURCE_DIR}/data/daemon
-  COMMAND cp ${PROJECT_SOURCE_DIR}/ps4-ezremote-server/data/eboot.bin ${PROJECT_SOURCE_DIR}/data/daemon/daemon.self
-  COMMAND cp ${PROJECT_SOURCE_DIR}/ps4-ezremote-server/data/eboot.md5 ${PROJECT_SOURCE_DIR}/data/daemon/daemon.md5
-  COMMAND cp ${PROJECT_SOURCE_DIR}/ps4-ezremote-server/data/sce_sys/param.sfo ${PROJECT_SOURCE_DIR}/data/daemon/param
-)
 
 set(PS4_FTP_URL "ftp://192.168.100.70:2121/data/pkg" CACHE STRING "PS4 FTP folder the package is uploaded to")
 add_custom_target(upload

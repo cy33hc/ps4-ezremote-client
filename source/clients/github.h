@@ -13,7 +13,7 @@ class GithubClient : public BaseClient
 public:
     int Connect(const std::string &url, const std::string &username, const std::string &password, bool send_ping=false);
     std::vector<DirEntry> ListDir(const std::string &path);
-    int Size(const std::string &path, int64_t *size);
+    int Size(const std::string &path, uint64_t *size);
     int Get(const std::string &outputfile, const std::string &path, uint64_t offset=0);
     int Get(SplitFile *split_file, const std::string &path, uint64_t offset=0);
     int GetRange(const std::string &path, void *buffer, uint64_t size, uint64_t offset);

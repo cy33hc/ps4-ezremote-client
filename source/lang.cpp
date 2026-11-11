@@ -4,6 +4,8 @@
 #include "config.h"
 #include "util.h"
 #include "lang.h"
+#include <map>
+#include <dirent.h>
 
 char lang_identifiers[LANG_STRINGS_NUM][LANG_ID_SIZE] = {
 	FOREACH_STR(GET_STRING)};
@@ -110,6 +112,7 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Cut",																							  // STR_CUT
 	"Copy",																							  // STR_COPY
 	"Paste",																						  // STR_PASTE
+	"Move",																										  // STR_MOVE
 	"Moving",																						  // STR_MOVING
 	"Copying",																						  // STR_COPYING
 	"Failed to move file",																			  // STR_FAIL_MOVE_MSG
@@ -189,12 +192,184 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Minimum background file size (bytes)",                                                           // STR_BG_DOWNLOAD_MIN_SIZE
 	"Background Download Progress",                                                                   // STR_BG_DOWNLOAD_PROGRESS
 	"Show Background Download Progress",                                                              // STR_SHOW_BG_DOWNLOAD_PROGRESS
+	"Running",																									  // STR_STATE_RUNNING
+	"Done",																										  // STR_STATE_DONE
+	"Failed",																									  // STR_STATE_FAILED
+	"Cancelled",																								  // STR_STATE_CANCELLED
+	"Partial",																									  // STR_STATE_PARTIAL
+	"Native",																									  // STR_ORIGIN_NATIVE
+	"Web",																										  // STR_ORIGIN_WEB
+	"Activities",																								  // STR_ACTIVITIES
+	"Clear completed",																						  // STR_CLEAR_COMPLETED
+	"Clear history",																								  // STR_CLEAR_HISTORY
+	"Show activities dialog on new activity",											  // STR_SHOW_ACTIVITIES_DIALOG
+	"Skip",																											  // STR_SKIP
+	"Always overwrite",																						  // STR_ALWAYS_OVERWRITE
+	"Cancelling…",																								  // STR_CANCELLING
 };
 
 bool needs_extended_font = false;
 
+static std::map<std::string, std::string> lang_file_cache;
+
+// /app0 files become unreadable once the app has been running for a while
+// (the same reason the font files had to be cached), so snapshot every
+// language file on first use and parse from memory afterwards.
+// Before JBC only /app0 is readable; afterwards the pfsmnt path is. Try both.
+static bool ReadLanguageFile(const std::string &name, std::string *out)
+{
+    const char *roots[] = {
+        "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/",
+        "/app0/assets/langs/",
+    };
+    for (size_t i = 0; i < sizeof(roots) / sizeof(roots[0]); i++)
+    {
+        std::string path = std::string(roots[i]) + name;
+        FILE *fp = fopen(path.c_str(), "rb");
+        if (fp == nullptr)
+            continue;
+        fseek(fp, 0, SEEK_END);
+        long size = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+        if (size > 0)
+        {
+            std::string content;
+            content.resize((size_t) size);
+            size_t read = fread(&content[0], 1, content.size(), fp);
+            if (read == content.size())
+            {
+                *out = content;
+                fclose(fp);
+                return true;
+            }
+        }
+        fclose(fp);
+    }
+    return false;
+}
+
+static void CacheLanguageFiles()
+{
+	if (!lang_file_cache.empty())
+		return;
+
+	// Read the known language list first; this covers every shipped file even
+	// if directory enumeration is restricted.
+	for (size_t i = 0; i < langs.size(); i++)
+	{
+		if (langs[i].compare("Default") == 0)
+			continue;
+
+		std::string name = langs[i] + ".ini";
+		std::string content;
+		if (ReadLanguageFile(name, &content))
+			lang_file_cache[name] = content;
+	}
+
+	const char *lang_root = "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs";
+	DIR *dir = opendir(lang_root);
+	if (dir == nullptr)
+	{
+		lang_root = "/app0/assets/langs";
+		dir = opendir(lang_root);
+	}
+	if (dir == nullptr)
+		return;
+
+	struct dirent *entry;
+	while ((entry = readdir(dir)) != nullptr)
+	{
+		std::string name = entry->d_name;
+		if (name.size() < 5 || name.compare(name.size() - 4, 4, ".ini") != 0)
+			continue;
+
+		std::string content;
+		if (ReadLanguageFile(name, &content))
+			lang_file_cache[name] = content;
+	}
+
+	closedir(dir);
+}
+
+static void ParseLanguageContent(const std::string &content)
+{
+	size_t pos = 0;
+	while (pos < content.size())
+	{
+		size_t end = content.find('\n', pos);
+		std::string line = content.substr(pos, end == std::string::npos ? std::string::npos : end - pos);
+		pos = (end == std::string::npos) ? content.size() : end + 1;
+
+		if (!line.empty() && line[line.size() - 1] == '\r')
+			line.erase(line.size() - 1);
+
+		size_t separator = line.find('=');
+		if (separator == std::string::npos)
+			continue;
+
+		std::string key = line.substr(0, separator);
+		std::string value = line.substr(separator + 1);
+
+		for (int i = 0; i < LANG_STRINGS_NUM; i++)
+		{
+			if (key.compare(lang_identifiers[i]) != 0)
+				continue;
+
+			std::string unescaped;
+			unescaped.reserve(value.size());
+			for (size_t c = 0; c < value.size(); c++)
+			{
+				if (value[c] == '\\' && c + 1 < value.size() && value[c + 1] == 'n')
+				{
+					unescaped += '\n';
+					c++;
+				}
+				else
+				{
+					unescaped += value[c];
+				}
+			}
+
+			strncpy(lang_strings[i], unescaped.c_str(), LANG_STR_SIZE - 1);
+			lang_strings[i][LANG_STR_SIZE - 1] = '\0';
+			break;
+		}
+	}
+}
+
 namespace Lang
 {
+	static bool reload_pending = false;
+	static std::string applied_language;
+	static int32_t system_lang_idx = 0;
+
+	void SetSystemLangIndex(int32_t lang_idx)
+	{
+		system_lang_idx = lang_idx;
+	}
+
+	void RequestReload()
+	{
+		reload_pending = true;
+	}
+
+	void SyncRequest()
+	{
+		if (applied_language != std::string(language))
+			reload_pending = true;
+	}
+
+	bool ApplyPendingReload()
+	{
+		if (!reload_pending)
+			return false;
+
+		reload_pending = false;
+		SetTranslation(system_lang_idx);
+		applied_language = std::string(language);
+		return true;
+	}
+
 	void SetTranslation(int32_t lang_idx)
 	{
 		char langFile[LANG_STR_SIZE * 2];
@@ -204,109 +379,118 @@ namespace Lang
 		lang = Util::Trim(lang, " ");
 		if (lang.size() > 0 && lang.compare("Default") != 0)
 		{
-			sprintf(langFile, "/app0/assets/langs/%s.ini", lang.c_str());
+			sprintf(langFile, "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/%s.ini", lang.c_str());
 		}
 		else
 		{
 			switch (lang_idx)
 			{
 			case ORBIS_SYSTEM_PARAM_LANG_ITALIAN:
-				sprintf(langFile, "%s", "/app0/assets/langs/Italiano.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Italiano.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_SPANISH:
 			case ORBIS_SYSTEM_PARAM_LANG_SPANISH_LA:
-				sprintf(langFile, "%s", "/app0/assets/langs/Spanish.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Spanish.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_GERMAN:
-				sprintf(langFile, "%s", "/app0/assets/langs/German.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/German.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_PORTUGUESE_PT:
 			case ORBIS_SYSTEM_PARAM_LANG_PORTUGUESE_BR:
-				sprintf(langFile, "%s", "/app0/assets/langs/Portuguese_BR.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Portuguese_BR.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_RUSSIAN:
-				sprintf(langFile, "%s", "/app0/assets/langs/Russian.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Russian.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_DUTCH:
-				sprintf(langFile, "%s", "/app0/assets/langs/Dutch.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Dutch.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_FRENCH:
 			case ORBIS_SYSTEM_PARAM_LANG_FRENCH_CA:
-				sprintf(langFile, "%s", "/app0/assets/langs/French.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/French.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_POLISH:
-				sprintf(langFile, "%s", "/app0/assets/langs/Polish.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Polish.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_JAPANESE:
-				sprintf(langFile, "%s", "/app0/assets/langs/Japanese.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Japanese.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_KOREAN:
-				sprintf(langFile, "%s", "/app0/assets/langs/Korean.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Korean.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_CHINESE_S:
-				sprintf(langFile, "%s", "/app0/assets/langs/Simplified Chinese.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Simplified Chinese.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_CHINESE_T:
-				sprintf(langFile, "%s", "/app0/assets/langs/Traditional Chinese.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Traditional Chinese.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_INDONESIAN:
-				sprintf(langFile, "%s", "/app0/assets/langs/Indonesian.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Indonesian.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_HUNGARIAN:
-				sprintf(langFile, "%s", "/app0/assets/langs/Hungarian.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Hungarian.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_GREEK:
-				sprintf(langFile, "%s", "/app0/assets/langs/Greek.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Greek.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_VIETNAMESE:
-				sprintf(langFile, "%s", "/app0/assets/langs/Vietnamese.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Vietnamese.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_TURKISH:
-				sprintf(langFile, "%s", "/app0/assets/langs/Turkish.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Turkish.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_ARABIC:
-				sprintf(langFile, "%s", "/app0/assets/langs/Arabic.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Arabic.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_ROMANIAN:
-				sprintf(langFile, "%s", "/app0/assets/langs/Romanian.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Romanian.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_NORWEGIAN:
-				sprintf(langFile, "%s", "/app0/assets/langs/Norwegian.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Norwegian.ini");
 				break;
 			default:
-				sprintf(langFile, "%s", "/app0/assets/langs/English.ini");
+				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/English.ini");
 				break;
 			}
 		}
 
-		FILE *config = fopen(langFile, "r");
-		if (config)
+		CacheLanguageFiles();
+
+		std::string fileName = langFile;
+		size_t slash = fileName.find_last_of('/');
+		std::string baseName = (slash == std::string::npos) ? fileName : fileName.substr(slash + 1);
+
+		std::map<std::string, std::string>::iterator cached = lang_file_cache.find(baseName);
+		if (cached != lang_file_cache.end())
 		{
-			while (EOF != fscanf(config, "%[^=]=%[^\n]\n", identifier, buffer))
+			ParseLanguageContent(cached->second);
+		}
+		else
+		{
+			std::string content;
+			if (ReadLanguageFile(baseName, &content))
 			{
-				for (int i = 0; i < LANG_STRINGS_NUM; i++)
+				ParseLanguageContent(content);
+			}
+			else
+			{
+				FILE *config = fopen(langFile, "r");
+				if (config)
 				{
-					if (strcmp(lang_identifiers[i], identifier) == 0)
-					{
-						char *newline = nullptr, *p = buffer;
-						while ((newline = strstr(p, "\\n")) != NULL)
-						{
-							newline[0] = '\n';
-							int len = strlen(&newline[2]);
-							memmove(&newline[1], &newline[2], len);
-							newline[len + 1] = 0;
-							p++;
-						}
-						strcpy(lang_strings[i], buffer);
-					}
+					char chunk[4096];
+					size_t read;
+					while ((read = fread(chunk, 1, sizeof(chunk), config)) > 0)
+						content.append(chunk, read);
+					fclose(config);
+					ParseLanguageContent(content);
 				}
 			}
-			fclose(config);
 		}
 
 		char buf[12];
 		int num;
 		sscanf(last_site, "%[^ ] %d", buf, &num);
 		sprintf(display_site, "%s %d", lang_strings[STR_SITE], num);
+		applied_language = std::string(language);
 	}
 }

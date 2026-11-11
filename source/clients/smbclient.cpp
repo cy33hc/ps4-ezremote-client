@@ -12,6 +12,7 @@
 #include <orbis/Net.h>
 #include "fs.h"
 #include "lang.h"
+#include "activity.h"
 #include "clients/smbclient.h"
 #include "windows.h"
 #include "util.h"
@@ -148,14 +149,14 @@ int SmbClient::_Rmdir(const std::string &ppath)
  */
 int SmbClient::Rmdir(const std::string &path, bool recursive)
 {
-	if (stop_activity)
+	if (Activities::Stopped())
 		return 1;
 
 	std::vector<DirEntry> list = ListDir(path);
 	int ret;
 	for (int i = 0; i < list.size(); i++)
 	{
-		if (stop_activity)
+		if (Activities::Stopped())
 			return 1;
 
 		if (list[i].isDir && recursive)
@@ -198,9 +199,10 @@ int SmbClient::Rmdir(const std::string &path, bool recursive)
 
 int SmbClient::Get(const std::string &outputfile, const std::string &ppath, uint64_t offset)
 {
+	uint64_t transfer_total = 0;
 	std::string path = std::string(ppath);
 	path = Util::Trim(path, "/");
-	if (!Size(path.c_str(), &bytes_to_download))
+	if (!Size(path.c_str(), &transfer_total))
 	{
 		snprintf(response, sizeof(response), "%s", smb2_get_error(smb2));
 		return 0;
@@ -230,10 +232,9 @@ int SmbClient::Get(const std::string &outputfile, const std::string &ppath, uint
 		return 0;
 	}
 	int count = 0;
-	bytes_transfered = 0;
-	sceRtcGetCurrentTick(&prev_tick);
+	ResetTransferredBytes();
 
-	while ((count = smb2_read(smb2, in, buff, max_read_size)) != 0)
+	while (!Activities::Stopped() && (count = smb2_read(smb2, in, buff, max_read_size)) != 0)
 	{
 		if (count < 0)
 		{
@@ -244,7 +245,8 @@ int SmbClient::Get(const std::string &outputfile, const std::string &ppath, uint
 			return 0;
 		}
 		FS::Write(out, buff, count);
-		bytes_transfered += count;
+		AddTransferredBytes(count);
+    Activities::ProgressCurrent(TransferredBytes(), TotalBytes());
 	}
 	FS::Close(out);
 	smb2_close(smb2, in);
@@ -272,7 +274,7 @@ int SmbClient::Get(SplitFile *split_file, const std::string &ppath, uint64_t off
 	}
 	int count = 0;
 
-	while ((count = smb2_read(smb2, in, buff, max_read_size)) != 0)
+	while (!Activities::Stopped() && (count = smb2_read(smb2, in, buff, max_read_size)) != 0)
 	{
 		if (count < 0)
 		{
@@ -348,7 +350,7 @@ int SmbClient::GetRange(const std::string &ppath, void *buffer, uint64_t size, u
 {
 	std::string path = std::string(ppath);
 	path = Util::Trim(path, "/");
-	int64_t filesize;
+	uint64_t filesize;
 	if (!Size(path.c_str(), &filesize))
 	{
 		return 0;
@@ -469,11 +471,13 @@ bool SmbClient::FileExists(const std::string &ppath)
  */
 int SmbClient::Put(const std::string &inputfile, const std::string &ppath, uint64_t offset)
 {
+	uint64_t transfer_total = 0;
 	std::string path = std::string(ppath);
 	path = Util::Trim(path, "/");
 
-	bytes_to_download = FS::GetSize(inputfile);
-	if (bytes_to_download < 0)
+	transfer_total = FS::GetSize(inputfile);
+	SetTotalBytes(transfer_total);
+	if (transfer_total < 0)
 	{
 		sprintf(response, "%s", lang_strings[STR_FAILED]);
 		return 0;
@@ -503,10 +507,9 @@ int SmbClient::Put(const std::string &inputfile, const std::string &ppath, uint6
 		return 0;
 	}
 	int count = 0;
-	bytes_transfered = 0;
-	sceRtcGetCurrentTick(&prev_tick);
+	ResetTransferredBytes();
 
-	while ((count = FS::Read(in, buff, max_write_size)) > 0)
+	while (!Activities::Stopped() && (count = FS::Read(in, buff, max_write_size)) > 0)
 	{
 		if (count < 0)
 		{
@@ -524,7 +527,8 @@ int SmbClient::Put(const std::string &inputfile, const std::string &ppath, uint6
 			free(buff);
 			return 0;
 		}
-		bytes_transfered += count;
+		AddTransferredBytes(count);
+		Activities::ProgressCurrent(TransferredBytes(), TotalBytes());
 	}
 	FS::Close(in);
 	smb2_close(smb2, out);
@@ -561,7 +565,7 @@ int SmbClient::Delete(const std::string &ppath)
 	return 1;
 }
 
-int SmbClient::Size(const std::string &ppath, int64_t *size)
+int SmbClient::Size(const std::string &ppath, uint64_t *size)
 {
 	std::string path = std::string(ppath);
 	path = Util::Trim(path, "/");
@@ -658,9 +662,10 @@ std::string SmbClient::GetPath(std::string ppath1, std::string ppath2)
 
 int SmbClient::Head(const std::string &ppath, void *buffer, uint64_t len)
 {
+	uint64_t transfer_total = 0;
 	std::string path = std::string(ppath);
 	path = Util::Trim(path, "/");
-	if (!Size(path.c_str(), &bytes_to_download))
+	if (!Size(path.c_str(), &transfer_total))
 	{
 		return 0;
 	}

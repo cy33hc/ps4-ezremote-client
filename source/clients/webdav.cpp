@@ -8,6 +8,7 @@
 #include "util.h"
 #include "system.h"
 #include "windows.h"
+#include "activity.h"
 
 using httplib::Client;
 using httplib::ContentProvider;
@@ -43,7 +44,7 @@ Result WebDAVClient::PropFind(const std::string &path, int depth)
     return client->send(req);
 }
 
-int WebDAVClient::Size(const std::string &path, int64_t *size)
+int WebDAVClient::Size(const std::string &path, uint64_t *size)
 {
     std::string encoded_path = httplib::detail::encode_url(GetFullPath(path));
     if (auto res = PropFind(encoded_path, 0))
@@ -194,8 +195,8 @@ std::vector<DirEntry> WebDAVClient::ListDir(const std::string &path)
 int WebDAVClient::Put(const std::string &inputfile, const std::string &path, uint64_t offset)
 {
     size_t bytes_remaining = FS::GetSize(inputfile);
-    bytes_transfered = 0;
-    sceRtcGetCurrentTick(&prev_tick);
+    SetTotalBytes(bytes_remaining);
+    ResetTransferredBytes();
 
     FILE *in = FS::OpenRead(inputfile);
 
@@ -207,9 +208,15 @@ int WebDAVClient::Put(const std::string &inputfile, const std::string &path, uin
 
             while (bytes_remaining > 0)
             {
+                if (Activities::Stopped())
+                {
+                    free(buf);
+                    return false;
+                }
                 size_t bytes_read = FS::Read(in, buf, buf_size);
                 sink.write(buf, bytes_read);
-                bytes_transfered += bytes_read;
+                AddTransferredBytes(bytes_read);
+                Activities::ProgressCurrent(TransferredBytes(), TotalBytes());
                 bytes_remaining -= bytes_read;
             }
             sink.done();

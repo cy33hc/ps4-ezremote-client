@@ -4,6 +4,7 @@
 #include <cstring>
 #include <map>
 #include <vector>
+#include <mutex>
 #include <regex>
 #include <stdlib.h>
 #include "server/http_server.h"
@@ -24,6 +25,13 @@ char local_directory[255];
 char remote_directory[255];
 char app_ver[6];
 char last_site[32];
+char web_last_site[32];
+char web_password[256];
+int web_session_timeout = 60;
+
+// Serialises the ini writers: the HTTP worker threads and the native render
+// thread both call CONFIG::Save*() and the ini layer is not re-entrant.
+static std::mutex config_write_mutex;
 char display_site[32];
 std::vector<std::string> langs;
 char language[128];
@@ -43,6 +51,7 @@ char realdebrid_api_key[64];
 char temp_folder[256];
 std::string ezremote_server_version;
 bool enable_background_download;
+bool show_activity_dialog = true;
 uint64_t minimum_backgrond_file_size;
 
 unsigned char cipher_key[32] = {'s', '5', 'v', '8', 'y', '/', 'B', '?', 'E', '(', 'H', '+', 'M', 'b', 'Q', 'e', 'T', 'h', 'W', 'm', 'Z', 'q', '4', 't', '7', 'w', '9', 'z', '$', 'C', '&', 'F'};
@@ -201,6 +210,9 @@ namespace CONFIG
 
         enable_background_download = ReadBool(CONFIG_GLOBAL, CONFIG_ENABLE_BG_DOWNLOAD, true);
         WriteBool(CONFIG_GLOBAL, CONFIG_ENABLE_BG_DOWNLOAD, enable_background_download);
+
+        show_activity_dialog = ReadBool(CONFIG_GLOBAL, CONFIG_SHOW_ACTIVITY_DIALOG, true);
+        WriteBool(CONFIG_GLOBAL, CONFIG_SHOW_ACTIVITY_DIALOG, show_activity_dialog);
 
         minimum_backgrond_file_size = ReadLong(CONFIG_GLOBAL, CONFIG_BG_DOWNLOAD_SIZE, 1024*1024*1024);
         WriteLong(CONFIG_GLOBAL, CONFIG_BG_DOWNLOAD_SIZE, minimum_backgrond_file_size);
@@ -364,9 +376,32 @@ namespace CONFIG
         remote_settings = &site_settings[std::string(last_site)];
         sprintf(remote_directory, "%s", remote_settings->default_directory);
 
+        // The web UI selects a site independently of the native UI's last_site.
+        char stored_web_password[512];
+        sprintf(stored_web_password, "%s", ReadString(CONFIG_GLOBAL, CONFIG_WEB_PASSWORD, ""));
+        web_password[0] = '\0';
+        if (strlen(stored_web_password) > 0)
+        {
+            std::string decrypted_password;
+            if (Decrypt(stored_web_password, decrypted_password) == 0)
+                sprintf(web_password, "%s", stored_web_password);
+            else
+                sprintf(web_password, "%s", decrypted_password.c_str());
+        }
+
+        web_session_timeout = ReadInt(CONFIG_GLOBAL, CONFIG_WEB_SESSION_TIMEOUT, 60);
+        if (web_session_timeout < 1)
+            web_session_timeout = 60;
+
+        sprintf(web_last_site, "%s", ReadString(CONFIG_GLOBAL, CONFIG_WEB_LAST_SITE, last_site));
+        if (site_settings.find(std::string(web_last_site)) == site_settings.end())
+            sprintf(web_last_site, "%s", last_site);
+        WriteString(CONFIG_GLOBAL, CONFIG_WEB_LAST_SITE, web_last_site);
+
         for (int i = 0; i < MAX_FAVORITE_URLS; i++)
         {
-            const char *index = std::to_string(i).c_str();
+            char index[12];
+            snprintf(index, sizeof(index), "%d", i);
             sprintf(favorite_urls[i], "%s", ReadString(CONFIG_FAVORITE_URLS, index, ""));
             WriteString(CONFIG_FAVORITE_URLS, index, favorite_urls[i]);
         }
@@ -376,6 +411,7 @@ namespace CONFIG
 
     void SaveConfig()
     {
+        std::lock_guard<std::mutex> lock(config_write_mutex);
         OpenIniFile(CONFIG_INI_FILE);
 
         std::string encrypted_text;
@@ -410,8 +446,42 @@ namespace CONFIG
         CloseIniFile();
     }
 
+    // Persists one server profile. SaveConfig() only writes the currently
+    // selected site, which is not enough when the web UI edits any of them.
+    void SaveSiteConfig(const std::string &site)
+    {
+        std::lock_guard<std::mutex> lock(config_write_mutex);
+
+        std::map<std::string, RemoteSettings>::iterator it = site_settings.find(site);
+        if (it == site_settings.end())
+        {
+            return;
+        }
+
+        RemoteSettings *setting = &it->second;
+        OpenIniFile(CONFIG_INI_FILE);
+
+        std::string encrypted_text;
+        if (strlen(setting->password) > 0)
+            Encrypt(setting->password, encrypted_text);
+        else
+            encrypted_text = std::string(setting->password);
+
+        WriteString(site.c_str(), CONFIG_REMOTE_SERVER_URL, setting->server);
+        WriteString(site.c_str(), CONFIG_REMOTE_SERVER_USER, setting->username);
+        WriteString(site.c_str(), CONFIG_REMOTE_SERVER_PASSWORD, encrypted_text.c_str());
+        WriteBool(site.c_str(), CONFIG_ENABLE_RPI, setting->enable_rpi);
+        WriteBool(site.c_str(), CONFIG_REMOTE_ENABLE_DISK_CACHE, setting->enable_disk_cache);
+        WriteString(site.c_str(), CONFIG_REMOTE_HTTP_SERVER_TYPE, setting->http_server_type);
+        WriteString(site.c_str(), CONFIG_REMOTE_DEFAULT_DIRECTORY, setting->default_directory);
+
+        WriteIniFile(CONFIG_INI_FILE);
+        CloseIniFile();
+    }
+
     void SaveGlobalConfig()
     {
+        std::lock_guard<std::mutex> lock(config_write_mutex);
         OpenIniFile(CONFIG_INI_FILE);
 
         std::string encrypted_secret;
@@ -436,6 +506,15 @@ namespace CONFIG
         WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_CLIENT_SECRET, encrypted_secret.c_str());
         WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_CLIENT_ID, gg_app.client_id);
         WriteString(CONFIG_GOOGLE, CONFIG_GOOGLE_PERMISSIONS, gg_app.permissions);
+        WriteInt(CONFIG_GLOBAL, CONFIG_WEB_SESSION_TIMEOUT, web_session_timeout);
+
+        std::string encrypted_web_password;
+        if (strlen(web_password) > 0)
+            Encrypt(web_password, encrypted_web_password);
+        else
+            encrypted_web_password = std::string(web_password);
+        WriteString(CONFIG_GLOBAL, CONFIG_WEB_PASSWORD, encrypted_web_password.c_str());
+
         WriteString(CONFIG_GLOBAL, CONFIG_TMP_FOLDER_PATH, temp_folder);
         WriteBool(CONFIG_GLOBAL, CONFIG_AUTO_DELETE_TMP_PKG, auto_delete_tmp_pkg);
         WriteBool(CONFIG_GLOBAL, CONFIG_SHOW_HIDDEN_FILES, show_hidden_files);
@@ -445,8 +524,14 @@ namespace CONFIG
         WriteBool(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_ENABLED, web_server_enabled);
         WriteBool(CONFIG_GLOBAL, CONFIG_ENABLE_BG_DOWNLOAD, enable_background_download);
         WriteLong(CONFIG_GLOBAL, CONFIG_BG_DOWNLOAD_SIZE, minimum_backgrond_file_size);
+        WriteBool(CONFIG_GLOBAL, CONFIG_SHOW_ACTIVITY_DIALOG, show_activity_dialog);
 
         WriteIniFile(CONFIG_INI_FILE);
+
+        // A language change needs the strings and, sometimes, the glyphs
+        // rebuilt; the UI applies it at the end of a frame. Both front ends
+        // save through here, so the switch behaves the same in each.
+        Lang::SyncRequest();
         CloseIniFile();
 
         if (!FS::FolderExists(temp_folder))
@@ -458,18 +543,34 @@ namespace CONFIG
         {
             FS::MkDirs(compressed_file_path);
         }
+
+        httplib::Client client = httplib::Client("http://127.0.0.1:6701");
+        std::string port = std::to_string(http_server_port);
+        client.Post("/change_ezremote_client_port", port.c_str(), port.length(), "text/html");
     }
 
     void SaveLocalDirecotry(const std::string &path)
     {
+        std::lock_guard<std::mutex> lock(config_write_mutex);
         OpenIniFile(CONFIG_INI_FILE);
         WriteString(CONFIG_GLOBAL, CONFIG_LOCAL_DIRECTORY, path.c_str());
         WriteIniFile(CONFIG_INI_FILE);
         CloseIniFile();
     }
 
+    void SaveWebSite(const std::string &site)
+    {
+        std::lock_guard<std::mutex> lock(config_write_mutex);
+
+        OpenIniFile(CONFIG_INI_FILE);
+        WriteString(CONFIG_GLOBAL, CONFIG_WEB_LAST_SITE, site.c_str());
+        WriteIniFile(CONFIG_INI_FILE);
+        CloseIniFile();
+    }
+
     void SaveFavoriteUrl(int index, char *url)
     {
+        std::lock_guard<std::mutex> lock(config_write_mutex);
         OpenIniFile(CONFIG_INI_FILE);
         const char *idx = std::to_string(index).c_str();
         WriteString(CONFIG_FAVORITE_URLS, idx, url);

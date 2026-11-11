@@ -39,6 +39,7 @@
 #include "system.h"
 #include "fs.h"
 #include "sfo.h"
+#include "activity.h"
 
 #define SERVER_ELF_PATH "/mnt/sandbox/pfsmnt/RMTC00001-app0/daemon/daemon.elf"
 
@@ -356,8 +357,7 @@ namespace INSTALLER
 			if (progress_info.length > 0)
 			{
 				completed = progress_info.transferred == progress_info.length;
-				bytes_to_download = progress_info.length;
-				bytes_transfered = progress_info.transferred;
+				Activities::ProgressCurrent(progress_info.transferred, progress_info.length);
 			}
 			sceSystemServicePowerTick();
 			sceKernelUsleep(500000);
@@ -384,8 +384,6 @@ namespace INSTALLER
 			RemoveSplitPkgInstallData(bg_check_data->hash);
 			free(bg_check_data);
 		}
-		activity_inprogess = false;
-		file_transfering = false;
 		Windows::SetModalMode(false);
 		return nullptr;
 	}
@@ -470,12 +468,10 @@ namespace INSTALLER
 				sprintf(confirm_message, "%s - %s?", display_title.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
 				confirm_state = CONFIRM_WAIT;
 				action_to_take = selected_action;
-				activity_inprogess = false;
 				while (confirm_state == CONFIRM_WAIT)
 				{
 					sceKernelUsleep(100000);
 				}
-				activity_inprogess = true;
 				selected_action = action_to_take;
 
 				if (confirm_state == CONFIRM_YES)
@@ -509,10 +505,6 @@ namespace INSTALLER
 		Util::Notify("%s queued", display_title.c_str());
 		if (prompt)
 		{
-			file_transfering = true;
-			bytes_to_download = header->pkg_content_size;
-			bytes_transfered = 0;
-			sceRtcGetCurrentTick(&prev_tick);
 
 			while (!completed)
 			{
@@ -524,8 +516,7 @@ namespace INSTALLER
 				if (progress_info.length > 0)
 				{
 					completed = progress_info.transferred == progress_info.length;
-					bytes_to_download = progress_info.length;
-					bytes_transfered = progress_info.transferred;
+					Activities::ProgressCurrent(progress_info.transferred, progress_info.length);
 				}
 				sceSystemServicePowerTick();
 			}
@@ -611,10 +602,6 @@ namespace INSTALLER
 
 		Util::Notify("%s queued", display_title.c_str());
 
-		file_transfering = true;
-		bytes_to_download = header.pkg_content_size;
-		bytes_transfered = 0;
-		sceRtcGetCurrentTick(&prev_tick);
 
 		while (!completed)
 		{
@@ -626,8 +613,7 @@ namespace INSTALLER
 			if (progress_info.length > 0)
 			{
 				completed = progress_info.transferred == progress_info.length;
-				bytes_to_download = progress_info.length;
-				bytes_transfered = progress_info.transferred;
+				Activities::ProgressCurrent(progress_info.transferred, progress_info.length);
 			}
 			sceSystemServicePowerTick();
 		}
@@ -688,12 +674,10 @@ namespace INSTALLER
 			sprintf(confirm_message, "%s - %s?", display_title.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
 			confirm_state = CONFIRM_WAIT;
 			action_to_take = selected_action;
-			activity_inprogess = false;
 			while (confirm_state == CONFIRM_WAIT)
 			{
 				sceKernelUsleep(100000);
 			}
-			activity_inprogess = true;
 			selected_action = action_to_take;
 
 			if (confirm_state == CONFIRM_YES)
@@ -725,9 +709,6 @@ namespace INSTALLER
 		}
 
 		sprintf(activity_message, "%s", lang_strings[STR_WAIT_FOR_INSTALL_MSG]);
-		bytes_to_download = header->pkg_content_size;
-		bytes_transfered = 0;
-		sceRtcGetCurrentTick(&prev_tick);
 
 		while (!completed)
 		{
@@ -739,8 +720,7 @@ namespace INSTALLER
 			if (progress_info.length > 0)
 			{
 				completed = progress_info.transferred == progress_info.length;
-				bytes_to_download = progress_info.length;
-				bytes_transfered = progress_info.transferred;
+				Activities::ProgressCurrent(progress_info.transferred, progress_info.length);
 			}
 			sceSystemServicePowerTick();
 		}
@@ -1005,12 +985,10 @@ namespace INSTALLER
 				sprintf(confirm_message, "%s - %s?", display_title.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
 				confirm_state = CONFIRM_WAIT;
 				action_to_take = selected_action;
-				activity_inprogess = false;
 				while (confirm_state == CONFIRM_WAIT)
 				{
 					sceKernelUsleep(100000);
 				}
-				activity_inprogess = true;
 				selected_action = action_to_take;
 
 				if (confirm_state == CONFIRM_YES)
@@ -1052,10 +1030,6 @@ namespace INSTALLER
 
 		if (!bg)
 		{
-			file_transfering = true;
-			bytes_to_download = header.pkg_content_size;
-			bytes_transfered = 0;
-			sceRtcGetCurrentTick(&prev_tick);
 
 			while (!completed)
 			{
@@ -1069,8 +1043,7 @@ namespace INSTALLER
 				if (progress_info.length > 0)
 				{
 					completed = progress_info.transferred == progress_info.length;
-					bytes_to_download = progress_info.length;
-					bytes_transfered = progress_info.transferred;
+					Activities::ProgressCurrent(progress_info.transferred, progress_info.length);
 				}
 				sceSystemServicePowerTick();
 			}
@@ -1192,12 +1165,10 @@ namespace INSTALLER
 				sprintf(confirm_message, "%s - %s?", display_title.c_str(), lang_strings[STR_REINSTALL_CONFIRM_MSG]);
 				confirm_state = CONFIRM_WAIT;
 				action_to_take = selected_action;
-				activity_inprogess = false;
 				while (confirm_state == CONFIRM_WAIT)
 				{
 					sceKernelUsleep(100000);
 				}
-				activity_inprogess = true;
 				selected_action = action_to_take;
 
 				if (confirm_state == CONFIRM_YES)
@@ -1239,10 +1210,6 @@ namespace INSTALLER
 
 		if (!bg)
 		{
-			file_transfering = true;
-			bytes_to_download = pkg_data->size;
-			bytes_transfered = 0;
-			sceRtcGetCurrentTick(&prev_tick);
 
 			while (!completed)
 			{
@@ -1256,8 +1223,7 @@ namespace INSTALLER
 				if (progress_info.length > 0)
 				{
 					completed = progress_info.transferred == progress_info.length;
-					bytes_to_download = progress_info.length;
-					bytes_transfered = progress_info.transferred;
+					Activities::ProgressCurrent(progress_info.transferred, progress_info.length);
 				}
 				sceSystemServicePowerTick();
 			}
@@ -1283,8 +1249,6 @@ namespace INSTALLER
 			delete (pkg_data->remote_client);
 		free(pkg_data);
 		RemoveSplitPkgInstallData(hash);
-		activity_inprogess = false;
-		file_transfering = false;
 		Windows::SetModalMode(false);
 		return ret;
 	}
@@ -1532,5 +1496,87 @@ namespace INSTALLER
 		}
 
 		return true;
+	}
+
+	bool IsDirectPackageInstallerEnabled()
+	{
+		// PS4 installs local packages straight through SceAppInstUtil.
+		return true;
+	}
+
+	bool ExtractRemotePkg(RemoteClient *client, const std::string &path, const std::string sfo_path, const std::string icon_path)
+	{
+		pkg_header header;
+		if (!client->Head(path, &header, sizeof(pkg_header)))
+			return false;
+		return ExtractRemotePkg(client, path, &header, sfo_path, icon_path);
+	}
+
+	std::string StoreFileHostBgData(const std::string &hash, const std::string &host,
+	                                const std::string &path, uint64_t size)
+	{
+		json_object *history_item_obj = json_object_new_object();
+		JsonObjectRef history_item_ref(history_item_obj);
+		json_object_object_add(history_item_obj, "hash", json_object_new_string(hash.c_str()));
+		json_object_object_add(history_item_obj, "url", json_object_new_string(host.c_str()));
+		json_object_object_add(history_item_obj, "path", json_object_new_string(path.c_str()));
+		json_object_object_add(history_item_obj, "username", json_object_new_string(""));
+		json_object_object_add(history_item_obj, "password", json_object_new_string(""));
+		json_object_object_add(history_item_obj, "type", json_object_new_int(CLIENT_TYPE_FILEHOST));
+		json_object_object_add(history_item_obj, "file_size", json_object_new_uint64(size));
+
+		const char *params_str = json_object_to_json_string(history_item_obj);
+
+		httplib::Client tmp_client(std::string("http://127.0.0.1:") + std::to_string(http_int_server_port));
+		tmp_client.set_connection_timeout(1);
+		if (auto res = tmp_client.Post("/store_bg_install_data", params_str, "application/json"))
+		{
+			if (!HTTP_SUCCESS(res->status))
+				return "";
+		}
+
+		return hash;
+	}
+
+	std::string getRemoteUrl(RemoteSettings *settings, RemoteClient *client, const std::string path, uint64_t size, bool encodeUrl)
+	{
+		std::string _path = path;
+
+		if (strlen(settings->username) == 0 &&
+		    strlen(settings->password) == 0 &&
+		    (settings->type == CLIENT_TYPE_WEBDAV ||
+		     (settings->type == CLIENT_TYPE_HTTP_SERVER &&
+		      strcmp(settings->http_server_type, HTTP_SERVER_ARCHIVEORG) != 0 &&
+		      strcmp(settings->http_server_type, HTTP_SERVER_GITHUB) != 0)))
+		{
+			std::string full_url = WebDAVClient::GetHttpUrl(settings->server + path);
+			size_t scheme_pos = full_url.find("://");
+			if (scheme_pos == std::string::npos)
+				return "";
+			size_t root_pos = full_url.find("/", scheme_pos + 3);
+			std::string host = full_url.substr(0, root_pos);
+			std::string url_path = full_url.substr(root_pos);
+
+			if (encodeUrl)
+				_path = httplib::detail::encode_url(url_path);
+			else
+				_path = url_path;
+
+			return host + _path;
+		}
+
+		if (settings->type == CLIENT_TYPE_HTTP_SERVER && strcmp(settings->http_server_type, HTTP_SERVER_GITHUB) == 0)
+		{
+			GithubClient *tmp_client = (GithubClient*) client;
+			_path = tmp_client->GetRedirectUrl(path);
+		}
+		else if (settings->type == CLIENT_TYPE_GOOGLE)
+		{
+			GDriveClient *tmp_client = (GDriveClient*) client;
+			_path = tmp_client->GetDownloadUrl(path);
+		}
+
+		std::string hash = StoreBgInstallHostData(settings, _path, size);
+		return std::string("http://127.0.0.1:") + std::to_string(http_int_server_port) + "/bg_install/" + hash;
 	}
 }
