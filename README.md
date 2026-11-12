@@ -11,7 +11,7 @@ ezRemote Client is an application that allows you to connect the PS4 to remote F
 
     **http://\<\<PS5 IP\>\>:6701/start_client.html**
 
-    ![Preview](/start_webui.png)
+    <img src="https://github.com/cy33hc/ps4-ezremote-client/blob/master/start_webui.png" width="300" />
 
 **Multi Tasking**
   - The app now supports multi tasking on both the Native UI and the Web UI
