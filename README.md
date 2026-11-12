@@ -22,6 +22,7 @@ ezRemote Client is an application that allows you to connect the PS4 to remote F
   - Cancel any running activity from either the Native UI or the Web UI
 
 **Web UI Revamped and full functional parity with the Native UI**
+ - Option to password protect webui
  - All 28 languages are available in the Web UI
  - The language is applied immediately after saving the settings
 
