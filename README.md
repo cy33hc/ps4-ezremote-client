@@ -9,7 +9,7 @@ ezRemote Client is an application that allows you to connect the PS4 to remote F
 **Launch ezRemote Client remotely**
  - Launch "ezRemote Client" remotely from a browser using the following URL. **NOTE: For this, you need to have started ezRemote Server v1.10**
 
-    **http://\<\<PS5 IP\>\>:6701/start_client.html**
+    **http://\<\<PS4 IP\>\>:6701/start_client.html**
 
     <img src="https://github.com/cy33hc/ps4-ezremote-client/blob/master/start_webui.png" width="300" />
 
