@@ -362,6 +362,7 @@ namespace Actions
     {
         if (Activities::Stopped())
             return 0;
+        Activities::ItemCurrent(src);
         int ret;
         if (!remoteclient->Ping())
         {
@@ -449,6 +450,7 @@ namespace Actions
                 }
                 else
                 {
+                    Activities::ItemCurrent(entries[i].path);
                     snprintf(activity_message, 1024, "%s %s", lang_strings[STR_UPLOADING], entries[i].path);
                     remoteclient->SetTotalBytes(entries[i].file_size);
                     remoteclient->ResetTransferredBytes();
@@ -468,6 +470,7 @@ namespace Actions
             int path_length = strlen(dest) + strlen(src.name) + 2;
             char *new_path = (char *)malloc(path_length);
             snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", src.name);
+            Activities::ItemCurrent(src.path);
             snprintf(activity_message, 1024, "%s %s", lang_strings[STR_UPLOADING], src.name);
             remoteclient->SetTotalBytes(src.file_size);
             ret = UploadFile(src.path, new_path);
@@ -618,6 +621,7 @@ namespace Actions
     {
         if (Activities::Stopped())
             return 0;
+        Activities::ItemCurrent(src);
         remoteclient->ResetTransferredBytes();
         uint64_t total_size = 0;
         if (!remoteclient->Size(src, &total_size))
@@ -707,6 +711,7 @@ namespace Actions
                 }
                 else
                 {
+                    Activities::ItemCurrent(entries[i].path);
                     snprintf(activity_message, 1024, "%s %s", lang_strings[STR_DOWNLOADING], entries[i].path);
                     ret = DownloadFile(entries[i].path, new_path);
                     if (ret <= 0)
@@ -724,6 +729,7 @@ namespace Actions
             int path_length = strlen(dest) + strlen(src.name) + 2;
             char *new_path = (char *)malloc(path_length);
             snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", src.name);
+            Activities::ItemCurrent(src.path);
             snprintf(activity_message, 1024, "%s %s", lang_strings[STR_DOWNLOADING], src.path);
             ret = DownloadFile(src.path, new_path);
             if (ret <= 0)
@@ -1663,6 +1669,7 @@ namespace Actions
     {
         if (Activities::Stopped())
             return 0;
+        Activities::ItemCurrent(src);
         int ret;
         if (overwrite_type == OVERWRITE_PROMPT && FS::FileExists(dest))
         {
@@ -1710,6 +1717,7 @@ namespace Actions
     {
         if (Activities::Stopped())
             return 1;
+        Activities::ItemCurrent(src.path);
 
         int ret;
         if (src.isDir)
@@ -1754,8 +1762,6 @@ namespace Actions
                 else
                 {
                     snprintf(activity_message, 1024, "%s %s", isCopy ? lang_strings[STR_COPYING] : lang_strings[STR_MOVING], entries[i].path);
-                    remoteclient->SetTotalBytes(entries[i].file_size);
-                    remoteclient->ResetTransferredBytes();
                     ret = CopyOrMoveLocalFile(entries[i].path, new_path, isCopy);
                     if (ret <= 0)
                     {
@@ -1778,7 +1784,6 @@ namespace Actions
             char *new_path = (char *)malloc(path_length);
             snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", src.name);
             snprintf(activity_message, 1024, "%s %s", isCopy ? lang_strings[STR_COPYING] : lang_strings[STR_MOVING], src.name);
-            remoteclient->SetTotalBytes(src.file_size);
             ret = CopyOrMoveLocalFile(src.path, new_path, isCopy);
             if (ret <= 0)
             {
@@ -1821,7 +1826,7 @@ namespace Actions
             }
             else
             {
-                CopyOrMove(*it, new_path, false);
+                CopyOrMove(*it, target.c_str(), false);
             }
         }
         local_paste_files.clear();
@@ -1858,24 +1863,30 @@ namespace Actions
             if (Activities::Stopped())
                 break;
 
-            if (strcmp(it->directory, target.c_str()) == 0)
-                continue;
+            bool same_folder = strcmp(it->directory, target.c_str()) == 0;
+            std::string dest_name = it->name;
+            if (same_folder)
+                dest_name = UniqueLocalName(target, it->name);
 
             char new_path[1024];
-            sprintf(new_path, "%s%s%s", target.c_str(), FS::hasEndSlash(target.c_str()) ? "" : "/", it->name);
+            sprintf(new_path, "%s%s%s", target.c_str(), FS::hasEndSlash(target.c_str()) ? "" : "/", dest_name.c_str());
 
             if (it->isDir)
             {
-                if (strncmp(target.c_str(), it->path, strlen(it->path)) == 0)
+                if (!same_folder && strncmp(target.c_str(), it->path, strlen(it->path)) == 0)
                 {
                     sprintf(status_message, "%s", lang_strings[STR_CANT_COPY_TO_SUBDIR_MSG]);
                     continue;
                 }
                 CopyOrMove(*it, new_path, true);
             }
+            else if (same_folder)
+            {
+                CopyOrMoveLocalFile(it->path, new_path, true);
+            }
             else
             {
-                CopyOrMove(*it, new_path, true);
+                CopyOrMove(*it, target.c_str(), true);
             }
         }
         local_paste_files.clear();
@@ -1903,6 +1914,7 @@ namespace Actions
     {
         if (Activities::Stopped())
             return 0;
+        Activities::ItemCurrent(src);
         int ret;
         if (overwrite_type == OVERWRITE_PROMPT && remoteclient->FileExists(dest))
         {
@@ -2007,6 +2019,7 @@ namespace Actions
     {
         if (Activities::Stopped())
             return 1;
+        Activities::ItemCurrent(src.path);
 
         int ret;
         if (src.isDir)
