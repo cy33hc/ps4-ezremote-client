@@ -119,7 +119,7 @@ target_link_libraries(ezremote_client
 )
 
 add_self(ezremote_client)
-add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "02.10" 32 0)
+add_pkg(ezremote_client ${CMAKE_SOURCE_DIR}/data "RMTC00001" "ezRemote Client" "02.11" 32 0)
 
 set(PS4_FTP_URL "ftp://192.168.100.70:2121/data/pkg" CACHE STRING "PS4 FTP folder the package is uploaded to")
 add_custom_target(upload
