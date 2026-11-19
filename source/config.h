@@ -45,7 +45,6 @@
 
 #define CONFIG_HTTP_SERVER "HttpServer"
 #define CONFIG_HTTP_SERVER_PORT "http_server_port"
-#define CONFIG_HTTP_SERVER_ENABLED "http_server_enabled"
 #define CONFIG_HTTP_SERVER_COMPRESSED_FILE_PATH "compressed_files_path"
 #define CONFIG_DEFAULT_COMPRESSED_FILE_PATH DATA_PATH "/compressed_files"
 
@@ -82,6 +81,7 @@
 
 #define CONFIG_ENABLE_BG_DOWNLOAD "enable_background_download"
 #define CONFIG_SHOW_ACTIVITY_DIALOG "show_activity_dialog"
+#define CONFIG_HEADLESS_MODE "headless_mode"
 #define CONFIG_BG_DOWNLOAD_SIZE "minimum_backgrond_file_size"
 
 #define HTTP_SERVER_APACHE "Apache"
@@ -170,6 +170,8 @@ extern char temp_folder[256];
 extern std::string ezremote_server_version;
 extern bool enable_background_download;
 extern bool show_activity_dialog;
+// Serve only the web UI; no window, no ImGui. Read at start-up.
+extern bool headless_enabled;
 extern uint64_t minimum_backgrond_file_size;
 
 namespace CONFIG

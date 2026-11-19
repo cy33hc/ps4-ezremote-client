@@ -64,7 +64,7 @@ export function SettingsDialog({ onClose, onSaved }: SettingsDialogProps) {
         enableBackgroundDownload: settings.enableBackgroundDownload,
         showActivityDialog: settings.showActivityDialog,
         minimumBackgroundFileSize: Math.max(0, Number(minSizeMb) || 0) * MB,
-        webServerEnabled: settings.webServerEnabled,
+        headlessMode: settings.headlessMode,
         httpServerPort: settings.httpServerPort,
         compressedFilePath: settings.compressedFilePath,
         webSessionTimeout: Math.max(1, Number(settings.webSessionTimeout) || 60),
@@ -173,7 +173,11 @@ export function SettingsDialog({ onClose, onSaved }: SettingsDialogProps) {
           </Section>
 
           <Section title="Web server">
-            <Check label="Enable web server" checked={settings.webServerEnabled} onChange={(value) => update("webServerEnabled", value)} />
+            <Check
+              label="Use only from a web browser (no console screen)"
+              checked={settings.headlessMode}
+              onChange={(value) => update("headlessMode", value)}
+            />
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Port">
                 <input

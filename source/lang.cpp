@@ -206,6 +206,9 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Skip",																											  // STR_SKIP
 	"Always overwrite",																						  // STR_ALWAYS_OVERWRITE
 	"Cancelling…",																								  // STR_CANCELLING
+	"Use only from a web browser (no console screen)",																								  // STR_HEADLESS_MODE
+	"ezRemote Client started in web browser mode",																								  // STR_HEADLESS_STARTED_MSG
+	"ezRemote Client is closing",																								  // STR_CLOSING_MSG
 };
 
 bool needs_extended_font = false;

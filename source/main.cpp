@@ -209,6 +209,8 @@ static void terminate()
 	sceSystemServiceLoadExec("exit", NULL);
 }
 
+bool headless_mode = false;
+
 int main()
 {
 	dbglogger_init();
@@ -219,11 +221,6 @@ int main()
 	setvbuf(stdout, NULL, _IONBF, 0);
 	signal(SIGPIPE, SIG_IGN);
 	
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
-	{
-		return 0;
-	}
-
 	// load common modules
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_IME_DIALOG) < 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_SYSTEM_SERVICE) < 0) return 0;
@@ -240,23 +237,34 @@ int main()
 		return 0;
 
 	CONFIG::LoadConfig();
+	headless_mode = headless_enabled;
 
-	// Create a window context
-	window = SDL_CreateWindow("main", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, FRAME_WIDTH, FRAME_HEIGHT, 0);
-	if (window == NULL)
-		return 0;
+	// Headless: no window, no ImGui, no font atlas. Everything inside this
+	// branch is the native front end.
+	if (!headless_mode)
+	{
+		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
+		{
+			return 0;
+		}
 
-	renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-	if (renderer == NULL)
-		return 0;
+		// Create a window context
+		window = SDL_CreateWindow("main", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, FRAME_WIDTH, FRAME_HEIGHT, 0);
+		if (window == NULL)
+			return 0;
 
-	Textures::Init(renderer);
-	InitImgui();
+		renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		if (renderer == NULL)
+			return 0;
 
-	// Setup Platform/Renderer backends
-	ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
-	ImGui_ImplSDLRenderer_Init(renderer);
-	ImGui_ImplSDLRenderer_CreateFontsTexture();
+		Textures::Init(renderer);
+		InitImgui();
+
+		// Setup Platform/Renderer backends
+		ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
+		ImGui_ImplSDLRenderer_Init(renderer);
+		ImGui_ImplSDLRenderer_CreateFontsTexture();
+	}
 
 	if (!initialize_jbc())
 		terminate();
@@ -267,13 +275,42 @@ int main()
 	}
 	atexit(terminate);
 
-	HttpServer::Start();
-	g_http_started = true;
-
-	if (INSTALLER::StartEzRemoteServer() < 0)
+	// The ezRemote Server answers on port 6701 and relaunches the client, so it
+	// must be up in both modes. Starting it is slow, hence a helper.
+	auto ensure_ezremote_server = []()
 	{
-		Util::Notify("Cloud not load ezRemote Server. It is needed for background install and download. Please ensure Goldhen payload server is enabled");
+		if (INSTALLER::StartEzRemoteServer() < 0)
+		{
+			Util::Notify("Cloud not load ezRemote Server. It is needed for background install and download. Please ensure Goldhen payload server is enabled");
+		}
+	};
+
+	if (headless_mode)
+	{
+		int32_t sys_lang = 0;
+		sceSystemServiceParamGetInt(ORBIS_SYSTEM_SERVICE_PARAM_ID_LANG, &sys_lang);
+		Lang::SetSystemLangIndex(sys_lang);
+		Lang::SetTranslation(sys_lang);
+
+		// No window appears, so say where the app went.
+		Util::Notify("%s", lang_strings[STR_HEADLESS_STARTED_MSG]);
+
+		ensure_ezremote_server();
+
+		// No UI loop keeps the process alive, so serve on this thread: listen()
+		// blocks and only returns once "/stop" has stopped the server. A return
+		// with done still false means the port could not be bound.
+		bool serving = HttpServer::Start(true);
+		if (!serving || !done)
+			Util::Notify("ezRemote Client could not start the web server on port %d", http_server_port);
+
+		Util::Notify("%s", lang_strings[STR_CLOSING_MSG]);
+		Shutdown();
+		return 0;
 	}
+
+	g_http_started = HttpServer::Start();
+	ensure_ezremote_server();
 
 	GUI::RenderLoop(renderer);
 

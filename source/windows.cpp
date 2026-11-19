@@ -2484,10 +2484,10 @@ namespace Windows
                 ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s", lang_strings[STR_WEB_SERVER]);
                 ImGui::Separator();
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
-                ImGui::Text("%s", lang_strings[STR_ENABLE]);
+                ImGui::Text("%s", lang_strings[STR_HEADLESS_MODE]);
                 ImGui::SameLine();
                 ImGui::SetCursorPosX(805);
-                ImGui::Checkbox("##web_server_enabled", &web_server_enabled);
+                ImGui::Checkbox("##headless_mode", &headless_enabled);
                 ImGui::Separator();
 
                 field_size = ImGui::CalcTextSize(lang_strings[STR_PORT]);

@@ -52,7 +52,6 @@ Server *svr;
 int http_server_port = 9090;
 int http_int_server_port = 6701;
 char compressed_file_path[1024];
-bool web_server_enabled = false;
 
 
 namespace HttpServer
@@ -3234,7 +3233,7 @@ namespace HttpServer
             json_object_object_add(result, "hasWebPassword", json_object_new_boolean(strlen(web_password) > 0));
             json_object_object_add(result, "webSessionTimeout", json_object_new_int(web_session_timeout));
             json_object_object_add(result, "minimumBackgroundFileSize", json_object_new_int64((int64_t)minimum_backgrond_file_size));
-            json_object_object_add(result, "webServerEnabled", json_object_new_boolean(web_server_enabled));
+            json_object_object_add(result, "headlessMode", json_object_new_boolean(headless_enabled));
             json_object_object_add(result, "httpServerPort", json_object_new_int(http_server_port));
             json_object_object_add(result, "compressedFilePath", json_object_new_string(compressed_file_path));
             json_object_object_add(result, "hasAllDebridKey", json_object_new_boolean(strlen(alldebrid_api_key) > 0));
@@ -3311,9 +3310,9 @@ namespace HttpServer
             if (bool_obj != nullptr)
                 show_activity_dialog = json_object_get_boolean(bool_obj) != 0;
 
-            bool_obj = json_object_object_get(jobj, "webServerEnabled");
+            bool_obj = json_object_object_get(jobj, "headlessMode");
             if (bool_obj != nullptr)
-                web_server_enabled = json_object_get_boolean(bool_obj) != 0;
+                headless_enabled = json_object_get_boolean(bool_obj) != 0;
 
             json_object *num_obj = json_object_object_get(jobj, "minimumBackgroundFileSize");
             if (num_obj != nullptr)
@@ -4757,7 +4756,10 @@ namespace HttpServer
         {
             res.status = 200;
             res.set_content("Stopping", "text/plain");
-            // The render loop exits and main's Shutdown() stops the server once.
+            // The listening socket must be closed for listen() to return, which
+            // is what headless mode (serving on the main thread) is blocked on.
+            Stop();
+            // Ends the render loop in gui.cpp so the client terminates.
             done = true;
         });
 
@@ -4805,23 +4807,31 @@ namespace HttpServer
         });
         svr->set_mount_point("/", "/");
 
-        if (web_server_enabled)
-            svr->listen("0.0.0.0", http_server_port);
-        else
-            svr->listen("127.0.0.1", http_server_port);
+        // Always reachable: the web UI is the only front end in headless mode
+        // and there is no setting to turn the server off.
+        svr->listen("0.0.0.0", http_server_port);
 
         return NULL;
     }
 
-    void Start()
+    bool Start(bool blocking)
     {
         if (svr == nullptr)
             svr = new Server();
         if (!svr->is_valid())
         {
-            return;
+            return false;
         }
-        int ret = pthread_create(&http_server_thid, NULL, ServerThread, NULL);
+
+        if (blocking)
+        {
+            // Serve on the calling thread: listen() blocks until "/stop"
+            // stops the server.
+            ServerThread(NULL);
+            return true;
+        }
+
+        return pthread_create(&http_server_thid, NULL, ServerThread, NULL) == 0;
     }
 
     bool AnyTransferRunning()

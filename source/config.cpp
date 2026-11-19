@@ -52,6 +52,7 @@ char temp_folder[256];
 std::string ezremote_server_version;
 bool enable_background_download;
 bool show_activity_dialog = true;
+bool headless_enabled = false;
 uint64_t minimum_backgrond_file_size;
 
 unsigned char cipher_key[32] = {'s', '5', 'v', '8', 'y', '/', 'B', '?', 'E', '(', 'H', '+', 'M', 'b', 'Q', 'e', 'T', 'h', 'W', 'm', 'Z', 'q', '4', 't', '7', 'w', '9', 'z', '$', 'C', '&', 'F'};
@@ -214,6 +215,9 @@ namespace CONFIG
         show_activity_dialog = ReadBool(CONFIG_GLOBAL, CONFIG_SHOW_ACTIVITY_DIALOG, true);
         WriteBool(CONFIG_GLOBAL, CONFIG_SHOW_ACTIVITY_DIALOG, show_activity_dialog);
 
+        headless_enabled = ReadBool(CONFIG_GLOBAL, CONFIG_HEADLESS_MODE, false);
+        WriteBool(CONFIG_GLOBAL, CONFIG_HEADLESS_MODE, headless_enabled);
+
         minimum_backgrond_file_size = ReadLong(CONFIG_GLOBAL, CONFIG_BG_DOWNLOAD_SIZE, 1024*1024*1024);
         WriteLong(CONFIG_GLOBAL, CONFIG_BG_DOWNLOAD_SIZE, minimum_backgrond_file_size);
 
@@ -282,9 +286,6 @@ namespace CONFIG
 
         sprintf(compressed_file_path, "%s", ReadString(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_COMPRESSED_FILE_PATH, CONFIG_DEFAULT_COMPRESSED_FILE_PATH));
         WriteString(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_COMPRESSED_FILE_PATH, compressed_file_path);
-
-        web_server_enabled = ReadBool(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_ENABLED, true);
-        WriteBool(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_ENABLED, web_server_enabled);
 
         for (int i = 0; i < sites.size(); i++)
         {
@@ -521,10 +522,10 @@ namespace CONFIG
         WriteString(CONFIG_GLOBAL, CONFIG_LANGUAGE, language);
         WriteInt(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_PORT, http_server_port);
         WriteString(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_COMPRESSED_FILE_PATH, compressed_file_path);
-        WriteBool(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_ENABLED, web_server_enabled);
         WriteBool(CONFIG_GLOBAL, CONFIG_ENABLE_BG_DOWNLOAD, enable_background_download);
         WriteLong(CONFIG_GLOBAL, CONFIG_BG_DOWNLOAD_SIZE, minimum_backgrond_file_size);
         WriteBool(CONFIG_GLOBAL, CONFIG_SHOW_ACTIVITY_DIALOG, show_activity_dialog);
+        WriteBool(CONFIG_GLOBAL, CONFIG_HEADLESS_MODE, headless_enabled);
 
         WriteIniFile(CONFIG_INI_FILE);
 

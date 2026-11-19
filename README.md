@@ -26,6 +26,12 @@ ezRemote Client is an application that allows you to connect the PS4 to remote F
  - All 28 languages are available in the Web UI
  - The language is applied immediately after saving the settings
 
+**Run without the console screen (web browser mode only)**
+ - Enable "Use only from a web browser (no console screen)" in the Global Settings, then restart the app
+ - On the next start the app opens no window and does not draw the Native UI; the Web UI keeps working as before
+ - The setting can be changed from either the Native UI or the Web UI; it applies on the next restart
+ - Turn it off again to get the console screen back
+
 **The Cancel function now matches Windows Explorer behaviour**
  - Previously when you cancel a copy/move/upload/download/extract/compress, it cancels the operation on the files that follow, now the cancel is immediately on the current file and files that follow.  This makes the cancel function work just like in Windows Explorer. Example if you are  copying multiple files and a 1GB file is being copied to another location, if you decide to cancel the copy, previously it will wait until the full 1GB file is copied before cancelling files that follow. Now if you cancel, it will stop right away even if the file was partially copied. Like Windows Explorer, you will need to manually cleanup/delete the partial file
 
@@ -184,6 +190,8 @@ Remote Package Installation with all Remote Server, even if they are password pr
 You need to launch the "ezRemote Client" app on the PS4. Then on any device(laptop, tablet, phone etc..) with web browser goto to http://<ip_address_of_ps4>:8080 . That's all.
 
 The port# can be changed from the "Global Settings" dialog in the PS4 app. Any changes to the web server settings needs a restart of the application to take effect.
+
+If you only ever use the Web UI, enable "Use only from a web browser (no console screen)" in the Global Settings and restart the app. ezRemote Client then starts without the Native UI - the Web UI is the only front end and the app shows no window on the console. Disable the option (from the Web UI settings) and restart to bring the Native UI back.
 
 ## Installation
 Copy the **ezremote_client.pkg** in to a FAT32 format usb drive then install from package installer
