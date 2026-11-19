@@ -9,8 +9,6 @@
 #include <sys/stat.h>
 #include <minizip/unzip.h>
 #include <minizip/zip.h>
-#include <un7zip.h>
-#include <unrar.h>
 #include <archive.h>
 #include <archive_entry.h>
 #include <orbis/SystemService.h>
@@ -31,11 +29,6 @@ namespace ZipUtil
 {
     static char filename_extracted[256];
     static char password[128];
-
-    void callback_7zip(const char *fileName, unsigned long fileSize, unsigned fileNum, unsigned numFiles)
-    {
-        sprintf(activity_message, "%s %s: %s", lang_strings[STR_EXTRACTING], filename_extracted, fileName);
-    }
 
     void convertToZipTime(time_t time, tm_zip *tmzip)
     {

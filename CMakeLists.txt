@@ -92,11 +92,10 @@ target_link_libraries(ezremote_client
   smb2
   nfs
   minizip
-  un7zip
-  unrar
   bz2
   b2
   lzma
+  # Only libarchive's lz4 filter references it; nothing in source/ uses LZ4_*.
   lz4
   archive
   json-c
