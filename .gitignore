@@ -12,6 +12,7 @@ _deps
 .vscode
 build
 data/daemon
+data/version.txt
 
 # local port working dirs
 .sdk/

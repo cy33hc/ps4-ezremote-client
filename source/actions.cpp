@@ -27,12 +27,13 @@
 #include "common.h"
 #include "fs.h"
 #include "config.h"
-#include "windows.h"
+#include "ui_state.h"
 #include "util.h"
 #include "activity.h"
 #include "lang.h"
 #include "actions.h"
 #include "installer.h"
+#include "payload_loader.h"
 #include "system.h"
 #include "sfo.h"
 #include "zip_util.h"
@@ -2247,9 +2248,9 @@ namespace Actions
 
     void RestartServer()
     {
-        INSTALLER::StopEzRemoteServer();
+        PAYLOAD::StopEzRemoteServer();
         sleep(2);
-        INSTALLER::StartEzRemoteServer();
+        PAYLOAD::StartEzRemoteServer();
         sleep(2);
     }
 

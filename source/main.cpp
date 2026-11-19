@@ -15,40 +15,51 @@
 #include <orbis/Pad.h>
 #include <orbis/AudioOut.h>
 #include <orbis/Net.h>
+
+#ifndef EZREMOTE_PAYLOAD
+#include <orbis/Pad.h>
+#include <orbis/AudioOut.h>
 #include <dbglogger.h>
 
 #include "imgui.h"
 #include "SDL2/SDL.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
+#include "gui.h"
+#include "textures.h"
+#include "fonts.h"
+#include "windows.h"
+#endif
+
 #include "server/http_server.h"
 #include "clients/gdrive.h"
 #include "config.h"
 #include "lang.h"
-#include "gui.h"
 #include "util.h"
 #include "installer.h"
+#include "payload_loader.h"
 #include "system.h"
-#include "textures.h"
-#include "fonts.h"
 #include "activity.h"
-#include "windows.h"
+#include "ui_state.h"
 
+#ifndef EZREMOTE_PAYLOAD
 extern "C"
 {
 #include "orbis_jbc.h"
 }
+#endif
 
 #define FRAME_WIDTH 1920
 #define FRAME_HEIGHT 1080
 #define NET_HEAP_SIZE   (5 * 1024 * 1024)
 
+static std::atomic<bool> g_shutdown_started{false};
+static bool g_http_started = false;
+
+#ifndef EZREMOTE_PAYLOAD
 // SDL window and software renderer
 SDL_Window *window;
 SDL_Renderer *renderer;
-
-static std::atomic<bool> g_shutdown_started{false};
-static bool g_http_started = false;
 
 ImVec4 ColorFromBytes(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255)
 {
@@ -146,6 +157,8 @@ void InitImgui()
 	colors[ImGuiCol_TabHovered]           = panelHoverColor;
 }
 
+#endif  // EZREMOTE_PAYLOAD
+
 static int instance_lock_fd = -1;
 
 static void Shutdown()
@@ -171,6 +184,7 @@ static void Shutdown()
 	INSTALLER::Exit();
 	GDriveClient::StopRefreshToken();
 
+#ifndef EZREMOTE_PAYLOAD
 	if (ImGui::GetCurrentContext() != nullptr)
 	{
 		ImGui_ImplSDLRenderer_Shutdown();
@@ -193,6 +207,7 @@ static void Shutdown()
 	SDL_Quit();
 
 	terminate_jbc();
+#endif
 	sceNetTerm();
 
 	if (instance_lock_fd >= 0)
@@ -206,15 +221,19 @@ static void Shutdown()
 static void terminate()
 {
 	Shutdown();
+#ifndef EZREMOTE_PAYLOAD
 	sceSystemServiceLoadExec("exit", NULL);
+#endif
 }
 
 bool headless_mode = false;
 
 int main()
 {
+#ifndef EZREMOTE_PAYLOAD
 	dbglogger_init();
 	dbglogger_log("If you see this you've set up dbglogger correctly.");
+#endif
 
 	int rc;
 	// No buffering
@@ -222,23 +241,40 @@ int main()
 	signal(SIGPIPE, SIG_IGN);
 	
 	// load common modules
+#ifndef EZREMOTE_PAYLOAD
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_IME_DIALOG) < 0) return 0;
+#endif
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_SYSTEM_SERVICE) < 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_USER_SERVICE) < 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_BGFT) < 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_APP_INST_UTIL) < 0) return 0;
+#ifndef EZREMOTE_PAYLOAD
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_PAD) < 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_AUDIOOUT) < 0 || sceAudioOutInit() != 0) return 0;
+#endif
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_NET) < 0 || sceNetInit() != 0) return 0;
 
 	sceNetPoolCreate("ezremote_client", NET_HEAP_SIZE, 0);
 
 	if (INSTALLER::Init() < 0)
+	{
+#ifndef EZREMOTE_PAYLOAD
 		return 0;
+#else
+		// A payload has no app context; keep the web UI usable even if BGFT
+		// cannot be initialised (background installs then fail at use).
+		Util::Notify("ezRemote Client could not initialise BGFT; background installs are unavailable");
+#endif
+	}
 
 	CONFIG::LoadConfig();
 	headless_mode = headless_enabled;
+#ifdef EZREMOTE_PAYLOAD
+	// The payload build has no native UI at all.
+	headless_mode = true;
+#endif
 
+#ifndef EZREMOTE_PAYLOAD
 	// Headless: no window, no ImGui, no font atlas. Everything inside this
 	// branch is the native front end.
 	if (!headless_mode)
@@ -268,6 +304,7 @@ int main()
 
 	if (!initialize_jbc())
 		terminate();
+#endif  // EZREMOTE_PAYLOAD
 	if (load_sys_modules() != 0)
 	{
 		Shutdown();
@@ -279,7 +316,7 @@ int main()
 	// must be up in both modes. Starting it is slow, hence a helper.
 	auto ensure_ezremote_server = []()
 	{
-		if (INSTALLER::StartEzRemoteServer() < 0)
+		if (PAYLOAD::StartEzRemoteServer() < 0)
 		{
 			Util::Notify("Cloud not load ezRemote Server. It is needed for background install and download. Please ensure Goldhen payload server is enabled");
 		}
@@ -287,6 +324,7 @@ int main()
 
 	if (headless_mode)
 	{
+	#ifdef EZREMOTE_PAYLOAD
 		int32_t sys_lang = 0;
 		sceSystemServiceParamGetInt(ORBIS_SYSTEM_SERVICE_PARAM_ID_LANG, &sys_lang);
 		Lang::SetSystemLangIndex(sys_lang);
@@ -307,13 +345,25 @@ int main()
 		Util::Notify("%s", lang_strings[STR_CLOSING_MSG]);
 		Shutdown();
 		return 0;
+	#else
+		PAYLOAD::StartEzRemoteClient();
+		Shutdown();
+		return 0;
+	#endif
 	}
 
+	PAYLOAD::StopEzRemoteClient();
+	while (PAYLOAD::IsEzremoteClientStarted())
+	{
+		usleep(100000);
+	}
 	g_http_started = HttpServer::Start();
 	ensure_ezremote_server();
 
+#ifndef EZREMOTE_PAYLOAD
 	GUI::RenderLoop(renderer);
 
 	Shutdown();
+#endif
 	return 0;
 }

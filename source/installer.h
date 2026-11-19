@@ -190,13 +190,9 @@ namespace INSTALLER
     void AddSplitPkgInstallData(const std::string &hash, SplitPkgInstallData *pkg_data);
     void RemoveSplitPkgInstallData(const std::string &hash);
     bool InstallSplitPkg(const std::string &path, SplitPkgInstallData* pkg_data, bool bg = false);
-    std::string EzRemoteServerVersion();
-    int StartEzRemoteServer();
-    void StopEzRemoteServer();
     std::string StoreBgInstallHostData(RemoteSettings *remote_settings, const std::string &path, uint64_t size);
     RemoteClient *GetRemoteClient(int site_idx);
     RemoteClient *GetRemoteClient(RemoteSettings *settings);
-    bool IsPortOpen(const char *ip, uint16_t port, int timeout_sec);
     bool CanInstallViaRPI(const std::string &path, pkg_header *pkg_header);
     bool CanInstallViaRPI(RemoteClient *client, const std::string &path, pkg_header *pkg_header);
 }

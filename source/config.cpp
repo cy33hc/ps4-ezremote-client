@@ -58,10 +58,18 @@ uint64_t minimum_backgrond_file_size;
 unsigned char cipher_key[32] = {'s', '5', 'v', '8', 'y', '/', 'B', '?', 'E', '(', 'H', '+', 'M', 'b', 'Q', 'e', 'T', 'h', 'W', 'm', 'Z', 'q', '4', 't', '7', 'w', '9', 'z', '$', 'C', '&', 'F'};
 unsigned char cipher_iv[16] = {'Y', 'p', '3', 's', '6', 'v', '9', 'y', '$', 'B', '&', 'E', ')', 'H', '@', 'M'};
 
+// Older builds encrypted passwords with an account/MAC-derived key. Keep that
+// derivation only as a decryption fallback; new writes always use cipher_key.
+static unsigned char account_cipher_key[32];
+static unsigned char account_cipher_iv[16];
+static bool account_cipher_ready = false;
+
 RemoteClient *remoteclient;
 
 namespace CONFIG
 {
+    static void DeriveAccountCipherKeys();
+
     int Encrypt(const std::string &text, std::string &encrypt_text)
     {
         unsigned char tmp_encrypt_text[text.length() * 2];
@@ -84,6 +92,12 @@ namespace CONFIG
         int decrypt_text_len;
         memset(tmp_decrypt_text, 0, sizeof(tmp_decrypt_text));
         ret = openssl_decrypt((unsigned char *)tmp_decode_text.c_str(), tmp_decode_text.length(), cipher_key, cipher_iv, tmp_decrypt_text, &decrypt_text_len);
+        if (ret == 0)
+        {
+            if (!account_cipher_ready)
+                DeriveAccountCipherKeys();
+            ret = openssl_decrypt((unsigned char *)tmp_decode_text.c_str(), tmp_decode_text.length(), account_cipher_key, account_cipher_iv, tmp_decrypt_text, &decrypt_text_len);
+        }
         if (ret == 0)
             return 0;
 
@@ -129,10 +143,12 @@ namespace CONFIG
         }
     }
 
-    void LoadCipherKeys()
+    static void DeriveAccountCipherKeys()
     {
-        // Get the key and iv for encryption. Inject the account_id/MAC address as part of the key and iv.
-        int user_id;
+        memcpy(account_cipher_key, cipher_key, sizeof(account_cipher_key));
+        memcpy(account_cipher_iv, cipher_iv, sizeof(account_cipher_iv));
+
+        int user_id = 0;
         uint64_t account_id = 0;
         sceUserServiceGetForegroundUser(&user_id);
         sceUserServiceGetNpAccountId(user_id, &account_id);
@@ -143,17 +159,25 @@ namespace CONFIG
         sceNetGetMacAddress(&addr, 0);
         for (int i = 0; i < sizeof(data); i++)
         {
-            cipher_key[i] = data[i];
-            cipher_key[i + 16] = data[i];
-            cipher_iv[i] = data[i];
+            account_cipher_key[i] = data[i];
+            account_cipher_key[i + 16] = data[i];
+            account_cipher_iv[i] = data[i];
         }
         int offset = sizeof(data);
         for (int i = 0; i < sizeof(addr.data); i++)
         {
-            cipher_key[offset + i] = addr.data[i];
-            cipher_key[offset + i + 16] = data[i];
-            cipher_iv[offset + i] = addr.data[i];
+            account_cipher_key[offset + i] = addr.data[i];
+            account_cipher_key[offset + i + 16] = data[i];
+            account_cipher_iv[offset + i] = addr.data[i];
         }
+        account_cipher_ready = true;
+    }
+
+    void LoadCipherKeys()
+    {
+        // Encryption always uses the built-in key/iv. The account-derived key is
+        // only tried as a fallback when decrypting values from older builds.
+        account_cipher_ready = false;
     }
 
     void LoadConfig()

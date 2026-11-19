@@ -17,10 +17,12 @@
 #include "config.h"
 #include "common.h"
 #include "fs.h"
+#ifndef EZREMOTE_PAYLOAD
 #include "ime_dialog.h"
+#endif
 #include "lang.h"
 #include "system.h"
-#include "windows.h"
+#include "ui_state.h"
 #include "util.h"
 #include "zip_util.h"
 #include "activity.h"
@@ -94,7 +96,13 @@ namespace ZipUtil
         }
 
         // Add file to zip
+#ifdef EZREMOTE_PAYLOAD
+        void *buf = nullptr;
+        if (posix_memalign(&buf, 4096, ARCHIVE_TRANSFER_SIZE) != 0)
+            buf = nullptr;
+#else
         void *buf = memalign(4096, ARCHIVE_TRANSFER_SIZE);
+#endif
         uint64_t seek = 0;
 
         while (1)
@@ -455,6 +463,10 @@ namespace ZipUtil
     {
         memset(password, 0, sizeof(password));
 
+#ifdef EZREMOTE_PAYLOAD
+        // Headless build: there is no UI to ask for a passphrase.
+        return password;
+#else
         /* Extraction runs on a worker thread. An IME dialog can only be pumped
          * from the UI thread, and if one is already open (e.g. the user is
          * editing something) we must not terminate it from here and use its
@@ -479,6 +491,7 @@ namespace ZipUtil
         {
             snprintf(password, sizeof(password) - 1, "%s", (char *)Dialog::getImeDialogInputText());
         }
+#endif
 
         return password;
     }

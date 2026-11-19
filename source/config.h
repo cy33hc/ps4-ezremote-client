@@ -19,6 +19,14 @@
 #define TMP_ICON_PATH DATA_PATH "/tmp_icon.png"
 #define TMP_FOLDER_PATH DATA_PATH "/tmp"
 
+#ifdef EZREMOTE_PAYLOAD
+#define SERVER_ELF_PATH DATA_PATH "/daemon/ezremote-server.elf"
+#define CLIENT_ELF_PATH DATA_PATH "/daemon/ezremote_client.elf"
+#else
+#define SERVER_ELF_PATH "/mnt/sandbox/pfsmnt/RMTC00001-app0/daemon/ezremote-server.elf"
+#define CLIENT_ELF_PATH "/mnt/sandbox/pfsmnt/RMTC00001-app0/daemon/ezremote_client.elf"
+#endif
+
 #define CONFIG_GLOBAL "Global"
 
 #define CONFIG_SHOW_HIDDEN_FILES "show_hidden_files"
@@ -116,7 +124,8 @@ struct RemoteSettings
     char site_name[32];
     char server[256];
     char username[33];
-    char password[128];
+    // Encrypted passwords are base64-expanded; leave room for long ones.
+    char password[512];
     ClientType type;
     bool enable_rpi;
     uint32_t supported_actions;

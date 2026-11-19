@@ -26,8 +26,9 @@
 #include "clients/rclone.h"
 #include "filehost/filehost.h"
 #include "config.h"
+#include "system.h"
 #include "fs.h"
-#include "windows.h"
+#include "ui_state.h"
 #include "lang.h"
 #include "zip_util.h"
 #include "sfo.h"
@@ -37,7 +38,6 @@
 #include "remote_pool.h"
 
 extern bool done;
-#include <dbglogger.h>
 
 #define SUCCESS_MSG "{ \"result\": { \"success\": true, \"error\": null } }"
 #define FAILURE_MSG "{ \"result\": { \"success\": false, \"error\": \"%s\" } }"
@@ -1128,14 +1128,58 @@ namespace HttpServer
         return "application/octet-stream";
     }
 
-    static void CacheOneAsset(const std::string &url_path)
+    // Reads a web asset from disk. In the app build the files live in the pkg
+    // sandbox; a payload has no app sandbox, so it serves them from its data
+    // folder. The URL prefix stays /app0/assets so index.html's absolute
+    // script/style paths keep working in both cases.
+    static bool ReadAssetFile(const std::string &url_path, std::string *out)
     {
         static const char *url_prefix = "/app0/assets";
+#ifdef EZREMOTE_PAYLOAD
+        static const char *fs_root = DATA_PATH "/assets";
+#else
         static const char *fs_root = "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets";
+#endif
 
         if (url_path.rfind(url_prefix, 0) != 0)
-            return;
+            return false;
 
+        std::string asset_path = url_path;
+        size_t query = asset_path.find('?');
+        if (query != std::string::npos)
+            asset_path.resize(query);
+
+        std::string relative = asset_path.substr(strlen(url_prefix));
+        if (relative.find("..") != std::string::npos)
+            return false;
+
+        std::string fs_path = std::string(fs_root) + relative;
+        FILE *fp = fopen(fs_path.c_str(), "rb");
+        if (fp == nullptr)
+            return false;
+
+        fseek(fp, 0, SEEK_END);
+        long size = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+        if (size <= 0 || size > (8 * 1024 * 1024))
+        {
+            fclose(fp);
+            return false;
+        }
+
+        std::string content;
+        content.resize((size_t) size);
+        size_t read = fread(&content[0], 1, content.size(), fp);
+        fclose(fp);
+        if (read != content.size())
+            return false;
+
+        *out = std::move(content);
+        return true;
+    }
+
+    static void CacheOneAsset(const std::string &url_path)
+    {
         std::string asset_path = url_path;
         size_t query = asset_path.find('?');
         if (query != std::string::npos)
@@ -1144,26 +1188,12 @@ namespace HttpServer
         if (static_assets.find(asset_path) != static_assets.end())
             return;
 
-        std::string fs_path = std::string(fs_root) + asset_path.substr(strlen(url_prefix));
-        FILE *fp = fopen(fs_path.c_str(), "rb");
-        if (fp == nullptr)
-            return;
-
-        fseek(fp, 0, SEEK_END);
-        long size = ftell(fp);
-        fseek(fp, 0, SEEK_SET);
-        if (size > 0 && size <= (8 * 1024 * 1024))
+        std::string content;
+        if (ReadAssetFile(asset_path, &content))
         {
-            std::string content;
-            content.resize((size_t) size);
-            size_t read = fread(&content[0], 1, content.size(), fp);
-            if (read == content.size())
-            {
-                static_assets[asset_path] = content;
-                static_asset_types[asset_path] = AssetMimeType(asset_path);
-            }
+            static_assets[asset_path] = std::move(content);
+            static_asset_types[asset_path] = AssetMimeType(asset_path);
         }
-        fclose(fp);
     }
 
     // /app0 stops accepting new opens after the app has been running for a
@@ -1197,12 +1227,29 @@ namespace HttpServer
 
     static bool ServeCachedAsset(const std::string &path, Response &res)
     {
-        std::map<std::string, std::string>::iterator it = static_assets.find(path);
-        if (it == static_assets.end())
-            return false;
+        std::string asset_path = path;
+        size_t query = asset_path.find('?');
+        if (query != std::string::npos)
+            asset_path.resize(query);
 
-        res.set_content(it->second, static_asset_types[path]);
-        return true;
+        std::map<std::string, std::string>::iterator it = static_assets.find(asset_path);
+        if (it != static_assets.end())
+        {
+            res.set_content(it->second, static_asset_types[asset_path]);
+            return true;
+        }
+
+#ifdef EZREMOTE_PAYLOAD
+        // The payload serves everything under /app0/assets straight from its
+        // data folder, including fonts and files not referenced by index.html.
+        std::string content;
+        if (ReadAssetFile(asset_path, &content))
+        {
+            res.set_content(content, AssetMimeType(asset_path));
+            return true;
+        }
+#endif
+        return false;
     }
 
     static bool IsWebInstallablePath(const std::string &path)
@@ -4805,7 +4852,11 @@ namespace HttpServer
             res.set_content("{\"success\":false,\"error\":\"Authentication required\"}", "application/json");
             return Server::HandlerResponse::Handled;
         });
+        #ifdef EZREMOTE_PAYLOAD
+        svr->set_mount_point("/", DATA_PATH);
+        #else
         svr->set_mount_point("/", "/");
+        #endif
 
         // Always reachable: the web UI is the only front end in headless mode
         // and there is no setting to turn the server off.

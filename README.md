@@ -320,3 +320,30 @@ Finally build the app
    make
 ```
 
+`cmake --build build --target upload` uploads the built package to `PS4_FTP_URL` and mirrors `data/assets` and `data/daemon` to `PS4_FTP_DATA_DIR/assets` and `PS4_FTP_DATA_DIR/daemon` on the console.
+
+### Headless payload ELF (elfldr)
+
+The client can also be built as a raw ELF with the [ps4-payload-sdk](https://github.com/ps4-payload-sdk) and loaded with elfldr. This build has **no native UI** (no SDL/ImGui): it always starts headless and serves the web UI. The normal OpenOrbis app/pkg build above is unaffected.
+
+```
+   export PS4_PAYLOAD_SDK=/opt/ps4-payload-sdk
+   cmake -S . -B build_elf -DCMAKE_TOOLCHAIN_FILE=/opt/ps4-payload-sdk/toolchain/orbis.cmake
+   cmake --build build_elf --target elf
+```
+
+The result is `build_elf/ezremote_client.elf`. The same build also compiles the `ps4-ezremote-server` submodule with the same payload SDK and stages its stripped payload at `data/daemon/ezremote-server.elf` (the stripped client payload is `data/daemon/ezremote_client.elf`). Run this before `build_pkg.sh` when you want the package to carry a freshly built server payload.
+
+Stage the web UI files for the console with:
+
+```
+   cmake --build build_elf --target payload-data
+```
+
+Deploy to the PS4:
+- `build_elf/ezremote_client.elf` - load it with elfldr
+- `build_elf/payload-data/assets` -> `/data/ezremote-client/assets`
+- optional: `data/daemon/ezremote-server.elf` -> `/data/ezremote-client/daemon/ezremote-server.elf` (without it, background install/download and "restart client" from the web UI are unavailable)
+
+The payload keeps its configuration in the same `/data/ezremote-client/config.ini`, and the web UI is served on the configured HTTP port (default 8080). The native Global Settings dialog is not present in this build; edit the web UI settings instead.
+

@@ -14,7 +14,7 @@
 #include "lang.h"
 #include "activity.h"
 #include "clients/nfsclient.h"
-#include "windows.h"
+#include "ui_state.h"
 #include "util.h"
 #include "system.h"
 

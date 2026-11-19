@@ -8,7 +8,6 @@
 #include "lang.h"
 #include "fonts.h"
 
-bool done = false;
 int gui_mode = GUI_MODE_BROWSER;
 
 namespace GUI

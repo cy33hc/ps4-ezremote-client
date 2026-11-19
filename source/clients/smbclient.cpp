@@ -14,7 +14,7 @@
 #include "lang.h"
 #include "activity.h"
 #include "clients/smbclient.h"
-#include "windows.h"
+#include "ui_state.h"
 #include "util.h"
 
 SmbClient::SmbClient()

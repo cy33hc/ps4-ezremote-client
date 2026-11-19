@@ -10,7 +10,7 @@
 #include "fs.h"
 #include "lang.h"
 #include "util.h"
-#include "windows.h"
+#include "ui_state.h"
 #include "system.h"
 
 #define FTP_CLIENT_BUFSIZ 1048576

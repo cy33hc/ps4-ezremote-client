@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string>
 #include <time.h>
+#include <orbis/libkernel.h>
 
 #include "common.h"
 #include "split_file.h"
