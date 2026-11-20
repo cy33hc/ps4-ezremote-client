@@ -1,40 +1,34 @@
 #!/usr/bin/env bash
-# Build the headless payload ELF with ps4-payload-sdk (for elfldr).
+# Build the headless client as an OpenOrbis eboot for a gdd daemon.
 #
 #   ./build_elf.sh
 #
-# Override the build directory with BUILD_DIR=..., the payload SDK with
-# PS4_PAYLOAD_SDK=..., and the OpenOrbis SDK with OPENORBIS=...
+# Override the build directory with BUILD_DIR=..., the SDK with OPENORBIS=...,
+# or the SELF authinfo with AUTH_INFO=...
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
-PAYLOAD_SDK="${PS4_PAYLOAD_SDK:-/opt/ps4-payload-sdk}"
-if [[ ! -f "$PAYLOAD_SDK/toolchain/orbis.cmake" ]]; then
-    echo "error: ps4-payload-sdk not found at $PAYLOAD_SDK (set PS4_PAYLOAD_SDK)" >&2
-    exit 1
-fi
-# The SDK's linker wrapper reads this environment variable.
-export PS4_PAYLOAD_SDK="$PAYLOAD_SDK"
-
-# OpenOrbis is only needed for the orbis/ headers and the libSceBgft.so stub.
 if [[ -n "${OPENORBIS:-}" && -d "$OPENORBIS" ]]; then
-    ORBIS_SDK="$OPENORBIS"
+    SDK="$OPENORBIS"
 elif [[ -d "$ROOT/.sdk/pacbrew/ps4/openorbis" ]]; then
-    ORBIS_SDK="$ROOT/.sdk/pacbrew/ps4/openorbis"
+    SDK="$ROOT/.sdk/pacbrew/ps4/openorbis"
 elif [[ -d /opt/pacbrew/ps4/openorbis ]]; then
-    ORBIS_SDK="/opt/pacbrew/ps4/openorbis"
+    SDK="/opt/pacbrew/ps4/openorbis"
 else
-    echo "error: OpenOrbis SDK not found (set OPENORBIS); it provides orbis/ headers for the payload build" >&2
+    echo "error: OpenOrbis SDK not found (set OPENORBIS)" >&2
     exit 1
 fi
+
+export OPENORBIS="$SDK"
+export OO_PS4_TOOLCHAIN="$SDK"
+
+AUTH_INFO="${AUTH_INFO:-010000000010003800000000001c004000ff00000000008000000000000000000000000000000000000000c000400040000000000000008000000000000000f00040ffff000000f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000}"
 
 BUILD_DIR="${BUILD_DIR:-$ROOT/build_elf}"
-TOOLCHAIN="$PAYLOAD_SDK/toolchain/orbis.cmake"
+TOOLCHAIN="$SDK/cmake/ps4.cmake"
 
-# A build directory configured with a different toolchain (or a now-missing
-# compiler) cannot be reused.
 if [[ -f "$BUILD_DIR/CMakeCache.txt" ]]; then
     cached_toolchain="$(sed -n 's/^CMAKE_TOOLCHAIN_FILE:[A-Z]*=//p' "$BUILD_DIR/CMakeCache.txt")"
     cached_cc="$(sed -n 's/^CMAKE_C_COMPILER:[A-Z]*=//p' "$BUILD_DIR/CMakeCache.txt")"
@@ -55,13 +49,16 @@ fi
 
 cmake -S "$ROOT" -B "$BUILD_DIR" \
     -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" \
-    -DEZREMOTE_ORBIS_SDK="$ORBIS_SDK"
-cmake --build "$BUILD_DIR" --target elf -j8
-cmake --build "$BUILD_DIR" --target payload-data
+    -DEZREMOTE_HEADLESS_APP=ON \
+    -DEZREMOTE_DAEMON_AUTHINFO="$AUTH_INFO"
+cmake --build "$BUILD_DIR" --target eboot -j8
+md5sum "$ROOT/data/daemon/ezremote_client.self" | cut -d' ' -f1 > "$ROOT/data/daemon/ezremote_client.md5"
+"$ROOT/scripts/make_daemon_sfo.sh" "$SDK"
 
 echo
 echo "Built:"
-echo "  $BUILD_DIR/ezremote_client.elf              (load with elfldr)"
-echo "  $ROOT/data/daemon/ezremote_client.elf       (stripped client payload)"
-echo "  $ROOT/data/daemon/ezremote-server.elf       (ezRemote Server payload)"
-echo "  $BUILD_DIR/payload-data/assets              (copy to /data/ezremote-client/assets)"
+echo "  $BUILD_DIR/eboot.bin                    (gdd daemon eboot)"
+echo "  $ROOT/data/daemon/ezremote_client.self   (staged copy)"
+echo "  $ROOT/data/daemon/ezremote_client.md5    (MD5 hash)"
+echo "  $ROOT/data/daemon/ezremote_client.sfo    (gdd param.sfo)"
+echo "  $BUILD_DIR/ezremote_client.elf          (linked ELF)"

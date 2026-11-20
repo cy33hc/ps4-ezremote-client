@@ -9,6 +9,19 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
+# Optional: ./build_pkg.sh upload
+# Uploads the built pkg and data/daemon via the CMake upload target.
+UPLOAD=0
+for arg in "$@"; do
+    case "$arg" in
+        upload|--upload) UPLOAD=1 ;;
+        *)
+            echo "usage: $0 [upload]" >&2
+            exit 1
+            ;;
+    esac
+done
+
 # Locate the OpenOrbis SDK: $OPENORBIS, the in-tree .sdk, or the system install.
 if [[ -n "${OPENORBIS:-}" && -d "$OPENORBIS" ]]; then
     SDK="$OPENORBIS"
@@ -56,6 +69,12 @@ fi
 
 cmake -S "$ROOT" -B "$BUILD_DIR" -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN"
 cmake --build "$BUILD_DIR" --target ezremote_client_pkg -j8
+
+if [[ $UPLOAD -eq 1 ]]; then
+    echo
+    echo "Uploading package and daemons..."
+    cmake --build "$BUILD_DIR" --target upload
+fi
 
 echo
 echo "Built:"

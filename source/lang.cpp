@@ -7,12 +7,7 @@
 #include <map>
 #include <dirent.h>
 
-#ifdef EZREMOTE_PAYLOAD
-// A payload has no app sandbox; its language files live with the web assets.
-#define LANG_ASSETS_ROOT DATA_PATH "/assets/langs"
-#else
-#define LANG_ASSETS_ROOT "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs"
-#endif
+#define LANG_ASSETS_ROOT WEB_ASSETS_ROOT "/langs"
 
 char lang_identifiers[LANG_STRINGS_NUM][LANG_ID_SIZE] = {
 	FOREACH_STR(GET_STRING)};
@@ -230,7 +225,7 @@ static bool ReadLanguageFile(const std::string &name, std::string *out)
 {
     const char *roots[] = {
         LANG_ASSETS_ROOT "/",
-#ifndef EZREMOTE_PAYLOAD
+#ifndef EZREMOTE_HEADLESS_APP
         "/app0/assets/langs/",
 #endif
     };
@@ -280,7 +275,7 @@ static void CacheLanguageFiles()
 
 	const char *lang_root = LANG_ASSETS_ROOT;
 	DIR *dir = opendir(lang_root);
-#ifndef EZREMOTE_PAYLOAD
+#ifndef EZREMOTE_HEADLESS_APP
 	if (dir == nullptr)
 	{
 		lang_root = "/app0/assets/langs";

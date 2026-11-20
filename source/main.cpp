@@ -15,11 +15,11 @@
 #include <orbis/Pad.h>
 #include <orbis/AudioOut.h>
 #include <orbis/Net.h>
+#include <dbglogger.h>
 
-#ifndef EZREMOTE_PAYLOAD
+#ifndef EZREMOTE_HEADLESS_APP
 #include <orbis/Pad.h>
 #include <orbis/AudioOut.h>
-#include <dbglogger.h>
 
 #include "imgui.h"
 #include "SDL2/SDL.h"
@@ -40,23 +40,38 @@
 #include "payload_loader.h"
 #include "system.h"
 #include "activity.h"
+#include "daemon.h"
 #include "ui_state.h"
 
-#ifndef EZREMOTE_PAYLOAD
 extern "C"
 {
 #include "orbis_jbc.h"
 }
-#endif
 
 #define FRAME_WIDTH 1920
 #define FRAME_HEIGHT 1080
 #define NET_HEAP_SIZE   (5 * 1024 * 1024)
 
+
+
 static std::atomic<bool> g_shutdown_started{false};
 static bool g_http_started = false;
 
-#ifndef EZREMOTE_PAYLOAD
+#ifdef EZREMOTE_HEADLESS_APP
+static void ShutdownLog(const char *message)
+{
+	FILE *file = fopen(DATA_PATH "/shutdown.log", "a");
+	if (file == nullptr)
+		return;
+	fprintf(file, "%s\n", message);
+	fflush(file);
+	fclose(file);
+}
+#else
+#define ShutdownLog(...) ((void)0)
+#endif
+
+#ifndef EZREMOTE_HEADLESS_APP
 // SDL window and software renderer
 SDL_Window *window;
 SDL_Renderer *renderer;
@@ -157,7 +172,7 @@ void InitImgui()
 	colors[ImGuiCol_TabHovered]           = panelHoverColor;
 }
 
-#endif  // EZREMOTE_PAYLOAD
+#endif  // EZREMOTE_HEADLESS_APP
 
 static int instance_lock_fd = -1;
 
@@ -168,6 +183,7 @@ static void Shutdown()
 		return;
 
 	done = true;
+	ShutdownLog("shutdown: enter");
 
 	HttpServer::Stop();
 	if (g_http_started)
@@ -176,15 +192,24 @@ static void Shutdown()
 		g_http_started = false;
 	}
 
+	ShutdownLog("shutdown: http stopped");
 	Activities::Shutdown();
 	// Give cancellable workers a moment to notice and unwind.
 	for (int i = 0; i < 50 && Activities::AnyRunning(); i++)
 		usleep(100000);
 
+#ifdef EZREMOTE_HEADLESS_APP
+	ShutdownLog("shutdown: skipping BGFT term");
+#else
+	ShutdownLog("shutdown: before INSTALLER::Exit");
 	INSTALLER::Exit();
+	ShutdownLog("shutdown: after INSTALLER::Exit");
+#endif
 	GDriveClient::StopRefreshToken();
+	ShutdownLog("shutdown: before jbc/net");
 
-#ifndef EZREMOTE_PAYLOAD
+#ifndef EZREMOTE_HEADLESS_APP
+	ShutdownLog("shutdown: native UI cleanup");
 	if (ImGui::GetCurrentContext() != nullptr)
 	{
 		ImGui_ImplSDLRenderer_Shutdown();
@@ -208,7 +233,14 @@ static void Shutdown()
 
 	terminate_jbc();
 #endif
+#ifdef EZREMOTE_HEADLESS_APP
+	ShutdownLog("shutdown: before terminate_jbc");
+	terminate_jbc();
+	ShutdownLog("shutdown: after terminate_jbc");
+#endif
+	ShutdownLog("shutdown: before net term");
 	sceNetTerm();
+	ShutdownLog("shutdown: after net term");
 
 	if (instance_lock_fd >= 0)
 	{
@@ -221,19 +253,16 @@ static void Shutdown()
 static void terminate()
 {
 	Shutdown();
-#ifndef EZREMOTE_PAYLOAD
+	ShutdownLog("terminate: calling LoadExec(exit)");
 	sceSystemServiceLoadExec("exit", NULL);
-#endif
 }
 
 bool headless_mode = false;
 
 int main()
 {
-#ifndef EZREMOTE_PAYLOAD
 	dbglogger_init();
 	dbglogger_log("If you see this you've set up dbglogger correctly.");
-#endif
 
 	int rc;
 	// No buffering
@@ -241,14 +270,14 @@ int main()
 	signal(SIGPIPE, SIG_IGN);
 	
 	// load common modules
-#ifndef EZREMOTE_PAYLOAD
+#ifndef EZREMOTE_HEADLESS_APP
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_IME_DIALOG) < 0) return 0;
 #endif
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_SYSTEM_SERVICE) < 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_USER_SERVICE) < 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_BGFT) < 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_APP_INST_UTIL) < 0) return 0;
-#ifndef EZREMOTE_PAYLOAD
+#ifndef EZREMOTE_HEADLESS_APP
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_PAD) < 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_AUDIOOUT) < 0 || sceAudioOutInit() != 0) return 0;
 #endif
@@ -258,7 +287,7 @@ int main()
 
 	if (INSTALLER::Init() < 0)
 	{
-#ifndef EZREMOTE_PAYLOAD
+#ifndef EZREMOTE_HEADLESS_APP
 		return 0;
 #else
 		// A payload has no app context; keep the web UI usable even if BGFT
@@ -269,12 +298,12 @@ int main()
 
 	CONFIG::LoadConfig();
 	headless_mode = headless_enabled;
-#ifdef EZREMOTE_PAYLOAD
+#ifdef EZREMOTE_HEADLESS_APP
 	// The payload build has no native UI at all.
 	headless_mode = true;
 #endif
 
-#ifndef EZREMOTE_PAYLOAD
+#ifndef EZREMOTE_HEADLESS_APP
 	// Headless: no window, no ImGui, no font atlas. Everything inside this
 	// branch is the native front end.
 	if (!headless_mode)
@@ -304,7 +333,11 @@ int main()
 
 	if (!initialize_jbc())
 		terminate();
-#endif  // EZREMOTE_PAYLOAD
+#endif  // EZREMOTE_HEADLESS_APP
+#ifdef EZREMOTE_HEADLESS_APP
+	if (!initialize_jbc())
+		terminate();
+#endif
 	if (load_sys_modules() != 0)
 	{
 		Shutdown();
@@ -324,7 +357,7 @@ int main()
 
 	if (headless_mode)
 	{
-	#ifdef EZREMOTE_PAYLOAD
+	#ifdef EZREMOTE_HEADLESS_APP
 		int32_t sys_lang = 0;
 		sceSystemServiceParamGetInt(ORBIS_SYSTEM_SERVICE_PARAM_ID_LANG, &sys_lang);
 		Lang::SetSystemLangIndex(sys_lang);
@@ -346,21 +379,16 @@ int main()
 		Shutdown();
 		return 0;
 	#else
-		PAYLOAD::StartEzRemoteClient();
+		boot_daemon_services(EZREMOTE_CLIENT_DAEMON_TITLE_ID, EZREMOTE_CLIENT_DAEMON_SELF);
 		Shutdown();
 		return 0;
 	#endif
 	}
 
-	PAYLOAD::StopEzRemoteClient();
-	while (PAYLOAD::IsEzremoteClientStarted())
-	{
-		usleep(100000);
-	}
 	g_http_started = HttpServer::Start();
 	ensure_ezremote_server();
 
-#ifndef EZREMOTE_PAYLOAD
+#ifndef EZREMOTE_HEADLESS_APP
 	GUI::RenderLoop(renderer);
 
 	Shutdown();

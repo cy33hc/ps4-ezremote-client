@@ -330,20 +330,29 @@ namespace CONFIG
             sprintf(setting.username, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_USER, ""));
             WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_USER, setting.username);
 
-            char tmp_password[128];
-            sprintf(tmp_password, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_PASSWORD, ""));
+            // Stored values are base64 ciphertext, not plaintext. Never treat
+            // an undecryptable value as a password or rewrite it with the
+            // generic key; that inflates the config on every launch.
+            std::string tmp_password = ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_PASSWORD, "");
             std::string encrypted_password;
-            if (strlen(tmp_password) > 0)
+            bool write_password = true;
+            if (!tmp_password.empty())
             {
                 std::string decrypted_password;
                 int ret = Decrypt(tmp_password, decrypted_password);
                 if (ret == 0)
-                    sprintf(setting.password, "%s", tmp_password);
+                {
+                    setting.password[0] = '\0';
+                    write_password = false;
+                }
                 else
-                    sprintf(setting.password, "%s", decrypted_password.c_str());
-                Encrypt(setting.password, encrypted_password);
+                {
+                    snprintf(setting.password, sizeof(setting.password), "%s", decrypted_password.c_str());
+                    Encrypt(setting.password, encrypted_password);
+                }
             }
-            WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_PASSWORD, encrypted_password.c_str());
+            if (write_password)
+                WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_PASSWORD, encrypted_password.c_str());
 
             setting.enable_rpi = ReadBool(sites[i].c_str(), CONFIG_ENABLE_RPI, true);
             WriteBool(sites[i].c_str(), CONFIG_ENABLE_RPI, setting.enable_rpi);

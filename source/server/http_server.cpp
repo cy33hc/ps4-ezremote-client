@@ -1135,11 +1135,7 @@ namespace HttpServer
     static bool ReadAssetFile(const std::string &url_path, std::string *out)
     {
         static const char *url_prefix = "/app0/assets";
-#ifdef EZREMOTE_PAYLOAD
-        static const char *fs_root = DATA_PATH "/assets";
-#else
-        static const char *fs_root = "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets";
-#endif
+        static const char *fs_root = WEB_ASSETS_ROOT;
 
         if (url_path.rfind(url_prefix, 0) != 0)
             return false;
@@ -1239,7 +1235,7 @@ namespace HttpServer
             return true;
         }
 
-#ifdef EZREMOTE_PAYLOAD
+#ifdef EZREMOTE_HEADLESS_APP
         // The payload serves everything under /app0/assets straight from its
         // data folder, including fonts and files not referenced by index.html.
         std::string content;
@@ -2294,7 +2290,7 @@ namespace HttpServer
         svr->Get("/version", [&](const Request &req, Response &res)
         {
             std::string version = "unknown";
-            FILE *file = fopen(DATA_PATH "/version.txt", "r");
+            FILE *file = fopen(WEB_VERSION_FILE, "r");
             if (file != nullptr)
             {
                 char buffer[64] = {0};
@@ -4852,7 +4848,7 @@ namespace HttpServer
             res.set_content("{\"success\":false,\"error\":\"Authentication required\"}", "application/json");
             return Server::HandlerResponse::Handled;
         });
-        #ifdef EZREMOTE_PAYLOAD
+        #ifdef EZREMOTE_HEADLESS_APP
         svr->set_mount_point("/", DATA_PATH);
         #else
         svr->set_mount_point("/", "/");

@@ -10,6 +10,7 @@
 
 #include "clients/remote_client.h"
 
+#define APP_TITLE_ID "RMTC00001"
 #define APP_ID "ezremote-client"
 #define DATA_PATH "/data/" APP_ID
 #define CONFIG_INI_FILE DATA_PATH "/config.ini"
@@ -19,12 +20,24 @@
 #define TMP_ICON_PATH DATA_PATH "/tmp_icon.png"
 #define TMP_FOLDER_PATH DATA_PATH "/tmp"
 
-#ifdef EZREMOTE_PAYLOAD
+#define DAEMON_PATH "/system/vsh/app"
+#define EZREMOTE_CLIENT_DAEMON_TITLE_ID "EZRC00001"
+#define EZREMOTE_SERVER_DAEMON_TITLE_ID "EZSV00001"
+#define EZREMOTE_CLIENT_DAEMON_SELF "ezremote_client"
+#define EZREMOTE_SERVER_DAEMON_SELF "ezremote-server"
+
+#ifdef EZREMOTE_HEADLESS_APP
 #define SERVER_ELF_PATH DATA_PATH "/daemon/ezremote-server.elf"
 #define CLIENT_ELF_PATH DATA_PATH "/daemon/ezremote_client.elf"
+// The gdd daemon is launched straight from /system/vsh/app/<title> on this
+// jailbroken setup, so serve assets from that folder rather than app0.
+#define WEB_ASSETS_ROOT DAEMON_PATH "/" EZREMOTE_CLIENT_DAEMON_TITLE_ID "/assets"
+#define WEB_VERSION_FILE DAEMON_PATH "/" EZREMOTE_CLIENT_DAEMON_TITLE_ID "/version.txt"
 #else
 #define SERVER_ELF_PATH "/mnt/sandbox/pfsmnt/RMTC00001-app0/daemon/ezremote-server.elf"
 #define CLIENT_ELF_PATH "/mnt/sandbox/pfsmnt/RMTC00001-app0/daemon/ezremote_client.elf"
+#define WEB_ASSETS_ROOT "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets"
+#define WEB_VERSION_FILE DATA_PATH "/version.txt"
 #endif
 
 #define CONFIG_GLOBAL "Global"

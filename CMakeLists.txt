@@ -6,11 +6,8 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DDONT_HAVE_STRUPR")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
 set(APP_VERSION "02.12")
 
-# Includes and definitions are target-scoped so the payload build can also add
-# ps4-ezremote-server without leaking this project's headers into its sources.
-
-# Shared by both builds. The payload build compiles the same code with
-# EZREMOTE_PAYLOAD set and without the native UI sources.
+# Shared by both builds. The headless build compiles the same code with
+# EZREMOTE_HEADLESS_APP set and without the native UI sources.
 set(EZREMOTE_CLIENT_COMMON_SOURCES
   source/pugixml/pugixml.cpp
   source/http/httplib.cpp
@@ -68,6 +65,7 @@ set(EZREMOTE_CLIENT_NATIVE_SOURCES
   source/imgui/imgui_tables.cpp
   source/imgui/imgui_widgets.cpp
   source/imgui/imgui.cpp
+  source/daemon.cpp
   source/fonts.cpp
   source/gui.cpp
   source/ime_dialog.cpp
@@ -76,110 +74,75 @@ set(EZREMOTE_CLIENT_NATIVE_SOURCES
   source/windows.cpp
 )
 
-if(DEFINED PS4_PAYLOAD_SDK)
-  # Payload SDK build: a headless ELF with no native UI, loadable with elfldr.
-  # The app/openorbis SDK is still needed for the orbis/ headers and the
-  # libSceBgft.so stub, which the payload SDK does not ship.
-  set(EZREMOTE_ORBIS_SDK "" CACHE PATH "OpenOrbis SDK used for headers and app stubs in the payload build")
-  if(NOT EZREMOTE_ORBIS_SDK)
-    if(DEFINED ENV{OPENORBIS})
-      set(EZREMOTE_ORBIS_SDK "$ENV{OPENORBIS}")
-    elseif(EXISTS "${CMAKE_SOURCE_DIR}/.sdk/pacbrew/ps4/openorbis/include/orbis")
-      set(EZREMOTE_ORBIS_SDK "${CMAKE_SOURCE_DIR}/.sdk/pacbrew/ps4/openorbis")
-    else()
-      set(EZREMOTE_ORBIS_SDK "/opt/pacbrew/ps4/openorbis")
-    endif()
-  endif()
-  if(NOT EXISTS "${EZREMOTE_ORBIS_SDK}/include/orbis")
-    message(FATAL_ERROR "OpenOrbis SDK headers not found at ${EZREMOTE_ORBIS_SDK}; set -DEZREMOTE_ORBIS_SDK=<openorbis sdk>")
-  endif()
 
-  # libSceBgft/libSceAppInstUtil are app libraries that a payload loader cannot
-  # resolve. They are loaded at runtime by source/payload_modules.cpp instead.
-  add_executable(ezremote_client.elf ${EZREMOTE_CLIENT_COMMON_SOURCES} source/payload_modules.cpp)
+option(EZREMOTE_HEADLESS_APP "Build the headless client as an OpenOrbis eboot" OFF)
+set(EZREMOTE_DAEMON_AUTHINFO "010000000010003800000000001c004000ff00000000008000000000000000000000000000000000000000c000400040000000000000008000000000000000f00040ffff000000f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" CACHE STRING "create-fself authinfo for the gdd daemon eboot")
+
+if(EZREMOTE_HEADLESS_APP)
+  # OpenOrbis headless app: the payload code paths without SDL/ImGui, plus jbc
+  # so it can still reach /data when launched as a gdd daemon.
+  add_executable(ezremote_client.elf
+    ${EZREMOTE_CLIENT_COMMON_SOURCES}
+    source/orbis_jbc.c)
   target_include_directories(ezremote_client.elf PRIVATE source source/pugixml)
   target_compile_definitions(ezremote_client.elf PRIVATE
-    EZREMOTE_PAYLOAD=1
-    __BSD_VISIBLE
-    _BSD_SOURCE
+    EZREMOTE_HEADLESS_APP=1
     CPPHTTPLIB_OPENSSL_SUPPORT
     CPPHTTPLIB_THREAD_POOL_COUNT=16)
-  # This payload SDK installation ships minizip headers that include "ints.h"
-  # without shipping the file itself. Provide the one typedef they use.
-  set(EZREMOTE_COMPAT_INCLUDE "${CMAKE_BINARY_DIR}/payload-compat-include")
-  file(MAKE_DIRECTORY "${EZREMOTE_COMPAT_INCLUDE}")
-  file(WRITE "${EZREMOTE_COMPAT_INCLUDE}/ints.h"
-    "#ifndef INTS_H\n#define INTS_H\ntypedef unsigned long long ui64_t;\n#endif\n")
-  target_include_directories(ezremote_client.elf PRIVATE "${EZREMOTE_COMPAT_INCLUDE}")
-  # orbis/ headers only; -idirafter keeps the payload SDK's libc headers first.
-  # The payload SDK's ifaddrs.h assumes <sys/types.h> was included first, and
-  # its inifile translation unit needs <ctype.h> for islower/toupper.
-  target_compile_options(ezremote_client.elf PRIVATE
-    "-idirafter" "${EZREMOTE_ORBIS_SDK}/include"
-    "-includesys/types.h"
-    "-includectype.h"
-    # Keep the payload small enough for ScePartyDaemon's loader.
-    -Oz -ffunction-sections -fdata-sections)
-  target_link_options(ezremote_client.elf PRIVATE
-    "-Wl,--gc-sections"
-    "-Wl,--icf=all")
   target_link_libraries(ezremote_client.elf
+    dbglogger
+    c
+    c++
+    pthread
     z
     crypto
     ssl
-    json-c
-    smb2
-    ssh2
-    nfs
-    archive
-    zstd
-    deflate
-    bz2
-    lzma
-    minizip
-    psl
     curl
-    lexbor_static
-    kernel_sys
+    lexbor
+    smb2
+    nfs
+    minizip
+    bz2
+    b2
+    lzma
+    lz4
+    archive
+    json-c
+    ssh2
+    jbc
+    kernel
     SceSysmodule
     SceSystemService
+    SceRtc
     SceUserService
     SceNet
+    SceBgft
+    SceAppInstUtil
   )
-
   set_target_properties(ezremote_client.elf PROPERTIES SKIP_BUILD_RPATH TRUE)
 
-  # Stage a stripped copy for the pkg's data/daemon folder. The server payload
-  # (data/daemon/ezremote-server.elf) is produced by the subdirectory below and
-  # is not overwritten here.
-  set(EZREMOTE_DAEMON_DIR "${CMAKE_SOURCE_DIR}/data/daemon")
-  add_custom_command(TARGET ezremote_client.elf POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${EZREMOTE_DAEMON_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:ezremote_client.elf>"
-            "${EZREMOTE_DAEMON_DIR}/ezremote_client.elf"
-    COMMAND "${PS4_PAYLOAD_SDK}/bin/orbis-strip" "${EZREMOTE_DAEMON_DIR}/ezremote_client.elf"
-    COMMENT "Staging stripped payload ELF in data/daemon"
-    VERBATIM)
-
-  add_custom_target(elf DEPENDS ezremote_client.elf)
-
-  # Copy the console web assets next to the build so they can be uploaded to
-  # /data/ezremote-client/assets on the PS4.
-  add_custom_target(payload-data
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/payload-data"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/data/assets" "${CMAKE_BINARY_DIR}/payload-data/assets"
-    COMMENT "Staging data/assets for /data/ezremote-client/assets")
-
-  # The ezRemote Server payload uses the same PS4_PAYLOAD_SDK/toolchain. Its
-  # `package` target strips the server ELF and copies it to
-  # data/daemon/ezremote-server.elf, so building the client ELF also refreshes
-  # the bundled server payload.
-  if(EXISTS "${CMAKE_SOURCE_DIR}/ps4-ezremote-server/CMakeLists.txt")
-    add_subdirectory(ps4-ezremote-server EXCLUDE_FROM_ALL)
-    add_dependencies(ezremote_client.elf package)
-  else()
-    message(WARNING "ps4-ezremote-server submodule is missing; building the client ELF without the server payload")
+  if(NOT DEFINED OPENORBIS)
+    set(OPENORBIS "$ENV{OPENORBIS}")
   endif()
+  set(EZREMOTE_SELF_OUT "${CMAKE_BINARY_DIR}/ezremote_client.oelf")
+  set(EZREMOTE_EBOOT "${CMAKE_BINARY_DIR}/eboot.bin")
+  add_custom_command(
+    OUTPUT "${EZREMOTE_EBOOT}"
+    COMMAND ${CMAKE_COMMAND} -E env "OO_PS4_TOOLCHAIN=${OPENORBIS}"
+            "${OPENORBIS}/bin/create-fself"
+            "-in=$<TARGET_FILE:ezremote_client.elf>"
+            "-out=${EZREMOTE_SELF_OUT}"
+            "--eboot" "${EZREMOTE_EBOOT}"
+            "--paid" "0x3800000000000035"
+            "--authinfo" "${EZREMOTE_DAEMON_AUTHINFO}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_SOURCE_DIR}/data/daemon"
+    COMMAND ${CMAKE_COMMAND} -E copy "${EZREMOTE_EBOOT}" "${CMAKE_SOURCE_DIR}/data/daemon/ezremote_client.self"
+    COMMAND sh -c "md5sum '${CMAKE_SOURCE_DIR}/data/daemon/ezremote_client.self' | cut -d' ' -f1 > '${CMAKE_SOURCE_DIR}/data/daemon/ezremote_client.md5'"
+    DEPENDS ezremote_client.elf
+    COMMENT "Creating gdd daemon eboot.bin with custom authinfo"
+    VERBATIM)
+  add_custom_target(eboot ALL DEPENDS "${EZREMOTE_EBOOT}")
+  add_custom_target(elf DEPENDS ezremote_client.elf)
 else()
   add_executable(ezremote_client ${EZREMOTE_CLIENT_COMMON_SOURCES} ${EZREMOTE_CLIENT_NATIVE_SOURCES})
   target_include_directories(ezremote_client PRIVATE source source/pugixml source/imgui)
@@ -244,9 +207,6 @@ else()
   add_custom_target(upload
     DEPENDS ezremote_client_pkg
     COMMAND cd ${CMAKE_BINARY_DIR} && for pkg in IV0001-*.pkg \; do curl -sS --fail --ftp-create-dirs -T \"$$pkg\" \"${PS4_FTP_URL}/$$pkg\" || exit 1 \; done
-    COMMAND python3 -u "${CMAKE_SOURCE_DIR}/scripts/upload_ftp.py"
-            "${PS4_FTP_URL}" "${PS4_FTP_DATA_DIR}"
-            "${CMAKE_SOURCE_DIR}/data/assets" "${CMAKE_SOURCE_DIR}/data/daemon"
-    COMMENT "Uploading package, assets and daemon payloads to ${PS4_FTP_DATA_DIR}"
+    COMMENT "Uploading package and daemon payloads to ${PS4_FTP_DATA_DIR}"
   )
 endif()

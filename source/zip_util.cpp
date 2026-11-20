@@ -17,7 +17,7 @@
 #include "config.h"
 #include "common.h"
 #include "fs.h"
-#ifndef EZREMOTE_PAYLOAD
+#ifndef EZREMOTE_HEADLESS_APP
 #include "ime_dialog.h"
 #endif
 #include "lang.h"
@@ -96,7 +96,7 @@ namespace ZipUtil
         }
 
         // Add file to zip
-#ifdef EZREMOTE_PAYLOAD
+#ifdef EZREMOTE_HEADLESS_APP
         void *buf = nullptr;
         if (posix_memalign(&buf, 4096, ARCHIVE_TRANSFER_SIZE) != 0)
             buf = nullptr;
@@ -463,7 +463,7 @@ namespace ZipUtil
     {
         memset(password, 0, sizeof(password));
 
-#ifdef EZREMOTE_PAYLOAD
+#ifdef EZREMOTE_HEADLESS_APP
         // Headless build: there is no UI to ask for a passphrase.
         return password;
 #else
