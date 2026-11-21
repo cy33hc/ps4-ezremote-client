@@ -14,6 +14,7 @@
 #include "config.h"
 #include "daemon.h"
 #include "fs.h"
+#include "util.h"
 #include "dbglogger.h"
 
 extern "C" {
@@ -200,6 +201,8 @@ bool boot_daemon_services(const std::string &title_id, const std::string &eboot_
     std::string src_sfo_path = app0 + "/daemon/" + eboot_name + ".sfo";
     std::string src_assets_path = app0 + "/assets";
     std::string dest_assets_path = daemon_path + "/assets";
+    std::string src_daemon_path = app0 + "/daemon";
+    std::string dest_daemon_path = daemon_path + "/daemon";
     std::string src_version_path = app0 + "/version.txt";
     std::string dest_version_path = daemon_path + "/version.txt";
 
@@ -214,6 +217,8 @@ bool boot_daemon_services(const std::string &title_id, const std::string &eboot_
 
     if (daemon_missing || assets_outdated)
     {
+        stop_daemon(title_id);
+        
         if (!!mount_large_fs("/dev/da0x4.crypt", "/system", "exfatfs", "511", MNT_UPDATE))
         {
             dbglogger_log("mounting /system failed with %s.", strerror(errno));
@@ -257,6 +262,13 @@ bool boot_daemon_services(const std::string &title_id, const std::string &eboot_
                     return false;
                 }
 
+                FS::RmRecursive(dest_daemon_path);
+                if (!copy_directory(src_daemon_path, dest_daemon_path))
+                {
+                    dbglogger_log("Copying Daemon daemon failed");
+                    return false;
+                }
+
                 if (!FS::Copy(src_version_path, dest_version_path))
                 {
                     dbglogger_log("Copying Daemon version.txt failed");
@@ -270,14 +282,15 @@ bool boot_daemon_services(const std::string &title_id, const std::string &eboot_
     //Launch Daemon with silent
     if (!is_daemon_running(title_id)) {
         appid = launch_daemon(title_id);
+        /* sleep(3);
+        if (!is_daemon_running(title_id)) {
+            Util::Notify("Failed to launch. Please retry");
+        } */
         dbglogger_log("Launched Daemon AppId: %x", appid);
     }
     else
        dbglogger_log("Found Daemon AppId: %x", appid);
 
-
-
     return true;
-
 }
 /* *********************** daemon shit **********************/

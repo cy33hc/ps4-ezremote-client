@@ -27,15 +27,11 @@
 #define EZREMOTE_SERVER_DAEMON_SELF "ezremote-server"
 
 #ifdef EZREMOTE_HEADLESS_APP
-#define SERVER_ELF_PATH DATA_PATH "/daemon/ezremote-server.elf"
-#define CLIENT_ELF_PATH DATA_PATH "/daemon/ezremote_client.elf"
-// The gdd daemon is launched straight from /system/vsh/app/<title> on this
-// jailbroken setup, so serve assets from that folder rather than app0.
+#define SERVER_ELF_PATH DAEMON_PATH "/" EZREMOTE_CLIENT_DAEMON_TITLE_ID "/daemon/ezremote-server.elf"
 #define WEB_ASSETS_ROOT DAEMON_PATH "/" EZREMOTE_CLIENT_DAEMON_TITLE_ID "/assets"
 #define WEB_VERSION_FILE DAEMON_PATH "/" EZREMOTE_CLIENT_DAEMON_TITLE_ID "/version.txt"
 #else
 #define SERVER_ELF_PATH "/mnt/sandbox/pfsmnt/RMTC00001-app0/daemon/ezremote-server.elf"
-#define CLIENT_ELF_PATH "/mnt/sandbox/pfsmnt/RMTC00001-app0/daemon/ezremote_client.elf"
 #define WEB_ASSETS_ROOT "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets"
 #define WEB_VERSION_FILE DATA_PATH "/version.txt"
 #endif
@@ -202,6 +198,8 @@ namespace CONFIG
     void SaveConfig();
     void SaveSiteConfig(const std::string &site);
     void SaveGlobalConfig();
+    void SyncHeadlessModeToServer();
+    void SyncClientPortToServer();
     void SaveLocalDirecotry(const std::string &path);
     void SaveFavoriteUrl(int index, char *url);
     void SaveWebSite(const std::string &site);
