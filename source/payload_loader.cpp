@@ -20,6 +20,7 @@
 #include "common.h"
 #include "config.h"
 #include "payload_loader.h"
+#include "daemon.h"
 #include "util.h"
 
 namespace PAYLOAD
@@ -192,65 +193,12 @@ namespace PAYLOAD
 			return 0;
 		}
 
-		return LoadPayload(SERVER_ELF_PATH);
-	}
-
-	int StartEzRemoteClient()
-	{
-		// Already serving its web UI; don't start a second instance.
-		if (IsEzremoteClientStarted())
-		{
-			Util::Notify("ezRemote Client browse mode is already running");
-			return 0;
-		}
-
-		return LoadPayload(CLIENT_ELF_PATH);
-	}
-
-	bool IsEzremoteClientStarted()
-	{
-		return IsPortOpen("127.0.0.1", http_server_port, 1);
+		return boot_daemon_services(EZREMOTE_SERVER_DAEMON_TITLE_ID, EZREMOTE_SERVER_DAEMON_SELF) ? 0 : -1;
 	}
 
 	void StopEzRemoteServer()
     {
-        httplib::Client tmp_client = httplib::Client("http://127.0.0.1:6701");
-        tmp_client.Get("/stop");
+        stop_daemon(EZREMOTE_SERVER_DAEMON_TITLE_ID);
     }
 
-	void StopEzRemoteClient()
-    {
-        httplib::Client tmp_client = httplib::Client("http://127.0.0.1:" + std::to_string(http_server_port));
-        tmp_client.set_connection_timeout(2);
-        tmp_client.set_read_timeout(2);
-
-        std::string cookie;
-        if (strlen(web_password) > 0)
-        {
-            // /stop needs a session when the web UI is password protected. The
-            // login route is unauthenticated, so authenticate first.
-            json_object *jobj = json_object_new_object();
-            json_object_object_add(jobj, "password", json_object_new_string(web_password));
-            std::string body = json_object_to_json_string(jobj);
-            json_object_put(jobj);
-
-            if (auto res = tmp_client.Post("/__local__/login", body, "application/json"))
-            {
-                std::string set_cookie = res->get_header_value("Set-Cookie");
-                size_t semicolon = set_cookie.find(';');
-                cookie = set_cookie.substr(0, semicolon);
-            }
-        }
-
-        if (cookie.empty())
-        {
-            tmp_client.Get("/stop");
-        }
-        else
-        {
-            httplib::Headers headers;
-            headers.emplace("Cookie", cookie);
-            tmp_client.Get("/stop", headers);
-        }
-    }
 }

@@ -57,20 +57,6 @@ extern "C"
 static std::atomic<bool> g_shutdown_started{false};
 static bool g_http_started = false;
 
-#ifdef EZREMOTE_HEADLESS_APP
-static void ShutdownLog(const char *message)
-{
-	FILE *file = fopen(DATA_PATH "/shutdown.log", "a");
-	if (file == nullptr)
-		return;
-	fprintf(file, "%s\n", message);
-	fflush(file);
-	fclose(file);
-}
-#else
-#define ShutdownLog(...) ((void)0)
-#endif
-
 #ifndef EZREMOTE_HEADLESS_APP
 // SDL window and software renderer
 SDL_Window *window;
@@ -183,7 +169,6 @@ static void Shutdown()
 		return;
 
 	done = true;
-	ShutdownLog("shutdown: enter");
 
 	HttpServer::Stop();
 	if (g_http_started)
@@ -192,24 +177,16 @@ static void Shutdown()
 		g_http_started = false;
 	}
 
-	ShutdownLog("shutdown: http stopped");
 	Activities::Shutdown();
 	// Give cancellable workers a moment to notice and unwind.
 	for (int i = 0; i < 50 && Activities::AnyRunning(); i++)
 		usleep(100000);
 
-#ifdef EZREMOTE_HEADLESS_APP
-	ShutdownLog("shutdown: skipping BGFT term");
-#else
-	ShutdownLog("shutdown: before INSTALLER::Exit");
 	INSTALLER::Exit();
-	ShutdownLog("shutdown: after INSTALLER::Exit");
-#endif
+
 	GDriveClient::StopRefreshToken();
-	ShutdownLog("shutdown: before jbc/net");
 
 #ifndef EZREMOTE_HEADLESS_APP
-	ShutdownLog("shutdown: native UI cleanup");
 	if (ImGui::GetCurrentContext() != nullptr)
 	{
 		ImGui_ImplSDLRenderer_Shutdown();
@@ -230,17 +207,10 @@ static void Shutdown()
 	if (ImGui::GetCurrentContext() != nullptr)
 		ImGui::DestroyContext();
 	SDL_Quit();
+#endif
 
 	terminate_jbc();
-#endif
-#ifdef EZREMOTE_HEADLESS_APP
-	ShutdownLog("shutdown: before terminate_jbc");
-	terminate_jbc();
-	ShutdownLog("shutdown: after terminate_jbc");
-#endif
-	ShutdownLog("shutdown: before net term");
 	sceNetTerm();
-	ShutdownLog("shutdown: after net term");
 
 	if (instance_lock_fd >= 0)
 	{
@@ -253,7 +223,6 @@ static void Shutdown()
 static void terminate()
 {
 	Shutdown();
-	ShutdownLog("terminate: calling LoadExec(exit)");
 	sceSystemServiceLoadExec("exit", NULL);
 }
 
@@ -330,14 +299,11 @@ int main()
 		ImGui_ImplSDLRenderer_Init(renderer);
 		ImGui_ImplSDLRenderer_CreateFontsTexture();
 	}
+#endif  // EZREMOTE_HEADLESS_APP
 
 	if (!initialize_jbc())
 		terminate();
-#endif  // EZREMOTE_HEADLESS_APP
-#ifdef EZREMOTE_HEADLESS_APP
-	if (!initialize_jbc())
-		terminate();
-#endif
+
 	if (load_sys_modules() != 0)
 	{
 		Shutdown();
@@ -349,9 +315,9 @@ int main()
 	// must be up in both modes. Starting it is slow, hence a helper.
 	auto ensure_ezremote_server = []()
 	{
-		if (PAYLOAD::StartEzRemoteServer() < 0)
+		if (!boot_daemon_services(EZREMOTE_SERVER_DAEMON_TITLE_ID, EZREMOTE_SERVER_DAEMON_SELF))
 		{
-			Util::Notify("Cloud not load ezRemote Server. It is needed for background install and download. Please ensure Goldhen payload server is enabled");
+			Util::Notify("Could not start ezRemote Server daemon. It is needed for background install and download.");
 		}
 	};
 
@@ -379,6 +345,7 @@ int main()
 		Shutdown();
 		return 0;
 	#else
+		boot_daemon_services(EZREMOTE_SERVER_DAEMON_TITLE_ID, EZREMOTE_SERVER_DAEMON_SELF);
 		boot_daemon_services(EZREMOTE_CLIENT_DAEMON_TITLE_ID, EZREMOTE_CLIENT_DAEMON_SELF);
 		Shutdown();
 		return 0;

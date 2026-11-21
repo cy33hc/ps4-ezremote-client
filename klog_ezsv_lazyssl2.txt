@@ -1,0 +1,1042 @@
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [ContentAreaScene : ContentAreaScene] -> [AppScreen : ApplicationScreenScene]
+<118>[SceShellUI] I/PSM.UI :      Scene [AppScreen : ApplicationScreenScene] : Alive
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[Theme/I] : ActiveUserChanged : From : [BLUE(userId = 10000001)]
+<118>[Theme/I] : ActiveUserChanged : To   : [ANONYMOUS(userId = ffffffff)]
+<118>[Theme/I] : Apply [ANONYMOUS] : [Option:101000]: with not preloaded user
+<118>[ScePatchChecker] check (title_id='RMTC00001', app_version='02.12', check_option=0): status=0, dl_status=0, trigger=1 userId=0xffffffff return 0x804101e6
+<118>[BGFT] [571] GameStartBoot(RMTC00001, 7) start
+<118>[BGFT] [573] GameStartBoot(RMTC00001, 7) end
+[PFS] mount [0x000004e559e9bce2] finished 1 1 1 1 0 1 1
+[PFS] mount [0x000004e516e79e01] finished 1 0 0 1 0 1 1
+<118>[BGFT] [606] GameWillStart(RMTC00001, 7) start
+<118>[BGFT] [608] GameWillStart(RMTC00001, 7) end
+<118>[SceLncService] PrepareProcessLaunchDir() returned
+<118>[SceLncService] spawnApp
+<118>[Syscore App] createApp RMTC00001
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[Syscore App] processSpawn(pid, 0x60001d0c, 0x11d0c2c0, appParam, processParam, 1, 1, 1, param, debug, 0)
+<118>[Syscore App] appParam: appType = 0x1, rootPath = /mnt/sandbox/RMTC00001_000, titleId = RMTC00001
+<118>[Syscore App] processParam: elfPath = /app0/eboot.bin, fullPath = /mnt/sandbox/pfsmnt/RMTC00001-app0-patch0-union/eboot.bin
+<118>[Syscore App] new pid=0x6a[Syscore App] attributeExe= 0
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+<118>[SceShellUI] I/PSM.UI : [NoDraw] : ClearFrameBuffer=False
+[KERNEL] dmem_start_app_process pid: 106, map=0xfffffb5017492508, app_maps_count[1], 0 -> 1
+<118>[Syscore App] Add event : pid=0x6a
+<118>[AppMgr Trace]: New Process, pid=0x6a, created.
+<118>[AppMgr Trace]: New App, appId=0x60001d0c, created
+<118>[Syscore App]  ExpandCpuSetMode : disable
+mDBG: Process 106 untraced!
+<106> EXEC /app0/eboot.bin [system], vm#0, dmem#0  <2529057 msec>
+<118>[VCS]checkFocusStatus() [LNC->VCS] Focus Change. appType = 4(MINI_APP). appId = 0x60001d0c.
+<118>[AppDb] openDb()[1063]: [File:Open] openDb() call dbutil::Connection::Open() path[/c2U818Arqm/priv/mms/app.db] flags[0x10000002] result[0x0, 0]
+<118>[AppDb] AppInfoDbInitializeDaemon()[54]: [File:Open] AppInfoDbInitializeDaemon() call DbAccessor::Init() path[/c2U818Arqm/priv/mms/app.db] result[0x0, 0].
+<118>[AppDb] AppInfoDbTerminateDaemon()[67]: [File:Close] AppInfoDbTerminateDaemon() call DbAccessor::Terminate().
+<118>[AppDb] Terminate()[768]: [File:Close] DbAccessor::Terminate() call dbutil::Connection::Close().
+<118>[UIProcess] malloc stats freeSize:41634816 (99%) inuseSize:308224 peakSize:310336 [pid:0x39]
+<118>[mbus] onNewClient. clientNum 10 over 8
+<118>[SL] AppFocusChanged [NPXS20001] -> [RMTC00001]
+<SDL2> PS4_PigletInit
+<SDL2> PS4_PigletInit: loading piglet module from: /O5MivO63KH/common/lib/libScePigletv2VSH.sprx
+<SDL2> PS4_PigletInit: Ok
+<SDL2> PS4_VideoInit
+<SDL2> PS4_JoystickDetect: new joystick detected (0) (joysticks count: 1)
+<SDL2> PS4_CreateWindow
+<SDL2> SDL_EGL_ChooseConfig: found a slow EGL config
+<118>[PSM] Got handle=0x3 from AppId=0x60001d0c
+<118>[SceShellUI] I/PSM.UI : [FirstClear] : ClearFrameBuffer=False
+<118>[SceLncService] W:\Build\J02700523\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2188) getAppId: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] launchApp(EZSV00001)
+<118>[SceLncService] category={gdd} VRMode={0,0}
+<118>[SceLncService] hnm,psnf,pc,tk,ns={0,0,0,0,0} appBootMode={-1}
+<118>[SceLncService] appType={SCE_LNC_APP_TYPE_DAEMON} [] appVer={01.12}
+<118>[SceLncService] Num. of logged-in users is 1
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck()
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck() returned
+<118>[SceLncService] PrepareProcessLaunchDebugger()
+<118>[SceLncService] PrepareProcessLaunchDebugger() returned
+<118>[SceLncService] spawnApp
+<118>[Syscore App] createApp EZSV00001
+<118>[Syscore App] processSpawn(pid, 0x60001e0d, 0x11e0d2d0, appParam, processParam, 0, 0, 1, param, debug, 0)
+<118>[Syscore App] appParam: appType = 0x2, rootPath = /mnt/sandbox/EZSV00001_000, titleId = EZSV00001
+<118>[Syscore App] processParam: elfPath = /app0/eboot.bin, fullPath = /system/vsh/app/EZSV00001/eboot.bin
+<118>[Syscore App] new pid=0x6b[Syscore App] attributeExe= 0
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+<118>[Syscore App] Add event : pid=0x6b
+<118>[AppMgr Trace]: New Process, pid=0x6b, created.
+<118>[AppMgr Trace]: New App, appId=0x60001e0d, created
+<118>[Syscore App]  ExpandCpuSetMode : disable
+mDBG: Process 107 untraced!
+<107> EXEC /app0/eboot.bin [system], vm#0, dmem#0  <2530170 msec>
+#
+# A user thread receives a fatal signal
+#
+# signal: 11 (SIGSEGV)
+# thread ID: 100923
+# thread name: eboot.bin
+# proc ID: 107
+# proc name: eboot.bin
+# reason: page fault (user read data, page not present)
+# fault address: 0000000000000038
+#
+# registers:
+# rax: 0000000058585858  rbx: 0000000000000000
+# rcx: 0000000880f4c540  rdx: 0000000000000000
+# rsi: 0000000000000038  rdi: 0000000000000000
+# rbp: 00000007eeffac10  rsp: 00000007eeffaba0
+# r8 : 0000000000000000  r9 : 0000000000000000
+# r10: 0000000000000000  r11: 0000000000000247
+# r12: 0000000800061490  r13: 0000000000000000
+# r14: 00000000008d5a48  r15: 0000000000000000
+# rip: 00000008000bb358  eflags: 00010202
+# BrF: 00000008000c3c47  BrT: 00000008000bb330
+#
+# backtrace:
+copyin: eboot.bin has nonsleeping lock
+# 00000008000c3c4c
+# 00000000004b4b5d
+# 000000000045ea6a
+# 000000000045f209
+# 00000000004706f5
+#
+# dynamic libraries:
+# /app0/eboot.bin
+#  text: 0000000000400000:000000000088c000 r-x
+#  data: 00000000008d0000:00000000008dc000 rw-
+#  fingerprint: 4f50454e4f524249532d484f4d45425245570000
+# /vLCfEbIN5K/common/lib/libkernel_sys.sprx
+#  text: 0000000800000000:0000000800054000 r-x
+#  data: 0000000800058000:0000000800090000 rw-
+#  fingerprint: dcb10caa3ec84e834bf8c02bb8a858ac00000000
+# /vLCfEbIN5K/common/lib/libSceLibcInternal.sprx
+#  text: 0000000800090000:00000008001c4000 r-x
+#  data: 00000008001cc000:00000008001e8000 rw-
+#  fingerprint: 7a6cbb01e8ab59f80a0f2d9f67adaa2d00000000
+# /vLCfEbIN5K/common/lib/libSceSysmodule.sprx
+#  text: 00000008001e8000:00000008001f4000 r-x
+#  data: 00000008001f8000:0000000800204000 rw-
+#  fingerprint: e8583e8a58c3712c5b310dab946cfe7d00000000
+<118>[Syscore App] App Crash : PID=0x6b, reason=0xb
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_APP_CRASH
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_APP_CRASH
+<118>[SceLncService] AppCrash: pid={0x0000006b} appId={0x60001e0d} appLocalPid={0x11e0d2d0}
+<118>[SceLncService] getCoredumpSequence() isDebuggable={0} isKeepProcess={1} isUserDebugRequest={0} isLimitKeepProcess={0} enableCrashReport={0}
+<118>[SceLncService] CoredumpSequence = {DUMP_PROCESS}
+<118>[SceLncService] getCoredumpMode() isSystem={0x00000001}, reason={0x0000000b}
+<118>[SceLncService] notifyAppCrash() pid={0x0000006b}, appId={0x60001e0d}, appLocalPid={0x11e0d2d0}, coredump.path,name,mode={/user/data/sce_coredumps/EZSV00001_1795249938/,EZSV00001_1795249938.sorbisdmp,1}, enableCrashReport={0}, skipVshDump={0}
+<118>[SceLncService] enableCrashReport={0}, crashReportMode={0}, isAllowed={0}
+<118>[SceLncService] kick coredump is disabled.
+<118>[Syscore App] Kill process: 0x6b
+<118>[Syscore App] EVFILT_PROC NOTE_EXIT received : pid=0x6b
+<118>[Syscore App] Kill process: 0x6b => 0
+<118>[Syscore App] process delete event : pid=0x6b
+<118>[AppMgr Trace]: pid=0x6b, deleted.
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[AppMgr] All processes exited
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[AppMgr Trace]: AppId=0x60001e0d  deleted
+<118>[AppMgr] checkAppTerminated invalid app.
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[SceLncService] onAppExit() appId={0x60001e0d}
+<118>[SceLncService] start unmountAllForShellCoreInternal()
+<118>[SceLncService] end unmountAllForShellCoreInternal()
+<118>[libSceSaveData] wait 0 msec for session killed
+<118>[SceRnpsAppMgr] UnblockAllAppInstall(): EZSV00001(appId=0x60001e0d)
+<118>[SceLncService] ProcessTerm()
+<118>[SceLncService] ProcessTerm() returned
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={2523} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [RevokeList]
+<118>[SceHidConfigService] ifModifiedSince={Fri, 09 Mar 2018 03:55:47 +0000}
+<118>[SceHidConfigService] SERVER_URL={http://ps4-system.sec.np.dl.playstation.net/ps4-system/hid_config/np/v00/hid_config.env}
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={2523} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] W:\Build\J02700523\vsh\shell\shell_core\hid_config_service\http_client.cpp(132) Get: HCS_ISOK::0x804101e6
+<118>[SceHidConfigService] W:\Build\J02700523\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(241) DownloadFile: HCS_ISOK::0x804101e6
+<118>[SceHidConfigService] W:\Build\J02700523\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(314) Run: HCS_CONTINUE::0x804101e6
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceHidConfigService] VerifySignature : size: total(610), signature(256), message(354) [byte]
+<118>[SceHidConfigService] VerifySignature : pass
+<118>[SceHidConfigService] DownloadFile : [UsbPower]
+<118>[SceHidConfigService] ifModifiedSince={Mon, 01 Mar 2021 07:07:09 +0000}
+<118>[SceHidConfigService] SERVER_URL={http://ps4-system.sec.np.dl.playstation.net/ps4-system/hidusbpower/np/v00/hidusbpower.env}
+<118>[SceHidConfigService] W:\Build\J02700523\vsh\shell\shell_core\hid_config_service\http_client.cpp(132) Get: HCS_ISOK::0x804101e6
+<118>[SceHidConfigService] W:\Build\J02700523\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(241) DownloadFile: HCS_ISOK::0x804101e6
+<118>[SceHidConfigService] W:\Build\J02700523\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(314) Run: HCS_CONTINUE::0x804101e6
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<SDL2> PS4_DestroyWindow
+<SDL2> PS4_VideoQuit
+<SDL2> PS4_Destroy
+<SDL2> PS4_Destroy done
+<118>[SceLncService] tryLockSuspendBlock: appId={0x60001d0c}
+<118>[Syscore App] Kill for LoadExec(0x6a)
+<118>[mbus] onSessionKilled. pid=106
+[KERNEL] dmem_handle_vmspace_exited pid: 106, ptype=1, 0xfffffb5017492508->pt_loaded is TRUE
+<118>@ removeSession:L184
+[KERNEL] dmem_handle_vmspace_exited map #0 0xffffffffffffffff
+[KERNEL] dmem_handle_vmspace_exited pid: 106, app_maps_count[1], 1 -> 0
+<118>[Syscore App] EVFILT_PROC NOTE_EXIT received : pid=0x6a
+<118>[Syscore App] Kill for LoadExec(0x6a) => 0
+<118>[AppMgr Trace]: pid=0x6a, deleted.
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[AppMgr] All processes exited, ready for next spawn
+<118>[AppMgr] Executing next spawn
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[Syscore App] processSpawn(pid, 0x60001d0c, 0x11d0c2e0, appParam, processParam, 1, 1, 1, param, debug, 1)
+<118>[Syscore App] appParam: appType = 0x1, rootPath = /mnt/sandbox/RMTC00001_000, titleId = RMTC00001
+<118>[Syscore App] processParam: elfPath = exit, fullPath = /mnt/sandbox/pfsmnt/RMTC00001-app0-patch0-union/eboot.bin
+<118>[Syscore App] new pid=0x6c[Syscore App] attributeExe= 0
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+<118>[Syscore App] process delete event : pid=0x6a
+<118>[Syscore App] processSpawn() error: 0x80aa001a
+<118>[AppMgr] Exit spawn failed : 0x80aa001a ELF path=exit
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[AppMgr Trace]: AppId=0x60001d0c  deleted
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[SceLncService] unlockSuspendBlock: appId={0x60001d0c}
+<118>[SceLncService] onAppExit() appId={0x60001d0c}
+<118>[SceLncService] start unmountAllForShellCoreInternal()
+<118>[SceLncService] end unmountAllForShellCoreInternal()
+<118>[SceSystemStateMgr] Power Mode Change: NAVIGATION
+<118>[SceSystemStateMgr] CPU  HLT CP SE CU ACLK DCLK ECLK LCLK SCLK SAMCLK VCLK DispCLK NCLK MemCLK MemP GMC DPM VDD      VDDNB    SOC      
+<118>[SceSystemStateMgr] 1600   1 NA  0  8  711  673  533  711  711    609  711     673 1400   1375   NA  NA   2 040/1137 050/1037 00710f31
+<118>[libSceSaveData] wait 0 msec for session killed
+<118>[SceRnpsAppMgr] UnblockAllAppInstall(): RMTC00001(appId=0x60001d0c)
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [AppScreen : ApplicationScreenScene] -> [ContentAreaScene : ContentAreaScene]
+<118>[SceShellUI] I/PSM.UI :      Scene [ContentAreaScene : ContentAreaScene] : Alive
+<118>SetDeviceIndexBehavior: mode=SpecificUser, param=0x10000001
+<118>[Theme/I] : ActiveUserChanged : From : [ANONYMOUS(userId = ffffffff)]
+<118>[Theme/I] : ActiveUserChanged : To   : [BLUE(userId = 10000001)]
+<118>[Theme/I] : Apply [BLUE] : [Option:111111]: with preloaded user
+<118>[SL] AppFocusChanged [RMTC00001] -> [NPXS20001]
+<118>[VCS]checkFocusStatus() [LNC->VCS] Focus Change. appType = 1(SHELL_UI). appId = 0x60000201.
+<118>[SceLncService] ProcessTerm()
+<118>[sceProcessStarter] ProcessTerm() big/mini app title_id = [RMTC00001] root_dir = [/mnt/sandbox/RMTC00001_000]
+[PFS] umount[0x000004e516e79e01] finished 0
+[PFS] umount[0x000004e559e9bce2] finished 0
+<118>[BGFT] [641] GameStopped(RMTC00001, 7) start
+<118>[BGFT] [643] GameStopped(RMTC00001, 7) end
+<118>[SceLncService] ProcessTerm() returned
+<118>[VCS]checkApplicationStatus() [LNC->VCS] App was Killed. appId = 0x60001d0c.
+<118>GetPlusInfoJob : Run(Start)
+<118>GetPlusInfoJob : Run(End)
+<118>GetPlusInfoJob : Finish / Cancelled False / Result True
+<118>[UpdateUserInfoforPlus] upd_userId : 268435457 / type : None
+<118>[SceShellCore] Libc Heap Status: free 37%, in-use 3850.0 KB, trend -40.4 KB/min, peak 4380.6 KB, when 2531 [sec]
+<118>[SceShellCore] Libc Heap Status: free 37%, in-use 3856.0 KB, trend +10.3 KB/min, peak 4380.6 KB, when 2562 [sec]
+<118>[SceWorkaroundCtl] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={2568} isFirstTime={1}
+<118>[SceWorkaroundCtl] start DownloadFile
+<118>[SceWorkaroundCtl] ifModifiedSince={Thu, 10 Dec 2020 08:29:25 +0000}
+<118>[SceWorkaroundCtl] W:\Build\J02700523\vsh\shell\shell_core\workaround_ctl\http_client.cpp(132) Get: WC_ISOK::0x804101e6
+<118>[SceWorkaroundCtl] W:\Build\J02700523\vsh\shell\shell_core\workaround_ctl\workaround_ctl_manager.cpp(288) DownloadFile: WC_ISOK::0x804101e6
+<118>[SceWorkaroundCtl] W:\Build\J02700523\vsh\shell\shell_core\workaround_ctl\workaround_ctl_manager.cpp(451) Run: WC_CONTINUE::0x804101e6
+<118>[SceWorkaroundCtl] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceSystemStateMgr] No user input for 60 seconds
+<118>[SceShellCore] Libc Heap Status: free 37%, in-use 3859.0 KB, trend +10.0 KB/min, peak 4380.6 KB, when 2593 [sec]
+<118>[SceShellCore] Libc Heap Status: free 37%, in-use 3813.1 KB, trend -44.2 KB/min, peak 4380.6 KB, when 2624 [sec]
+<118>[SceSystemStateMgr] No user input for 180 seconds
+<118>[SceLncService] launchApp(RMTC00001)
+<118>[SceLncService] category={gde} VRMode={0,0}
+<118>[SceLncService] hnm,psnf,pc,tk,ns={0,0,0,0,0} appBootMode={0}
+<118>[SceLncService] appType={SCE_LNC_APP_TYPE_MINI_APP} [] appVer={02.12}
+<118>[SceLncService] mem_mode = {NORMAL}
+<118>[SceLncService] Num. of logged-in users is 1
+<118>[SceLncService] PrepareProcessLaunchDirCheck()
+<118>[SceLncService] PrepareProcessLaunchDirCheck() returned
+<118>[SceSystemStateMgr] Power Mode Change: FULL_GAME
+<118>[ScePatchChecker] (*) check (title_id='RMTC00001', app_version='02.12', check_option=0): status=0, trigger=1 userId=0xffffffff return 0x804101e6
+<118>[SceSystemStateMgr] CPU  HLT CP SE CU ACLK DCLK ECLK LCLK SCLK SAMCLK VCLK DispCLK NCLK MemCLK MemP GMC DPM VDD      VDDNB    SOC      
+<118>[SceSystemStateMgr] 1600   0 NA  0 18  800  673  609  800  800    711  711     673 1400   1375   NA  NA   3 040/1143 046/1093 00710f31
+<118>[SceLncService] PrepareProcessLaunchDir()
+<118>[ScePatchChecker] check (title_id='RMTC00001', app_version='02.12', check_option=0): status=0, dl_status=0, trigger=1 userId=0xffffffff return 0x804101e6
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [ContentAreaScene : ContentAreaScene] -> [AppScreen : ApplicationScreenScene]
+<118>[SceShellUI] I/PSM.UI :      Scene [AppScreen : ApplicationScreenScene] : Alive
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[Theme/I] : ActiveUserChanged : From : [BLUE(userId = 10000001)]
+<118>[Theme/I] : ActiveUserChanged : To   : [ANONYMOUS(userId = ffffffff)]
+<118>[Theme/I] : Apply [ANONYMOUS] : [Option:101000]: with not preloaded user
+<118>[BGFT] [571] GameStartBoot(RMTC00001, 7) start
+<118>[BGFT] [573] GameStartBoot(RMTC00001, 7) end
+<118>[SceShellCore] Libc Heap Status: free 36%, in-use 3879.2 KB, trend +67.2 KB/min, peak 4380.6 KB, when 2709 [sec]
+[PFS] mount [0x000004e559cb3b38] finished 1 1 1 1 0 1 1
+[PFS] mount [0x000004e559cf48b0] finished 1 0 0 1 0 1 1
+<118>[BGFT] [606] GameWillStart(RMTC00001, 7) start
+<118>[BGFT] [608] GameWillStart(RMTC00001, 7) end
+<118>[SceLncService] PrepareProcessLaunchDir() returned
+<118>[SceLncService] spawnApp
+<118>[Syscore App] createApp RMTC00001
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[Syscore App] processSpawn(pid, 0x60001f0c, 0x11f0c2f0, appParam, processParam, 1, 1, 1, param, debug, 0)
+<118>[Syscore App] appParam: appType = 0x1, rootPath = /mnt/sandbox/RMTC00001_000, titleId = RMTC00001
+<118>[Syscore App] processParam: elfPath = /app0/eboot.bin, fullPath = /mnt/sandbox/pfsmnt/RMTC00001-app0-patch0-union/eboot.bin
+<118>[Syscore App] new pid=0x6f[Syscore App] attributeExe= 0
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+[KERNEL] dmem_start_app_process pid: 111, map=0xfffffb5017492290, app_maps_count[1], 0 -> 1
+<118>[Syscore App] Add event : pid=0x6f
+<118>[AppMgr Trace]: New Process, pid=0x6f, created.
+<118>[AppMgr Trace]: New App, appId=0x60001f0c, created
+<118>[Syscore App]  ExpandCpuSetMode : disable
+mDBG: Process 111 untraced!
+<111> EXEC /app0/eboot.bin [system], vm#0, dmem#0  <2719288 msec>
+<118>[AppDb] openDb()[1063]: [File:Open] openDb() call dbutil::Connection::Open() path[/c2U818Arqm/priv/mms/app.db] flags[0x10000002] result[0x0, 0]
+<118>[AppDb] AppInfoDbInitializeDaemon()[54]: [File:Open] AppInfoDbInitializeDaemon() call DbAccessor::Init() path[/c2U818Arqm/priv/mms/app.db] result[0x0, 0].
+<118>[UIProcess] malloc stats freeSize:41635200 (99%) inuseSize:307840 peakSize:310336 [pid:0x39]
+<118>[SL] AppFocusChanged [NPXS20001] -> [RMTC00001]
+<118>[AppDb] AppInfoDbTerminateDaemon()[67]: [File:Close] AppInfoDbTerminateDaemon() call DbAccessor::Terminate().
+<118>[AppDb] Terminate()[768]: [File:Close] DbAccessor::Terminate() call dbutil::Connection::Close().
+<118>[VCS]checkFocusStatus() [LNC->VCS] Focus Change. appType = 4(MINI_APP). appId = 0x60001f0c.
+<118>[mbus] onNewClient. clientNum 10 over 8
+<SDL2> PS4_PigletInit
+<118>[SceShellUI] I/PSM.UI : [NoDraw] : ClearFrameBuffer=False
+<SDL2> PS4_PigletInit: loading piglet module from: /NbIxfxiAYQ/common/lib/libScePigletv2VSH.sprx
+<SDL2> PS4_PigletInit: Ok
+<SDL2> PS4_VideoInit
+<SDL2> PS4_JoystickDetect: new joystick detected (0) (joysticks count: 1)
+<SDL2> PS4_CreateWindow
+<SDL2> SDL_EGL_ChooseConfig: found a slow EGL config
+<118>[PSM] Got handle=0x3 from AppId=0x60001f0c
+<118>[SceShellUI] I/PSM.UI : [FirstClear] : ClearFrameBuffer=False
+<118>[SceLncService] W:\Build\J02700523\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2188) getAppId: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] launchApp(EZSV00001)
+<118>[SceLncService] category={gdd} VRMode={0,0}
+<118>[SceLncService] hnm,psnf,pc,tk,ns={0,0,0,0,0} appBootMode={-1}
+<118>[SceLncService] appType={SCE_LNC_APP_TYPE_DAEMON} [] appVer={01.12}
+<118>[SceLncService] Num. of logged-in users is 1
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck()
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck() returned
+<118>[SceLncService] PrepareProcessLaunchDebugger()
+<118>[SceLncService] PrepareProcessLaunchDebugger() returned
+<118>[SceLncService] spawnApp
+<118>[Syscore App] createApp EZSV00001
+<118>[Syscore App] processSpawn(pid, 0x6000200d, 0x1200d300, appParam, processParam, 0, 0, 1, param, debug, 0)
+<118>[Syscore App] appParam: appType = 0x2, rootPath = /mnt/sandbox/EZSV00001_000, titleId = EZSV00001
+<118>[Syscore App] processParam: elfPath = /app0/eboot.bin, fullPath = /system/vsh/app/EZSV00001/eboot.bin
+<118>[Syscore App] new pid=0x70[Syscore App] attributeExe= 0
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+<118>[Syscore App] Add event : pid=0x70
+<118>[AppMgr Trace]: New Process, pid=0x70, created.
+<118>[AppMgr Trace]: New App, appId=0x6000200d, created
+<118>[Syscore App]  ExpandCpuSetMode : disable
+mDBG: Process 112 untraced!
+<112> EXEC /app0/eboot.bin [system], vm#0, dmem#0  <2720292 msec>
+#
+# A user thread receives a fatal signal
+#
+# signal: 11 (SIGSEGV)
+# thread ID: 101437
+# thread name: eboot.bin
+# proc ID: 112
+# proc name: eboot.bin
+# reason: page fault (user read data, page not present)
+# fault address: 0000000000000038
+#
+# registers:
+# rax: 0000000058585858  rbx: 0000000000000000
+# rcx: 0000000880f4c540  rdx: 0000000000000000
+# rsi: 0000000000000038  rdi: 0000000000000000
+# rbp: 00000007eeffac10  rsp: 00000007eeffaba0
+# r8 : 0000000000000000  r9 : 0000000000000000
+# r10: 0000000000000000  r11: 0000000000000247
+# r12: 0000000800061490  r13: 0000000000000000
+# r14: 00000000008d5a48  r15: 0000000000000000
+# rip: 00000008000bb358  eflags: 00010202
+# BrF: 00000008000c3c47  BrT: 00000008000bb330
+#
+# backtrace:
+copyin: eboot.bin has nonsleeping lock
+# 00000008000c3c4c
+# 00000000004b4b5d
+# 000000000045ea6a
+# 000000000045f209
+# 00000000004706f5
+#
+# dynamic libraries:
+# /app0/eboot.bin
+#  text: 0000000000400000:000000000088c000 r-x
+#  data: 00000000008d0000:00000000008dc000 rw-
+#  fingerprint: 4f50454e4f524249532d484f4d45425245570000
+# /wLusyCJ96C/common/lib/libkernel_sys.sprx
+#  text: 0000000800000000:0000000800054000 r-x
+#  data: 0000000800058000:0000000800090000 rw-
+#  fingerprint: dcb10caa3ec84e834bf8c02bb8a858ac00000000
+# /wLusyCJ96C/common/lib/libSceLibcInternal.sprx
+#  text: 0000000800090000:00000008001c4000 r-x
+#  data: 00000008001cc000:00000008001e8000 rw-
+#  fingerprint: 7a6cbb01e8ab59f80a0f2d9f67adaa2d00000000
+# /wLusyCJ96C/common/lib/libSceSysmodule.sprx
+#  text: 00000008001e8000:00000008001f4000 r-x
+#  data: 00000008001f8000:0000000800204000 rw-
+#  fingerprint: e8583e8a58c3712c5b310dab946cfe7d00000000
+<118>[Syscore App] App Crash : PID=0x70, reason=0xb
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_APP_CRASH
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_APP_CRASH
+<118>[SceLncService] AppCrash: pid={0x00000070} appId={0x6000200d} appLocalPid={0x1200d300}
+<118>[SceLncService] getCoredumpSequence() isDebuggable={0} isKeepProcess={1} isUserDebugRequest={0} isLimitKeepProcess={0} enableCrashReport={0}
+<118>[SceLncService] CoredumpSequence = {DUMP_PROCESS}
+<118>[SceLncService] getCoredumpMode() isSystem={0x00000001}, reason={0x0000000b}
+<118>[SceLncService] notifyAppCrash() pid={0x00000070}, appId={0x6000200d}, appLocalPid={0x1200d300}, coredump.path,name,mode={/user/data/sce_coredumps/EZSV00001_1795250128/,EZSV00001_1795250128.sorbisdmp,1}, enableCrashReport={0}, skipVshDump={0}
+<118>[SceLncService] enableCrashReport={0}, crashReportMode={0}, isAllowed={0}
+<118>[SceLncService] kick coredump is disabled.
+<118>[Syscore App] Kill process: 0x70
+<118>[Syscore App] EVFILT_PROC NOTE_EXIT received : pid=0x70
+<118>[Syscore App] Kill process: 0x70 => 0
+<118>[Syscore App] process delete event : pid=0x70
+<118>[AppMgr Trace]: pid=0x70, deleted.
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[AppMgr] All processes exited
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[AppMgr Trace]: AppId=0x6000200d  deleted
+<118>[Syscore App] Syscore Event Queue Pop : [AppMgr] checkAppTerminated invalid app.
+<118>SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[SceLncService] onAppExit() appId={0x6000200d}
+<118>[SceLncService] start unmountAllForShellCoreInternal()
+<118>[SceLncService] end unmountAllForShellCoreInternal()
+<118>[libSceSaveData] wait 0 msec for session killed
+<118>[SceRnpsAppMgr] UnblockAllAppInstall(): EZSV00001(appId=0x6000200d)
+<118>[SceLncService] ProcessTerm()
+<118>[SceLncService] ProcessTerm() returned
+<SDL2> PS4_DestroyWindow
+<SDL2> PS4_VideoQuit
+<SDL2> PS4_Destroy
+<SDL2> PS4_Destroy done
+<118>[SceLncService] tryLockSuspendBlock: appId={0x60001f0c}
+<118>[Syscore App] Kill for LoadExec(0x6f)
+<118>[mbus] onSessionKilled. pid=111
+[KERNEL] dmem_handle_vmspace_exited pid: 111, ptype=1, 0xfffffb5017492290->pt_loaded is TRUE
+<118>@ removeSession:L184
+[KERNEL] dmem_handle_vmspace_exited map #0 0xfffffb5017492290
+[KERNEL] dmem_handle_vmspace_exited pid: 111, app_maps_count[1], 1 -> 0
+<118>[Syscore App] EVFILT_PROC NOTE_EXIT received : pid=0x6f
+<118>[Syscore App] Kill for LoadExec(0x6f) => 0
+<118>[AppMgr Trace]: pid=0x6f, deleted.
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[AppMgr] All processes exited, ready for next spawn
+<118>[AppMgr] Executing next spawn
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[Syscore App] processSpawn(pid, 0x60001f0c, 0x11f0c310, appParam, processParam, 1, 1, 1, param, debug, 1)
+<118>[Syscore App] appParam: appType = 0x1, rootPath = /mnt/sandbox/RMTC00001_000, titleId = RMTC00001
+<118>[Syscore App] processParam: elfPath = exit, fullPath = /mnt/sandbox/pfsmnt/RMTC00001-app0-patch0-union/eboot.bin
+<118>[Syscore App] new pid=0x71[Syscore App] attributeExe= 0
+<118>[Syscore App] process delete event : pid=0x6f
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+<118>[Syscore App] processSpawn() error: 0x80aa001a
+<118>[AppMgr] Exit spawn failed : 0x80aa001a ELF path=exit
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[AppMgr Trace]: AppId=0x60001f0c  deleted
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[SceLncService] unlockSuspendBlock: appId={0x60001f0c}
+<118>[SceLncService] onAppExit() appId={0x60001f0c}
+<118>[SceLncService] start unmountAllForShellCoreInternal()
+<118>[SceLncService] end unmountAllForShellCoreInternal()
+<118>[SceSystemStateMgr] Power Mode Change: NAVIGATION
+<118>[SceSystemStateMgr] CPU  HLT CP SE CU ACLK DCLK ECLK LCLK SCLK SAMCLK VCLK DispCLK NCLK MemCLK MemP GMC DPM VDD      VDDNB    SOC      
+<118>[SceSystemStateMgr] 1600   1 NA  0  8  711  673  533  711  711    609  711     673 1400   1375   NA  NA   2 040/1137 050/1037 00710f31
+<118>[libSceSaveData] wait 0 msec for session killed
+<118>[SceRnpsAppMgr] UnblockAllAppInstall(): RMTC00001(appId=0x60001f0c)
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [AppScreen : ApplicationScreenScene] -> [ContentAreaScene : ContentAreaScene]
+<118>[SceShellUI] I/PSM.UI :      Scene [ContentAreaScene : ContentAreaScene] : Alive
+<118>SetDeviceIndexBehavior: mode=SpecificUser, param=0x10000001
+<118>[Theme/I] : ActiveUserChanged : From : [ANONYMOUS(userId = ffffffff)]
+<118>[Theme/I] : ActiveUserChanged : To   : [BLUE(userId = 10000001)]
+<118>[Theme/I] : Apply [BLUE] : [Option:111111]: with preloaded user
+<118>[UIProcess] malloc stats freeSize:41635200 (99%) inuseSize:307840 peakSize:310336 [pid:0x39]
+<118>[SL] AppFocusChanged [RMTC00001] -> [NPXS20001]
+<118>[SceLncService] ProcessTerm()
+<118>[sceProcessStarter] ProcessTerm() big/mini app title_id = [RMTC00001] root_dir = [/mnt/sandbox/RMTC00001_000]
+[PFS] umount[0x000004e559cf48b0] finished 0
+<118>[VCS]checkFocusStatus() [LNC->VCS] Focus Change. appType = 1(SHELL_UI). appId = 0x60000201.
+[PFS] umount[0x000004e559cb3b38] finished 0
+<118>[BGFT] [641] GameStopped(RMTC00001, 7) start
+<118>[BGFT] [643] GameStopped(RMTC00001, 7) end
+<118>[SceLncService] ProcessTerm() returned
+<118>[VCS]checkApplicationStatus() [LNC->VCS] App was Killed. appId = 0x60001f0c.
+<118>GetPlusInfoJob : Run(Start)
+<118>GetPlusInfoJob : Run(End)
+<118>GetPlusInfoJob : Finish / Cancelled False / Result True
+<118>[UpdateUserInfoforPlus] upd_userId : 268435457 / type : None
+<118>[SceLncService] launchApp(RMTC00001)
+<118>[SceLncService] category={gde} VRMode={0,0}
+<118>[SceLncService] hnm,psnf,pc,tk,ns={0,0,0,0,0} appBootMode={0}
+<118>[SceLncService] appType={SCE_LNC_APP_TYPE_MINI_APP} [] appVer={02.12}
+<118>[SceLncService] mem_mode = {NORMAL}
+<118>[SceLncService] Num. of logged-in users is 1
+<118>[SceLncService] PrepareProcessLaunchDirCheck()
+<118>[SceLncService] PrepareProcessLaunchDirCheck() returned
+<118>[SceSystemStateMgr] Power Mode Change: FULL_GAME
+<118>[ScePatchChecker] (*) check (title_id='RMTC00001', app_version='02.12', check_option=0): status=0, trigger=1 userId=0xffffffff return 0x804101e6
+<118>[SceSystemStateMgr] CPU  HLT CP SE CU ACLK DCLK ECLK LCLK SCLK SAMCLK VCLK DispCLK NCLK MemCLK MemP GMC DPM VDD      VDDNB    SOC      
+<118>[SceSystemStateMgr] 1600   0 NA  0 18  800  673  609  800  800    711  711     673 1400   1375   NA  NA   3 040/1137 046/1100 00710f31
+<118>[SceLncService] PrepareProcessLaunchDir()
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [ContentAreaScene : ContentAreaScene] -> [AppScreen : ApplicationScreenScene]
+<118>[SceShellUI] I/PSM.UI :      Scene [AppScreen : ApplicationScreenScene] : Alive
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[Theme/I] : ActiveUserChanged : From : [BLUE(userId = 10000001)]
+<118>[Theme/I] : ActiveUserChanged : To   : [ANONYMOUS(userId = ffffffff)]
+<118>[Theme/I] : Apply [ANONYMOUS] : [Option:101000]: with not preloaded user
+<118>[ScePatchChecker] check (title_id='RMTC00001', app_version='02.12', check_option=0): status=0, dl_status=0, trigger=1 userId=0xffffffff return 0x804101e6
+<118>[BGFT] [571] GameStartBoot(RMTC00001, 7) start
+<118>[BGFT] [573] GameStartBoot(RMTC00001, 7) end
+[PFS] mount [0x000004e516e79e01] finished 1 1 1 1 0 1 1
+[PFS] mount [0x000004e51664e201] finished 1 0 0 1 0 1 1
+<118>[BGFT] [606] GameWillStart(RMTC00001, 7) start
+<118>[BGFT] [608] GameWillStart(RMTC00001, 7) end
+<118>[SceLncService] PrepareProcessLaunchDir() returned
+<118>[SceLncService] spawnApp
+<118>[Syscore App] createApp RMTC00001
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[Syscore App] processSpawn(pid, 0x6000210c, 0x1210c320, appParam, processParam, 1, 1, 1, param, debug, 0)
+<118>[Syscore App] appParam: appType = 0x1, rootPath = /mnt/sandbox/RMTC00001_000, titleId = RMTC00001
+<118>[Syscore App] processParam: elfPath = /app0/eboot.bin, fullPath = /mnt/sandbox/pfsmnt/RMTC00001-app0-patch0-union/eboot.bin
+<118>[Syscore App] new pid=0x74[Syscore App] attributeExe= 0
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+[KERNEL] dmem_start_app_process pid: 116, map=0xfffffb5017492018, app_maps_count[1], 0 -> 1
+<118>[Syscore App] Add event : pid=0x74
+<118>[AppMgr Trace]: New Process, pid=0x74, created.
+<118>[AppMgr Trace]: New App, appId=0x6000210c, created
+<118>[Syscore App]  ExpandCpuSetMode : disable
+mDBG: Process 116 untraced!
+<116> EXEC /app0/eboot.bin [system], vm#0, dmem#0  <2738664 msec>
+<118>[SceShellUI] I/PSM.UI : [NoDraw] : ClearFrameBuffer=False
+<118>[AppDb] openDb()[1063]: [File:Open] openDb() call dbutil::Connection::Open() path[/c2U818Arqm/priv/mms/app.db] flags[0x10000002] result[0x0, 0]
+<118>[AppDb] AppInfoDbInitializeDaemon()[54]: [File:Open] AppInfoDbInitializeDaemon() call DbAccessor::Init() path[/c2U818Arqm/priv/mms/app.db] result[0x0, 0].
+<118>[SL] AppFocusChanged [NPXS20001] -> [RMTC00001]
+<118>[AppDb] AppInfoDbTerminateDaemon()[67]: [File:Close] AppInfoDbTerminateDaemon() call DbAccessor::Terminate().
+<118>[AppDb] Terminate()[768]: [File:Close] DbAccessor::Terminate() call dbutil::Connection::Close().
+<118>[mbus] onNewClient. clientNum 10 over 8
+<118>[VCS]checkFocusStatus() [LNC->VCS] Focus Change. appType = 4(MINI_APP). appId = 0x6000210c.
+<118>[SceLncService] W:\Build\J02700523\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2188) getAppId: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] launchApp(EZSV00001)
+<118>[SceLncService] category={gdd} VRMode={0,0}
+<118>[SceLncService] hnm,psnf,pc,tk,ns={0,0,0,0,0} appBootMode={-1}
+<118>[SceLncService] appType={SCE_LNC_APP_TYPE_DAEMON} [] appVer={01.12}
+<118>[SceLncService] Num. of logged-in users is 1
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck()
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck() returned
+<118>[SceLncService] PrepareProcessLaunchDebugger()
+<118>[SceLncService] PrepareProcessLaunchDebugger() returned
+<118>[SceLncService] spawnApp
+<118>[Syscore App] createApp EZSV00001
+<118>[Syscore App] processSpawn(pid, 0x6000220d, 0x1220d330, appParam, processParam, 0, 0, 1, param, debug, 0)
+<118>[Syscore App] appParam: appType = 0x2, rootPath = /mnt/sandbox/EZSV00001_000, titleId = EZSV00001
+<118>[Syscore App] processParam: elfPath = /app0/eboot.bin, fullPath = /system/vsh/app/EZSV00001/eboot.bin
+<118>[Syscore App] new pid=0x75[Syscore App] attributeExe= 0
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+<118>[Syscore App] Add event : pid=0x75
+<118>[AppMgr Trace]: New Process, pid=0x75, created.
+<118>[AppMgr Trace]: New App, appId=0x6000220d, created
+<118>[Syscore App]  ExpandCpuSetMode : disable
+mDBG: Process 117 untraced!
+<117> EXEC /app0/eboot.bin [system], vm#0, dmem#0  <2738959 msec>
+#
+# A user thread receives a fatal signal
+#
+# signal: 11 (SIGSEGV)
+# thread ID: 101098
+# thread name: eboot.bin
+# proc ID: 117
+# proc name: eboot.bin
+# reason: page fault (user read data, page not present)
+# fault address: 0000000000000038
+#
+# registers:
+# rax: 0000000058585858  rbx: 0000000000000000
+# rcx: 0000000880f4c540  rdx: 0000000000000000
+# rsi: 0000000000000038  rdi: 0000000000000000
+# rbp: 00000007eeffac10  rsp: 00000007eeffaba0
+# r8 : 0000000000000000  r9 : 0000000000000000
+# r10: 0000000000000000  r11: 0000000000000247
+# r12: 0000000800061490  r13: 0000000000000000
+# r14: 00000000008d5a48  r15: 0000000000000000
+# rip: 00000008000bb358  eflags: 00010202
+# BrF: 00000008000c3c47  BrT: 00000008000bb330
+#
+# backtrace:
+copyin: eboot.bin has nonsleeping lock
+# 00000008000c3c4c
+# 00000000004b4b5d
+# 000000000045ea6a
+# 000000000045f209
+# 00000000004706f5
+#
+# dynamic libraries:
+# /app0/eboot.bin
+#  text: 0000000000400000:000000000088c000 r-x
+#  data: 00000000008d0000:00000000008dc000 rw-
+#  fingerprint: 4f50454e4f524249532d484f4d45425245570000
+# /aAmedYjTdm/common/lib/libkernel_sys.sprx
+#  text: 0000000800000000:0000000800054000 r-x
+#  data: 0000000800058000:0000000800090000 rw-
+#  fingerprint: dcb10caa3ec84e834bf8c02bb8a858ac00000000
+# /aAmedYjTdm/common/lib/libSceLibcInternal.sprx
+#  text: 0000000800090000:00000008001c4000 r-x
+#  data: 00000008001cc000:00000008001e8000 rw-
+#  fingerprint: 7a6cbb01e8ab59f80a0f2d9f67adaa2d00000000
+# /aAmedYjTdm/common/lib/libSceSysmodule.sprx
+#  text: 00000008001e8000:00000008001f4000 r-x
+#  data: 00000008001f8000:0000000800204000 rw-
+#  fingerprint: e8583e8a58c3712c5b310dab946cfe7d00000000
+<118>[Syscore App] App Crash : PID=0x75, reason=0xb
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_APP_CRASH
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_APP_CRASH
+<118>[SceLncService] AppCrash: pid={0x00000075} appId={0x6000220d} appLocalPid={0x1220d330}
+<118>[SceLncService] getCoredumpSequence() isDebuggable={0} isKeepProcess={1} isUserDebugRequest={0} isLimitKeepProcess={0} enableCrashReport={0}
+<118>[SceLncService] CoredumpSequence = {DUMP_PROCESS}
+<118>[SceLncService] getCoredumpMode() isSystem={0x00000001}, reason={0x0000000b}
+<118>[SceLncService] notifyAppCrash() pid={0x00000075}, appId={0x6000220d}, appLocalPid={0x1220d330}, coredump.path,name,mode={/user/data/sce_coredumps/EZSV00001_1795250147/,EZSV00001_1795250147.sorbisdmp,1}, enableCrashReport={0}, skipVshDump={0}
+<118>[SceLncService] enableCrashReport={0}, crashReportMode={0}, isAllowed={0}
+<118>[SceLncService] kick coredump is disabled.
+<118>[Syscore App] Kill process: 0x75
+<118>[Syscore App] EVFILT_PROC NOTE_EXIT received : pid=0x75
+<118>[Syscore App] Kill process: 0x75 => 0
+<118>[Syscore App] process delete event : pid=0x75
+<118>[AppMgr Trace]: pid=0x75, deleted.
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[AppMgr] All processes exited
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[AppMgr Trace]: AppId=0x6000220d  deleted
+<118>[AppMgr] checkAppTerminated invalid app.
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[SceLncService] onAppExit() appId={0x6000220d}
+<118>[SceLncService] start unmountAllForShellCoreInternal()
+<118>[SceLncService] end unmountAllForShellCoreInternal()
+<118>[SceLncService] W:\Build\J02700523\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2175) getAppTitleId: LNC_ISOK::0x80940004
+<118>[SceLncUtil] W:\Build\J02700523\vsh\common_lib\lnc_util\src\lnc_util_ipc_client.cpp(530) getAppTitleId: LNC_ISOK::0x80940004
+<118>[libSceSaveData] wait 0 msec for session killed
+<118>[SceRnpsAppMgr] UnblockAllAppInstall(): EZSV00001(appId=0x6000220d)
+<118>[SceLncService] W:\Build\J02700523\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2175) getAppTitleId: LNC_ISOK::0x80940004
+<118>[SceLncService] ProcessTerm()
+<118>[SceLncService] ProcessTerm() returned
+<118>[SceLncService] W:\Build\J02700523\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2188) getAppId: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] launchApp(EZRC00001)
+<118>[SceLncService] category={gdd} VRMode={0,0}
+<118>[SceLncService] hnm,psnf,pc,tk,ns={0,0,0,0,0} appBootMode={-1}
+<118>[SceLncService] appType={SCE_LNC_APP_TYPE_DAEMON} [] appVer={02.12}
+<118>[SceLncService] Num. of logged-in users is 1
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck()
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck() returned
+<118>[SceLncService] PrepareProcessLaunchDebugger()
+<118>[SceLncService] PrepareProcessLaunchDebugger() returned
+<118>[SceLncService] spawnApp
+<118>[Syscore App] createApp EZRC00001
+<118>[Syscore App] processSpawn(pid, 0x6000230d, 0x1230d340, appParam, processParam, 0, 0, 1, param, debug, 0)
+<118>[Syscore App] appParam: appType = 0x2, rootPath = /mnt/sandbox/EZRC00001_000, titleId = EZRC00001
+<118>[Syscore App] processParam: elfPath = /app0/eboot.bin, fullPath = /system/vsh/app/EZRC00001/eboot.bin
+<118>[Syscore App] new pid=0x76[Syscore App] attributeExe= 0
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+<118>[Syscore App] Add event : pid=0x76
+<118>[AppMgr Trace]: New Process, pid=0x76, created.
+<118>[AppMgr Trace]: New App, appId=0x6000230d, created
+<118>[Syscore App]  ExpandCpuSetMode : disable
+mDBG: Process 118 untraced!
+<118>[SceLncService] tryLockSuspendBlock: appId={0x6000210c}
+<118>[Syscore App] Kill for LoadExec(0x74)
+<118>[mbus] onSessionKilled. pid=116
+[KERNEL] dmem_handle_vmspace_exited pid: 116, ptype=1, 0xfffffb5017492018->pt_loaded is TRUE
+<118>@ removeSession:L184
+<118> EXEC /app0/eboot.bin [system], vm#0, dmem#0  <2740921 msec>
+[KERNEL] dmem_handle_vmspace_exited map #0 0xffffffffffffffff
+[KERNEL] dmem_handle_vmspace_exited pid: 116, app_maps_count[1], 1 -> 0
+<118>[Syscore App] EVFILT_PROC NOTE_EXIT received : pid=0x74
+<118>[Syscore App] Kill for LoadExec(0x74) => 0
+<118>[AppMgr Trace]: pid=0x74, deleted.
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[AppMgr] All processes exited, ready for next spawn
+<118>[AppMgr] Executing next spawn
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[Syscore App] processSpawn(pid, 0x6000210c, 0x1210c350, appParam, processParam, 1, 1, 1, param, debug, 1)
+<118>[Syscore App] appParam: appType = 0x1, rootPath = /mnt/sandbox/RMTC00001_000, titleId = RMTC00001
+<118>[Syscore App] processParam: elfPath = exit, fullPath = /mnt/sandbox/pfsmnt/RMTC00001-app0-patch0-union/eboot.bin
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[Syscore App] new pid=0x77[Syscore App] attributeExe= 0
+<118>[Syscore App] process delete event : pid=0x74
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+<118>[Syscore App] processSpawn() error: 0x80aa001a
+<118>[AppMgr] Exit spawn failed : 0x80aa001a ELF path=exit
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[AppMgr Trace]: AppId=0x6000210c  deleted
+<118>[SceLncService] unlockSuspendBlock: appId={0x6000210c}
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[SceLncService] onAppExit() appId={0x6000210c}
+<118>[SceLncService] start unmountAllForShellCoreInternal()
+<118>[SceLncService] end unmountAllForShellCoreInternal()
+<118>[SceSystemStateMgr] Power Mode Change: NAVIGATION
+<118>[SceSystemStateMgr] CPU  HLT CP SE CU ACLK DCLK ECLK LCLK SCLK SAMCLK VCLK DispCLK NCLK MemCLK MemP GMC DPM VDD      VDDNB    SOC      
+<118>[SceSystemStateMgr] 1600   1 NA  0  8  711  673  533  711  711    609  711     673 1400   1375   NA  NA   2 040/1137 050/1037 00710f31
+<118>[libSceSaveData] wait 0 msec for session killed
+<118>[SceRnpsAppMgr] UnblockAllAppInstall(): RMTC00001(appId=0x6000210c)
+<118>[SceLncService] W:\Build\J02700523\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2188) getAppId: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [AppScreen : ApplicationScreenScene] -> [ContentAreaScene : ContentAreaScene]
+<118>[SceShellUI] I/PSM.UI :      Scene [ContentAreaScene : ContentAreaScene] : Alive
+<118>SetDeviceIndexBehavior: mode=SpecificUser, param=0x10000001
+<118>[Theme/I] : ActiveUserChanged : From : [ANONYMOUS(userId = ffffffff)]
+<118>[Theme/I] : ActiveUserChanged : To   : [BLUE(userId = 10000001)]
+<118>[Theme/I] : Apply [BLUE] : [Option:111111]: with preloaded user
+<118>[SceShellUI] I/PSM.UI : [FirstClear] : ClearFrameBuffer=False
+<118>[VCS]checkFocusStatus() [LNC->VCS] Focus Change. appType = 1(SHELL_UI). appId = 0x60000201.
+<118>[SL] AppFocusChanged [RMTC00001] -> [NPXS20001]
+<118>[SceLncService] ProcessTerm()
+<118>[sceProcessStarter] ProcessTerm() big/mini app title_id = [RMTC00001] root_dir = [/mnt/sandbox/RMTC00001_000]
+<118>[SceLncService] launchApp(EZSV00001)
+<118>[SceLncService] category={gdd} VRMode={0,0}
+<118>[SceLncService] hnm,psnf,pc,tk,ns={0,0,0,0,0} appBootMode={-1}
+<118>[SceLncService] appType={SCE_LNC_APP_TYPE_DAEMON} [] appVer={01.12}
+<118>[SceLncService] Num. of logged-in users is 1
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck()
+[PFS] umount[0x000004e51664e201] finished 0
+[PFS] umount[0x000004e516e79e01] finished 0
+<118>[BGFT] [641] GameStopped(RMTC00001, 7) start
+<118>[BGFT] [643] GameStopped(RMTC00001, 7) end
+<118>[SceLncService] ProcessTerm() returned
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck() returned
+<118>[SceLncService] PrepareProcessLaunchDebugger()
+<118>[SceLncService] PrepareProcessLaunchDebugger() returned
+<118>[VCS]checkApplicationStatus() [LNC->VCS] App was Killed. appId = 0x6000210c.
+<118>[SceLncService] spawnApp
+<118>[Syscore App] createApp EZSV00001
+<118>[Syscore App] processSpawn(pid, 0x6000240c, 0x1240c360, appParam, processParam, 0, 0, 1, param, debug, 0)
+<118>[Syscore App] appParam: appType = 0x2, rootPath = /mnt/sandbox/EZSV00001_000, titleId = EZSV00001
+<118>[Syscore App] processParam: elfPath = /app0/eboot.bin, fullPath = /system/vsh/app/EZSV00001/eboot.bin
+<118>[Syscore App] new pid=0x78[Syscore App] attributeExe= 0
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+<118>[Syscore App] Add event : pid=0x78
+<118>[AppMgr Trace]: New Process, pid=0x78, created.
+<118>[AppMgr Trace]: New App, appId=0x6000240c, created
+<118>[Syscore App]  ExpandCpuSetMode : enable
+mDBG: Process 120 untraced!
+<118>GetPlusInfoJob : Run(Start)
+<118>GetPlusInfoJob : Run(End)
+<118>GetPlusInfoJob : Finish / Cancelled False / Result True
+<118>[UpdateUserInfoforPlus] upd_userId : 268435457 / type : None
+<120> EXEC /app0/eboot.bin [system], vm#0, dmem#0  <2741346 msec>
+#
+# A user thread receives a fatal signal
+#
+# signal: 11 (SIGSEGV)
+# thread ID: 101240
+# thread name: eboot.bin
+# proc ID: 120
+# proc name: eboot.bin
+# reason: page fault (user read data, page not present)
+# fault address: 0000000000000038
+#
+# registers:
+# rax: 0000000058585858  rbx: 0000000000000000
+# rcx: 0000000880f4c540  rdx: 0000000000000000
+# rsi: 0000000000000038  rdi: 0000000000000000
+# rbp: 00000007eeffac10  rsp: 00000007eeffaba0
+# r8 : 0000000000000000  r9 : 0000000000000000
+# r10: 0000000000000000  r11: 0000000000000247
+# r12: 0000000800061490  r13: 0000000000000000
+# r14: 00000000008d5a48  r15: 0000000000000000
+# rip: 00000008000bb358  eflags: 00010202
+# BrF: 00000008000c3c47  BrT: 00000008000bb330
+#
+# backtrace:
+copyin: eboot.bin has nonsleeping lock
+# 00000008000c3c4c
+# 00000000004b4b5d
+# 000000000045ea6a
+# 000000000045f209
+# 00000000004706f5
+#
+# dynamic libraries:
+# /app0/eboot.bin
+#  text: 0000000000400000:000000000088c000 r-x
+#  data: 00000000008d0000:00000000008dc000 rw-
+#  fingerprint: 4f50454e4f524249532d484f4d45425245570000
+# /8kJrbQ2hY2/common/lib/libkernel_sys.sprx
+#  text: 0000000800000000:0000000800054000 r-x
+#  data: 0000000800058000:0000000800090000 rw-
+#  fingerprint: dcb10caa3ec84e834bf8c02bb8a858ac00000000
+# /8kJrbQ2hY2/common/lib/libSceLibcInternal.sprx
+#  text: 0000000800090000:00000008001c4000 r-x
+#  data: 00000008001cc000:00000008001e8000 rw-
+#  fingerprint: 7a6cbb01e8ab59f80a0f2d9f67adaa2d00000000
+# /8kJrbQ2hY2/common/lib/libSceSysmodule.sprx
+#  text: 00000008001e8000:00000008001f4000 r-x
+#  data: 00000008001f8000:0000000800204000 rw-
+#  fingerprint: e8583e8a58c3712c5b310dab946cfe7d00000000
+<118>[Syscore App] App Crash : PID=0x78, reason=0xb
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_APP_CRASH
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_APP_CRASH
+<118>[SceLncService] AppCrash: pid={0x00000078} appId={0x6000240c} appLocalPid={0x1240c360}
+<118>[SceLncService] getCoredumpSequence() isDebuggable={0} isKeepProcess={1} isUserDebugRequest={0} isLimitKeepProcess={0} enableCrashReport={0}
+<118>[SceLncService] CoredumpSequence = {DUMP_PROCESS}
+<118>[SceLncService] getCoredumpMode() isSystem={0x00000001}, reason={0x0000000b}
+<118>[SceLncService] notifyAppCrash() pid={0x00000078}, appId={0x6000240c}, appLocalPid={0x1240c360}, coredump.path,name,mode={/user/data/sce_coredumps/EZSV00001_1795250149/,EZSV00001_1795250149.sorbisdmp,1}, enableCrashReport={0}, skipVshDump={0}
+<118>[SceLncService] enableCrashReport={0}, crashReportMode={0}, isAllowed={0}
+<118>[SceLncService] kick coredump is disabled.
+<118>[Syscore App] Kill process: 0x78
+<118>[Syscore App] EVFILT_PROC NOTE_EXIT received : pid=0x78
+<118>[Syscore App] Kill process: 0x78 => 0
+<118>[Syscore App] process delete event : pid=0x78
+<118>[AppMgr Trace]: pid=0x78, deleted.
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[AppMgr] All processes exited
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[AppMgr Trace]: AppId=0x6000240c  deleted
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[AppMgr] checkAppTerminated invalid app.
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[SceLncService] onAppExit() appId={0x6000240c}
+<118>[SceLncService] start unmountAllForShellCoreInternal()
+<118>[SceLncService] end unmountAllForShellCoreInternal()
+<118>[libSceSaveData] wait 0 msec for session killed
+<118>[SceRnpsAppMgr] UnblockAllAppInstall(): EZSV00001(appId=0x6000240c)
+<118>[SceLncService] ProcessTerm()
+<118>[SceLncService] ProcessTerm() returned
+<118>[SceLncService] W:\Build\J02700523\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2175) getAppTitleId: LNC_ISOK::0x80940004
+<118>[SceLncUtil] W:\Build\J02700523\vsh\common_lib\lnc_util\src\lnc_util_ipc_client.cpp(530) getAppTitleId: LNC_ISOK::0x80940004
+<118>[SceShellCore] Libc Heap Status: free 37%, in-use 3839.9 KB, trend +27.2 KB/min, peak 4380.6 KB, when 2740 [sec]
+<118>[SceShellCore] VM Stats: RSS 595.9, kernel 261.5, wire count 326.3, swap out 0.0, page table CPU 3687/6144 GPU 370/2048
+<118>[SceShellCore] FMEM   1.3/   4.5 NPXS20977 SceSysAvControl.elf
+<118>[SceShellCore] FMEM  10.8/  74.3 NPXS20991 SceSysCore.elf
+<118>[SceShellCore] FMEM   9.4/  54.3 NPXS20973 orbis_audiod.elf
+<118>[SceShellCore] FMEM   3.2/  11.2 NPXS20976 GnmCompositor.elf
+<118>[SceShellCore] FMEM  29.0/ 344.8 NPXS20000 SceShellCore
+<118>[SceShellCore] FMEM 365.1/ 886.7 NPXS20001 SceShellUI
+<118>[SceShellCore] FMEM   6.5/  11.8 NPXS21003 SceAvCapture
+<118>[SceShellCore] FMEM   8.9/  24.5 NPXS21000 SceGameLiveStreaming
+<118>[SceShellCore] FMEM  14.3/  43.5 NPXS21002 ScePartyDaemon
+<118>[SceShellCore] FMEM   4.3/  25.4 NPXS21004 SceVideoCoreServer
+<118>[SceShellCore] FMEM  21.0/  57.3 NPXS21006 SceRemotePlay
+<118>[SceShellCore] FMEM   8.0/  53.2 NPXS21010 SceCloudClientDaemon
+<118>[SceShellCore] FMEM   3.3/  10.8 NPXS21016 SceSpZeroConf
+<118>[SceShellCore] FMEM   8.6/ 156.0 NPXS21002 webrtc_daemon.self
+<118>[SceShellCore] FMEM   7.1/  18.1 NPXS21019 SceSocialScreenMgr
+<118>[SceShellCore] FMEM   5.0/   9.8 NPXS21007 SceMusicCoreServer
+<118>[SceShellCore] FMEM   7.2/  14.4 NPXS21020 SceVoiceAndAgent
+<118>[SceShellCore] FMEM   2.2/   5.1 NPXS20967 fs_cleaner.elf
+<118>[SceShellCore] FMEM   2.1/  10.2 NPXS20974 SceVdecProxy.elf
+<118>[SceShellCore] FMEM   2.3/  10.5 NPXS20975 SceVencProxy.elf
+<118>[SceShellCore] FMEM  23.8/ 263.9 NPXS20001 SecureUIProcess.self
+<118>[SceShellCore] FMEM  31.9/ 526.1 NPXS20001 SecureWebProcess.self
+<118>[SceShellCore] FMEM  10.5/ 358.8 NPXS20001 orbis-jsc-compiler.self
+<118>[SceShellCore] FMEM  10.3/2659.6 EZRC00001 eboot.bin
+<118>[SceLncService] W:\Build\J02700523\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2188) getAppId: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] W:\Build\J02700523\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2188) getAppId: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] launchApp(EZSV00001)
+<118>[SceLncService] category={gdd} VRMode={0,0}
+<118>[SceLncService] hnm,psnf,pc,tk,ns={0,0,0,0,0} appBootMode={-1}
+<118>[SceLncService] appType={SCE_LNC_APP_TYPE_DAEMON} [] appVer={01.12}
+<118>[SceLncService] Num. of logged-in users is 1
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck()
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck() returned
+<118>[SceLncService] PrepareProcessLaunchDebugger()
+<118>[SceLncService] PrepareProcessLaunchDebugger() returned
+<118>[SceLncService] spawnApp
+<118>[Syscore App] createApp EZSV00001
+<118>[Syscore App] processSpawn(pid, 0x6000250c, 0x1250c370, appParam, processParam, 0, 0, 1, param, debug, 0)
+<118>[Syscore App] appParam: appType = 0x2, rootPath = /mnt/sandbox/EZSV00001_000, titleId = EZSV00001
+<118>[Syscore App] processParam: elfPath = /app0/eboot.bin, fullPath = /system/vsh/app/EZSV00001/eboot.bin
+<118>[Syscore App] new pid=0x79[Syscore App] attributeExe= 0
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+<118>[Syscore App] Add event : pid=0x79
+<118>[AppMgr Trace]: New Process, pid=0x79, created.
+<118>[AppMgr Trace]: New App, appId=0x6000250c, created
+<118>[Syscore App]  ExpandCpuSetMode : enable
+mDBG: Process 121 untraced!
+<118>[UIProcess] malloc stats freeSize:41635072 (99%) inuseSize:307968 peakSize:310336 [pid:0x39]
+<121> EXEC /app0/eboot.bin [system], vm#0, dmem#0  <2762336 msec>
+#
+# A user thread receives a fatal signal
+#
+# signal: 11 (SIGSEGV)
+# thread ID: 101410
+# thread name: eboot.bin
+# proc ID: 121
+# proc name: eboot.bin
+# reason: page fault (user read data, page not present)
+# fault address: 0000000000000038
+#
+# registers:
+# rax: 0000000058585858  rbx: 0000000000000000
+# rcx: 0000000880f4c540  rdx: 0000000000000000
+# rsi: 0000000000000038  rdi: 0000000000000000
+# rbp: 00000007eeffac10  rsp: 00000007eeffaba0
+# r8 : 0000000000000000  r9 : 0000000000000000
+# r10: 0000000000000000  r11: 0000000000000247
+# r12: 0000000800061490  r13: 0000000000000000
+# r14: 00000000008d5a48  r15: 0000000000000000
+# rip: 00000008000bb358  eflags: 00010202
+# BrF: 00000008000c3c47  BrT: 00000008000bb330
+#
+# backtrace:
+copyin: eboot.bin has nonsleeping lock
+# 00000008000c3c4c
+# 00000000004b4b5d
+# 000000000045ea6a
+# 000000000045f209
+# 00000000004706f5
+#
+# dynamic libraries:
+# /app0/eboot.bin
+#  text: 0000000000400000:000000000088c000 r-x
+#  data: 00000000008d0000:00000000008dc000 rw-
+#  fingerprint: 4f50454e4f524249532d484f4d45425245570000
+# /0HFuhgJR0Z/common/lib/libkernel_sys.sprx
+#  text: 0000000800000000:0000000800054000 r-x
+#  data: 0000000800058000:0000000800090000 rw-
+#  fingerprint: dcb10caa3ec84e834bf8c02bb8a858ac00000000
+# /0HFuhgJR0Z/common/lib/libSceLibcInternal.sprx
+#  text: 0000000800090000:00000008001c4000 r-x
+#  data: 00000008001cc000:00000008001e8000 rw-
+#  fingerprint: 7a6cbb01e8ab59f80a0f2d9f67adaa2d00000000
+# /0HFuhgJR0Z/common/lib/libSceSysmodule.sprx
+#  text: 00000008001e8000:00000008001f4000 r-x
+#  data: 00000008001f8000:0000000800204000 rw-
+#  fingerprint: e8583e8a58c3712c5b310dab946cfe7d00000000
+<118>[Syscore App] App Crash : PID=0x79, reason=0xb
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_APP_CRASH
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_APP_CRASH
+<118>[SceLncService] AppCrash: pid={0x00000079} appId={0x6000250c} appLocalPid={0x1250c370}
+<118>[SceLncService] getCoredumpSequence() isDebuggable={0} isKeepProcess={1} isUserDebugRequest={0} isLimitKeepProcess={0} enableCrashReport={0}
+<118>[SceLncService] CoredumpSequence = {DUMP_PROCESS}
+<118>[SceLncService] getCoredumpMode() isSystem={0x00000001}, reason={0x0000000b}
+<118>[SceLncService] notifyAppCrash() pid={0x00000079}, appId={0x6000250c}, appLocalPid={0x1250c370}, coredump.path,name,mode={/user/data/sce_coredumps/EZSV00001_1795250170/,EZSV00001_1795250170.sorbisdmp,1}, enableCrashReport={0}, skipVshDump={0}
+<118>[SceLncService] enableCrashReport={0}, crashReportMode={0}, isAllowed={0}
+<118>[SceLncService] kick coredump is disabled.
+<118>[Syscore App] Kill process: 0x79
+<118>[Syscore App] EVFILT_PROC NOTE_EXIT received : pid=0x79
+<118>[Syscore App] Kill process: 0x79 => 0
+<118>[AppMgr Trace]: pid=0x79, deleted.
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[AppMgr] All processes exited
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[AppMgr Trace]: AppId=0x6000250c  deleted
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[AppMgr] checkAppTerminated invalid app.
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[Syscore App] process delete event : pid=0x79
+<118>[SceLncService] onAppExit() appId={0x6000250c}
+<118>[SceLncService] start unmountAllForShellCoreInternal()
+<118>[SceLncService] end unmountAllForShellCoreInternal()
+<118>[libSceSaveData] wait 0 msec for session killed
+<118>[SceRnpsAppMgr] UnblockAllAppInstall(): EZSV00001(appId=0x6000250c)
+<118>[SceLncService] ProcessTerm()
+<118>[SceLncService] ProcessTerm() returned
+<118>[SceLncService] W:\Build\J02700523\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2188) getAppId: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] W:\Build\J02700523\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2188) getAppId: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] launchApp(EZSV00001)
+<118>[SceLncService] category={gdd} VRMode={0,0}
+<118>[SceLncService] hnm,psnf,pc,tk,ns={0,0,0,0,0} appBootMode={-1}
+<118>[SceLncService] appType={SCE_LNC_APP_TYPE_DAEMON} [] appVer={01.12}
+<118>[SceLncService] Num. of logged-in users is 1
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck()
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck() returned
+<118>[SceLncService] PrepareProcessLaunchDebugger()
+<118>[SceLncService] PrepareProcessLaunchDebugger() returned
+<118>[SceLncService] spawnApp
+<118>[Syscore App] createApp EZSV00001
+<118>[Syscore App] processSpawn(pid, 0x6000260c, 0x1260c380, appParam, processParam, 0, 0, 1, param, debug, 0)
+<118>[Syscore App] appParam: appType = 0x2, rootPath = /mnt/sandbox/EZSV00001_000, titleId = EZSV00001
+<118>[Syscore App] processParam: elfPath = /app0/eboot.bin, fullPath = /system/vsh/app/EZSV00001/eboot.bin
+<118>[Syscore App] new pid=0x7a[Syscore App] attributeExe= 0
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+<118>[Syscore App] Add event : pid=0x7a
+<118>[AppMgr Trace]: New Process, pid=0x7a, created.
+<118>[AppMgr Trace]: New App, appId=0x6000260c, created
+<118>[Syscore App]  ExpandCpuSetMode : enable
+mDBG: Process 122 untraced!
+<118>[UIProcess] malloc stats freeSize:41634976 (99%) inuseSize:308064 peakSize:310336 [pid:0x39]
+<122> EXEC /app0/eboot.bin [system], vm#0, dmem#0  <2775841 msec>
+#
+# A user thread receives a fatal signal
+#
+# signal: 11 (SIGSEGV)
+# thread ID: 101355
+# thread name: eboot.bin
+# proc ID: 122
+# proc name: eboot.bin
+# reason: page fault (user read data, page not present)
+# fault address: 0000000000000038
+#
+# registers:
+# rax: 0000000058585858  rbx: 0000000000000000
+# rcx: 0000000880f4c540  rdx: 0000000000000000
+# rsi: 0000000000000038  rdi: 0000000000000000
+# rbp: 00000007eeffac10  rsp: 00000007eeffaba0
+# r8 : 0000000000000000  r9 : 0000000000000000
+# r10: 0000000000000000  r11: 0000000000000247
+# r12: 0000000800061490  r13: 0000000000000000
+# r14: 00000000008d5a48  r15: 0000000000000000
+# rip: 00000008000bb358  eflags: 00010202
+# BrF: 00000008000c3c47  BrT: 00000008000bb330
+#
+# backtrace:
+copyin: eboot.bin has nonsleeping lock
+# 00000008000c3c4c
+# 00000000004b4b5d
+# 000000000045ea6a
+# 000000000045f209
+# 00000000004706f5
+#
+# dynamic libraries:
+# /app0/eboot.bin
+#  text: 0000000000400000:000000000088c000 r-x
+#  data: 00000000008d0000:00000000008dc000 rw-
+#  fingerprint: 4f50454e4f524249532d484f4d45425245570000
+# /5Lq4JSlbJ2/common/lib/libkernel_sys.sprx
+#  text: 0000000800000000:0000000800054000 r-x
+#  data: 0000000800058000:0000000800090000 rw-
+#  fingerprint: dcb10caa3ec84e834bf8c02bb8a858ac00000000
+# /5Lq4JSlbJ2/common/lib/libSceLibcInternal.sprx
+#  text: 0000000800090000:00000008001c4000 r-x
+#  data: 00000008001cc000:00000008001e8000 rw-
+#  fingerprint: 7a6cbb01e8ab59f80a0f2d9f67adaa2d00000000
+# /5Lq4JSlbJ2/common/lib/libSceSysmodule.sprx
+#  text: 00000008001e8000:00000008001f4000 r-x
+#  data: 00000008001f8000:0000000800204000 rw-
+#  fingerprint: e8583e8a58c3712c5b310dab946cfe7d00000000
+<118>[Syscore App] App Crash : PID=0x7a, reason=0xb
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_APP_CRASH
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_APP_CRASH
+<118>[SceLncService] AppCrash: pid={0x0000007a} appId={0x6000260c} appLocalPid={0x1260c380}
+<118>[SceLncService] getCoredumpSequence() isDebuggable={0} isKeepProcess={1} isUserDebugRequest={0} isLimitKeepProcess={0} enableCrashReport={0}
+<118>[SceLncService] CoredumpSequence = {DUMP_PROCESS}
+<118>[SceLncService] getCoredumpMode() isSystem={0x00000001}, reason={0x0000000b}
+<118>[SceLncService] notifyAppCrash() pid={0x0000007a}, appId={0x6000260c}, appLocalPid={0x1260c380}, coredump.path,name,mode={/user/data/sce_coredumps/EZSV00001_1795250184/,EZSV00001_1795250184.sorbisdmp,1}, enableCrashReport={0}, skipVshDump={0}
+<118>[SceLncService] enableCrashReport={0}, crashReportMode={0}, isAllowed={0}
+<118>[SceLncService] kick coredump is disabled.
+<118>[Syscore App] Kill process: 0x7a
+<118>[Syscore App] EVFILT_PROC NOTE_EXIT received : pid=0x7a
+<118>[Syscore App] Kill process: 0x7a => 0
+<118>[Syscore App] process delete event : pid=0x7a
+<118>[AppMgr Trace]: pid=0x7a, deleted.
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[AppMgr] All processes exited
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[AppMgr Trace]: AppId=0x6000260c  deleted
+<118>[AppMgr] checkAppTerminated invalid app.
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[SceLncService] onAppExit() appId={0x6000260c}
+<118>[SceLncService] start unmountAllForShellCoreInternal()
+<118>[SceLncService] end unmountAllForShellCoreInternal()
+<118>[libSceSaveData] wait 0 msec for session killed
+<118>[SceRnpsAppMgr] UnblockAllAppInstall(): EZSV00001(appId=0x6000260c)
+<118>[SceLncService] ProcessTerm()
+<118>[SceLncService] ProcessTerm() returned
+<118>[SceShellCore] Libc Heap Status: free 37%, in-use 3840.2 KB, trend -15.6 KB/min, peak 4380.6 KB, when 2771 [sec]
+<118>[SceShellUI] I/PSM.UI : UI system timer elapsed 00:46:00
+<118>[SceSystemStateMgr] No user input for 60 seconds
+<118>[SL][08:36:51:619][Thread 0x0001884b][INFO][TRACE][ALWAYS][MAIN STREAM][BEGIN][Heap]sanity OK, free 2293600 (37%), in-use 3932320 (63%), peak 4485760 (72%), when 2799 [sec]
+<118>[SL][08:36:51:833][Thread 0x0001884b][INFO][TRACE][ALWAYS][MAIN STREAM][END  ][Heap]sanity OK, free 2292736 (37%), in-use 3933184 (63%), peak 4485760 (72%), when 2800 [sec]

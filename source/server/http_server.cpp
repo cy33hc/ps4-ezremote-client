@@ -3357,6 +3357,7 @@ namespace HttpServer
             if (bool_obj != nullptr)
                 headless_enabled = json_object_get_boolean(bool_obj) != 0;
 
+
             json_object *num_obj = json_object_object_get(jobj, "minimumBackgroundFileSize");
             if (num_obj != nullptr)
                 minimum_backgrond_file_size = (uint64_t)json_object_get_int64(num_obj);

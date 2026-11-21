@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the headless client as an OpenOrbis eboot for a gdd daemon.
 #
-#   ./build_elf.sh
+#   ./build_headless.sh
 #
 # Override the build directory with BUILD_DIR=..., the SDK with OPENORBIS=...,
 # or the SELF authinfo with AUTH_INFO=...

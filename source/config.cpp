@@ -581,6 +581,18 @@ namespace CONFIG
         httplib::Client client = httplib::Client("http://127.0.0.1:6701");
         std::string port = std::to_string(http_server_port);
         client.Post("/change_ezremote_client_port", port.c_str(), port.length(), "text/html");
+        SyncHeadlessModeToServer();
+    }
+
+    void SyncHeadlessModeToServer()
+    {
+        httplib::Client client("http://127.0.0.1:6701");
+        client.set_connection_timeout(1, 0);
+        client.set_read_timeout(1, 0);
+        std::string value = headless_enabled
+            ? "{\"headless_mode\":true}"
+            : "{\"headless_mode\":false}";
+        client.Post("/set_headless_mode", value.c_str(), value.length(), "application/json");
     }
 
     void SaveLocalDirecotry(const std::string &path)

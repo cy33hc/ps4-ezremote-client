@@ -83,12 +83,13 @@ if(EZREMOTE_HEADLESS_APP)
   # so it can still reach /data when launched as a gdd daemon.
   add_executable(ezremote_client.elf
     ${EZREMOTE_CLIENT_COMMON_SOURCES}
+    source/daemon.cpp
     source/orbis_jbc.c)
   target_include_directories(ezremote_client.elf PRIVATE source source/pugixml)
   target_compile_definitions(ezremote_client.elf PRIVATE
     EZREMOTE_HEADLESS_APP=1
     CPPHTTPLIB_OPENSSL_SUPPORT
-    CPPHTTPLIB_THREAD_POOL_COUNT=16)
+    CPPHTTPLIB_THREAD_POOL_COUNT=32)
   target_link_libraries(ezremote_client.elf
     dbglogger
     c
@@ -118,6 +119,7 @@ if(EZREMOTE_HEADLESS_APP)
     SceNet
     SceBgft
     SceAppInstUtil
+    SceLncUtil
   )
   set_target_properties(ezremote_client.elf PROPERTIES SKIP_BUILD_RPATH TRUE)
 
@@ -148,7 +150,7 @@ else()
   target_include_directories(ezremote_client PRIVATE source source/pugixml source/imgui)
   target_compile_definitions(ezremote_client PRIVATE
     CPPHTTPLIB_OPENSSL_SUPPORT
-    CPPHTTPLIB_THREAD_POOL_COUNT=16)
+    CPPHTTPLIB_THREAD_POOL_COUNT=32)
 
   target_link_libraries(ezremote_client
     dbglogger

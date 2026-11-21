@@ -67,6 +67,9 @@ if [[ -f "$BUILD_DIR/CMakeCache.txt" ]]; then
     fi
 fi
 
+# The client pkg bundles the server daemon, so stage the server first.
+BUILD_DIR="${SERVER_BUILD_DIR:-$ROOT/build_server}" "$ROOT/build_server.sh"
+
 cmake -S "$ROOT" -B "$BUILD_DIR" -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN"
 cmake --build "$BUILD_DIR" --target ezremote_client_pkg -j8
 
