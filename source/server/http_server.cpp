@@ -4847,31 +4847,9 @@ namespace HttpServer
 
         if (blocking)
         {
-#ifdef EZREMOTE_HEADLESS_APP
-            // Headless: listen() on the main thread. If the listener drops
-            // unexpectedly, rebuild the server and start listening again.
-            while (!done)
-            {
-                Util::Notify("Starting ezRemote Client web server on port %d", http_server_port);
-                ServerThread(NULL);
-
-                if (done)
-                    break;
-
-                // A failed listen returns immediately; avoid a hot loop and
-                // give the port a moment to become available again.
-                sleep(3);
-                delete svr;
-                svr = new Server();
-                if (!svr->is_valid())
-                    return false;
-            }
-            return true;
-#else
             // Native: serve on the calling thread until "/stop".
             ServerThread(NULL);
             return true;
-#endif
         }
 
         return pthread_create(&http_server_thid, NULL, ServerThread, NULL) == 0;
