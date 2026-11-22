@@ -136,7 +136,7 @@ target_link_libraries(ezremote_client
 
 # Ship the client version inside the package. The server's launcher reads it
 # to know which client build is running.
-file(WRITE "${CMAKE_SOURCE_DIR}/data/version.txt" "${APP_VERSION}\n")
+file(WRITE "${CMAKE_SOURCE_DIR}/data/version.txt" "2.11\n")
 
 # The native UI app is shipped as a self payload for the loader package.
 set(EZREMOTE_NATIVEUI_AUTHINFO "000000000000000000000000001C004000FF000000000080000000000000000000000000000000000000008000400040000000000000008000000000000000080040FFFF000000F000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" CACHE STRING "create-fself authinfo for the native UI self")
@@ -229,6 +229,7 @@ add_custom_target(ezremote_client_daemon_self ALL DEPENDS "${EZREMOTE_DAEMON_EBO
 add_executable(ezremote_loader
   ps4-ezremote-loader/main.c
   ps4-ezremote-loader/daemon.c
+  ps4-ezremote-loader/payload_loader.c
   source/orbis_jbc.c)
 target_include_directories(ezremote_loader PRIVATE source ps4-ezremote-loader)
 target_compile_definitions(ezremote_loader PRIVATE EZREMOTE_LOADER=1)
@@ -239,6 +240,7 @@ target_link_libraries(ezremote_loader
   SceSysmodule
   SceSystemService
   SceLncUtil
+  SceNet
 )
 set_target_properties(ezremote_loader PROPERTIES SKIP_BUILD_RPATH TRUE)
 

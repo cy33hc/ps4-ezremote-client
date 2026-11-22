@@ -1,8 +1,11 @@
+#include <stddef.h>
+#include <orbis/Net.h>
 #include <orbis/Sysmodule.h>
 #include <orbis/SystemService.h>
 #include <stdbool.h>
 
 #include "daemon.h"
+#include "payload_loader.h"
 #include "orbis_jbc.h"
 
 int main(int argc, char *argv[])
@@ -12,9 +15,17 @@ int main(int argc, char *argv[])
         return 1;
     if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_USER_SERVICE) < 0)
         return 1;
+    if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_NET) < 0)
+        return 1;
+    if (sceNetInit() < 0)
+        return 1;
+    sceNetPoolCreate("ezremote_loader", 1 * 1024 * 1024, 0);
 
     if (!initialize_jbc())
         return 1;
+
+    if (StartEzRemoteServer() < 0)
+        Notify("Failed to start ezRemote Server");
 
     if (is_headless_mode())
     {
