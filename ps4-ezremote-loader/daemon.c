@@ -172,7 +172,8 @@ static int RmRecursive(const char *path)
             continue;
 
         char child[LOADER_MAX_PATH];
-        if (!JoinPath(child, sizeof(child), path, entry->d_name) || !RmRecursive(child))
+        JoinPath(child, sizeof(child), path, entry->d_name);
+        if (!RmRecursive(child))
         {
             closedir(dir);
             return 0;
@@ -223,13 +224,12 @@ static bool IsDaemonOutdated(const char *title_id, const char *eboot_name)
     char app0_daemon[LOADER_MAX_PATH];
     char src_md5[LOADER_MAX_PATH];
 
-    if (!JoinPath(daemon_path, sizeof(daemon_path), LOADER_DAEMON_PATH, title_id) ||
-        !JoinPath(dest_md5, sizeof(dest_md5), daemon_path, "eboot.md5") ||
-        !JoinPath(app0, sizeof(app0), "/mnt/sandbox/pfsmnt/" LOADER_APP_TITLE_ID "-app0", NULL) ||
-        !JoinPath(app0_daemon, sizeof(app0_daemon), app0, "daemon") ||
-        !JoinPath(src_md5, sizeof(src_md5), app0_daemon, eboot_name) ||
-        !AppendSuffix(src_md5, sizeof(src_md5), ".md5"))
-        return true;
+    JoinPath(daemon_path, sizeof(daemon_path), LOADER_DAEMON_PATH, title_id);
+    JoinPath(dest_md5, sizeof(dest_md5), daemon_path, "eboot.md5");
+    JoinPath(app0, sizeof(app0), "/mnt/sandbox/pfsmnt/" LOADER_APP_TITLE_ID "-app0", NULL);
+    JoinPath(app0_daemon, sizeof(app0_daemon), app0, "daemon");
+    JoinPath(src_md5, sizeof(src_md5), app0_daemon, eboot_name);
+    AppendSuffix(src_md5, sizeof(src_md5), ".md5");
 
     if (!FileExists(dest_md5) || !FileExists(src_md5))
         return true;
@@ -284,12 +284,8 @@ static bool CopyDirectory(const char *src, const char *dst)
 
         char src_path[LOADER_MAX_PATH];
         char dst_path[LOADER_MAX_PATH];
-        if (!JoinPath(src_path, sizeof(src_path), src, entry->d_name) ||
-            !JoinPath(dst_path, sizeof(dst_path), dst, entry->d_name))
-        {
-            ok = false;
-            break;
-        }
+        JoinPath(src_path, sizeof(src_path), src, entry->d_name);
+        JoinPath(dst_path, sizeof(dst_path), dst, entry->d_name);
 
         struct stat st;
         if (stat(src_path, &st) != 0)
