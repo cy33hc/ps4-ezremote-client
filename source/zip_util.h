@@ -10,7 +10,13 @@
 #include "common.h"
 #include "fs.h"
 
+#ifdef EZREMOTE_HEADLESS_APP
+// Keep archive buffers small in the daemon; the default 20 MiB does not fit
+// comfortably in the headless app's heap during package installs.
+#define ARCHIVE_TRANSFER_SIZE (512 * 1024)
+#else
 #define ARCHIVE_TRANSFER_SIZE 20971520
+#endif
 
 static uint8_t MAGIC_ZIP_1[4] = {0x50, 0x4B, 0x03, 0x04};
 static uint8_t MAGIC_ZIP_2[4] = {0x50, 0x4B, 0x05, 0x06};

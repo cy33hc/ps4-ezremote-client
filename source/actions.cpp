@@ -996,6 +996,11 @@ namespace Actions
     {
         ssize_t len;
         char *buffer = (char*) malloc(ARCHIVE_TRANSFER_SIZE);
+        if (buffer == nullptr)
+        {
+            sprintf(status_message, "archive install buffer allocation failed");
+            return NULL;
+        }
 
         ArchivePkgInstallData *install_data = (ArchivePkgInstallData*) argp;
         SplitFile *sp = install_data->split_file;

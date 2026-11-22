@@ -103,6 +103,12 @@ namespace ZipUtil
 #else
         void *buf = memalign(4096, ARCHIVE_TRANSFER_SIZE);
 #endif
+        if (buf == nullptr)
+        {
+            FS::Close(fd);
+            zipCloseFileInZip(zf);
+            return 0;
+        }
         uint64_t seek = 0;
 
         while (1)
@@ -306,6 +312,8 @@ namespace ZipUtil
     {
         ssize_t len;
         unsigned char *buffer = (unsigned char *)malloc(ARCHIVE_TRANSFER_SIZE);
+        if (buffer == nullptr)
+            return 0;
 
         /* loop over file contents and write to fd */
         for (int n = 0;; n++)

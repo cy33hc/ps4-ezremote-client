@@ -42,7 +42,11 @@ extern bool done;
 #define SUCCESS_MSG "{ \"result\": { \"success\": true, \"error\": null } }"
 #define FAILURE_MSG "{ \"result\": { \"success\": false, \"error\": \"%s\" } }"
 #define SUCCESS_MSG_LEN 48
+#ifdef EZREMOTE_HEADLESS_APP
+#define PKG_INITIAL_REQUEST_SIZE (512 * 1024ul)
+#else
 #define PKG_INITIAL_REQUEST_SIZE 8388608ul
+#endif
 
 std::mutex mutex_;
 
@@ -4392,126 +4396,93 @@ namespace HttpServer
 
         svr->Get("/archive_inst/(.*)", [&](const Request &req, Response &res)
         {
-            RemoteClient *tmp_client;
-            RemoteSettings *tmp_settings;
             std::string hash = req.matches[1];
-
             ArchivePkgInstallData *pkg_data = INSTALLER::GetArchivePkgInstallData(hash);
+            if (pkg_data == nullptr || pkg_data->archive_entry == nullptr || pkg_data->split_file == nullptr)
+            {
+                failed(res, 500, "Cannot resume archive_inst");
+                return;
+            }
+
+            const size_t file_size = pkg_data->archive_entry->filesize;
 
             if (req.method == "HEAD")
             {
                 res.status = 204;
-                res.set_header("Content-Length", std::to_string(pkg_data->archive_entry->filesize));
+                res.set_header("Content-Length", std::to_string(file_size));
                 res.set_header("Accept-Ranges", "bytes");
                 return;
             }
 
-            if (req.ranges.empty())
-            {
-                res.status = 200;
-                res.set_content_provider(
-                    pkg_data->archive_entry->filesize, "application/octet-stream",
-                    [pkg_data](size_t offset, size_t length, DataSink &sink) {
-                        char *buf = (char*) malloc(131072);
-                        size_t bytes_read = pkg_data->split_file->Read(buf, 131072, offset);
-                        sink.write(buf, bytes_read);
-                        free(buf);
-                        return true;
-                    },
-                    [](bool success) {
-                        return true;
-                    });
-            }
-            else
-            {
-                res.status = 206;
-                size_t range_len = (req.ranges[0].second - req.ranges[0].first) + 1;
-                if (req.ranges[0].second >= 18000000000000000000ul)
-                {
-                    range_len = PKG_INITIAL_REQUEST_SIZE;
-                    res.set_header("Content-Length", std::to_string(range_len));
-                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+PKG_INITIAL_REQUEST_SIZE-1) + "/"+std::to_string(pkg_data->archive_entry->filesize));
-                    OrbisTick archive_tick;
-                    sceRtcGetCurrentTick(&archive_tick);
-                }
-                std::pair<ssize_t, ssize_t> range = req.ranges[0];
-                res.set_content_provider(
-                    pkg_data->archive_entry->filesize, "application/octet-stream",
-                    [pkg_data, range, range_len](size_t offset, size_t length, DataSink &sink) {
-                        char *buf = (char*) malloc(range_len);
-                        size_t bytes_read = pkg_data->split_file->Read(buf, range_len, range.first);
-                        sink.write(buf, bytes_read);
-                        free(buf);
-                        return true;
-                    },
-                    [](bool success) {
-                        return true;
-                    });
-            }
+            // httplib applies the Range header and passes the resolved offset
+            // and length. Read at that offset; do not add range.first again.
+            res.set_content_provider(
+                file_size, "application/octet-stream",
+                [pkg_data, file_size](size_t offset, size_t length, DataSink &sink) {
+                    if (offset >= file_size)
+                        return false;
+
+                    size_t to_read = std::min(length, file_size - offset);
+                    to_read = std::min(to_read, static_cast<size_t>(PKG_INITIAL_REQUEST_SIZE));
+                    if (to_read == 0)
+                        return false;
+
+                    std::vector<char> buf(to_read);
+                    ssize_t bytes_read = static_cast<ssize_t>(
+                        pkg_data->split_file->Read(buf.data(), to_read, offset));
+                    if (bytes_read <= 0)
+                        return false;
+                    return sink.write(buf.data(), static_cast<size_t>(bytes_read));
+                },
+                [](bool success) {
+                    return true;
+                });
         });
 
         svr->Get("/split_inst/(.*)", [&](const Request &req, Response &res)
         {
             std::string hash = req.matches[1];
-
             SplitPkgInstallData *pkg_data = INSTALLER::GetSplitPkgInstallData(hash);
-
-            if (pkg_data == nullptr)
+            if (pkg_data == nullptr || pkg_data->split_file == nullptr)
             {
                 failed(res, 500, "Cannot resume split_inst");
                 return;
             }
 
+            const size_t file_size = pkg_data->size;
+
             if (req.method == "HEAD")
             {
                 res.status = 204;
-                res.set_header("Content-Length", std::to_string(pkg_data->size));
+                res.set_header("Content-Length", std::to_string(file_size));
                 res.set_header("Accept-Ranges", "bytes");
                 return;
             }
 
-            if (req.ranges.empty())
-            {
-                res.status = 200;
-                res.set_content_provider(
-                    pkg_data->size, "application/octet-stream",
-                    [pkg_data](size_t offset, size_t length, DataSink &sink) {
-                        char *buf = (char*) malloc(131072);
-                        size_t bytes_read = pkg_data->split_file->Read(buf, 131072, offset);
-                        sink.write(buf, bytes_read);
-                        free(buf);
-                        return true;
-                    },
-                    [](bool success) {
-                        return true;
-                    });
-            }
-            else
-            {
-                res.status = 206;
-                size_t range_len = (req.ranges[0].second - req.ranges[0].first) + 1;
-                if (req.ranges[0].second >= 18000000000000000000ul)
-                {
-                    range_len = PKG_INITIAL_REQUEST_SIZE;
-                    res.set_header("Content-Length", std::to_string(range_len));
-                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+PKG_INITIAL_REQUEST_SIZE-1) + "/"+std::to_string(pkg_data->size));
-                    OrbisTick split_tick;
-                    sceRtcGetCurrentTick(&split_tick);
-                }
-                std::pair<ssize_t, ssize_t> range = req.ranges[0];
-                res.set_content_provider(
-                    pkg_data->size, "application/octet-stream",
-                    [pkg_data, range, range_len](size_t offset, size_t length, DataSink &sink) {
-                        char *buf = (char*) malloc(range_len);
-                        size_t bytes_read = pkg_data->split_file->Read(buf, range_len, range.first);
-                        sink.write(buf, bytes_read);
-                        free(buf);
-                        return true;
-                    },
-                    [](bool success) {
-                        return true;
-                    });
-            } });
+            // Same as /archive_inst: httplib applies Range and passes the
+            // resolved offset/length, so read from offset and stream in chunks.
+            res.set_content_provider(
+                file_size, "application/octet-stream",
+                [pkg_data, file_size](size_t offset, size_t length, DataSink &sink) {
+                    if (offset >= file_size)
+                        return false;
+
+                    size_t to_read = std::min(length, file_size - offset);
+                    to_read = std::min(to_read, static_cast<size_t>(PKG_INITIAL_REQUEST_SIZE));
+                    if (to_read == 0)
+                        return false;
+
+                    std::vector<char> buf(to_read);
+                    ssize_t bytes_read = static_cast<ssize_t>(
+                        pkg_data->split_file->Read(buf.data(), to_read, offset));
+                    if (bytes_read <= 0)
+                        return false;
+                    return sink.write(buf.data(), static_cast<size_t>(bytes_read));
+                },
+                [](bool success) {
+                    return true;
+                });
+        });
 
         svr->Post("/__local__/install_url", [&](const Request &req, Response &res)
         {
@@ -4872,10 +4843,31 @@ namespace HttpServer
 
         if (blocking)
         {
-            // Serve on the calling thread: listen() blocks until "/stop"
-            // stops the server.
+#ifdef EZREMOTE_HEADLESS_APP
+            // Headless: listen() on the main thread. If the listener drops
+            // unexpectedly, rebuild the server and start listening again.
+            while (!done)
+            {
+                Util::Notify("Starting ezRemote Client web server on port %d", http_server_port);
+                ServerThread(NULL);
+
+                if (done)
+                    break;
+
+                // A failed listen returns immediately; avoid a hot loop and
+                // give the port a moment to become available again.
+                sleep(3);
+                delete svr;
+                svr = new Server();
+                if (!svr->is_valid())
+                    return false;
+            }
+            return true;
+#else
+            // Native: serve on the calling thread until "/stop".
             ServerThread(NULL);
             return true;
+#endif
         }
 
         return pthread_create(&http_server_thid, NULL, ServerThread, NULL) == 0;
