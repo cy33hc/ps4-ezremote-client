@@ -7,6 +7,7 @@
 #include <time.h>
 #include <semaphore.h>
 #include <pthread.h>
+#include <mutex>
 
 enum FileBlockStatus
 {
@@ -47,6 +48,8 @@ public:
 
 private:
     std::deque<FileBlock*> file_blocks;
+    std::mutex blocks_mutex;
+    std::mutex read_mutex;
     size_t write_offset = 0;
     size_t block_size;
     size_t read_offset = 0;

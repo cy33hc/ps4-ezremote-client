@@ -51,6 +51,10 @@ int SplitFile::Open()
 
 size_t SplitFile::Read(char *buf, size_t buf_size, size_t offset)
 {
+    // One reader at a time; the provider may be called from more than one
+    // HTTP connection.
+    std::lock_guard<std::mutex> read_lock(this->read_mutex);
+
     int first_block_num, block_num;
     size_t block_offset;
     size_t remaining;
@@ -64,23 +68,39 @@ size_t SplitFile::Read(char *buf, size_t buf_size, size_t offset)
     block_num = first_block_num;
     block_offset = offset % this->block_size;
 
-    while ((block_num >= this->file_blocks.size() && !this->complete) ||
-           (block_num < this->file_blocks.size() && this->file_blocks[block_num]->status == BLOCK_STATUS_NOT_EXISTS))
+    for (;;)
     {
+        {
+            std::lock_guard<std::mutex> lock(this->blocks_mutex);
+            if (block_num < this->file_blocks.size())
+            {
+                FileBlock *candidate = this->file_blocks[block_num];
+                if (candidate != nullptr && candidate->status != BLOCK_STATUS_NOT_EXISTS)
+                    break;
+            }
+            else if (this->complete)
+            {
+                break;
+            }
+        }
+
         struct timespec ts;
         clock_gettime(CLOCK_REALTIME, &ts);
         ts.tv_sec += 2;
         sem_timedwait(&this->block_ready, &ts);
     }
 
-    // If complete and block_num is past the end, the requested offset is beyond EOF
-    if (block_num >= this->file_blocks.size())
-        return 0;
-
-    block = this->file_blocks[block_num];
-    if (block->status == BLOCK_STATUS_DELETED)
     {
-        return -1;
+        std::lock_guard<std::mutex> lock(this->blocks_mutex);
+        // If complete and block_num is past the end, the requested offset is beyond EOF
+        if (block_num >= this->file_blocks.size())
+            return 0;
+
+        block = this->file_blocks[block_num];
+        if (block == nullptr || block->status == BLOCK_STATUS_DELETED)
+        {
+            return -1;
+        }
     }
 
     if (block_offset > block->size - 1 && this->complete)
@@ -135,37 +155,55 @@ size_t SplitFile::Read(char *buf, size_t buf_size, size_t offset)
         block_num++;
         block_offset = 0;
 
-        while ((block_num > this->file_blocks.size() - 1 && !this->complete) ||
-               (block_num < this->file_blocks.size() && this->file_blocks[block_num]->status == BLOCK_STATUS_NOT_EXISTS))
+        for (;;)
         {
+            {
+                std::lock_guard<std::mutex> lock(this->blocks_mutex);
+                if (block_num < this->file_blocks.size())
+                {
+                    FileBlock *candidate = this->file_blocks[block_num];
+                    if (candidate != nullptr && candidate->status != BLOCK_STATUS_NOT_EXISTS)
+                        break;
+                }
+                else if (this->complete)
+                {
+                    break;
+                }
+            }
+
             struct timespec ts;
             clock_gettime(CLOCK_REALTIME, &ts);
             ts.tv_sec += 2;
             sem_timedwait(&this->block_ready, &ts);
         }
 
-        // If complete and block_num is past the end, no more data
-        if (block_num >= this->file_blocks.size())
-            break;
-
-        block = this->file_blocks[block_num];
+        {
+            std::lock_guard<std::mutex> lock(this->blocks_mutex);
+            // If complete and block_num is past the end, no more data
+            if (block_num >= this->file_blocks.size())
+                break;
+            block = this->file_blocks[block_num];
+        }
     }
 
     // delete blocks before the first read offset block. Assumuption, that reads are always
     // forward and won't read previously already read blocks. For safety, keeping only current block and 2 previous blocks
-    for (int j=0; j < first_block_num - 13; j++)
     {
-        if (this->file_blocks[j] != nullptr && this->file_blocks[j]->status == BLOCK_STATUS_CREATED)
+        std::lock_guard<std::mutex> lock(this->blocks_mutex);
+        for (int j = 0; j < first_block_num - 13; j++)
         {
-            if (this->file_blocks[j]->fd != nullptr)
+            if (this->file_blocks[j] != nullptr && this->file_blocks[j]->status == BLOCK_STATUS_CREATED)
             {
-                fclose(this->file_blocks[j]->fd);
-                this->file_blocks[j]->fd = nullptr;
+                if (this->file_blocks[j]->fd != nullptr)
+                {
+                    fclose(this->file_blocks[j]->fd);
+                    this->file_blocks[j]->fd = nullptr;
+                }
+                this->file_blocks[j]->status = BLOCK_STATUS_DELETED;
+                remove(this->file_blocks[j]->block_file.c_str());
+                delete (this->file_blocks[j]);
+                this->file_blocks[j] = nullptr;
             }
-            this->file_blocks[j]->status = BLOCK_STATUS_DELETED;
-            remove(this->file_blocks[j]->block_file.c_str());
-            delete (this->file_blocks[j]);
-            this->file_blocks[j] = nullptr;
         }
     }
 
@@ -313,7 +351,10 @@ ssize_t SplitFile::Write(char *buf, size_t buf_size)
             fclose(block_in_progress->fd);
             block_in_progress->fd = nullptr;
             block_in_progress->status = BLOCK_STATUS_CREATED;
-            this->file_blocks.push_back(block_in_progress);
+            {
+                std::lock_guard<std::mutex> lock(this->blocks_mutex);
+                this->file_blocks.push_back(block_in_progress);
+            }
 
             sem_post(&this->block_ready);
 
@@ -340,7 +381,10 @@ int SplitFile::Close()
     }
     block_in_progress->status = BLOCK_STATUS_CREATED;
     block_in_progress->is_last = true;
-    this->file_blocks.push_back(block_in_progress);
+    {
+        std::lock_guard<std::mutex> lock(this->blocks_mutex);
+        this->file_blocks.push_back(block_in_progress);
+    }
     sem_post(&this->block_ready);
 
     // Wait until file is fully read, if file isn't full read

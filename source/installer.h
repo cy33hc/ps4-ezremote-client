@@ -146,6 +146,8 @@ struct SplitPkgInstallData
     pthread_t thread;
     bool stop_write_thread;
     bool delete_client;
+    int http_users;
+    bool closing;
 };
 
 struct DownloadPkgData
@@ -187,6 +189,8 @@ namespace INSTALLER
     void RemoveArchivePkgInstallData(const std::string &hash);
     bool InstallArchivePkg(const std::string &path, ArchivePkgInstallData* pkg_data, bool bg = false);
     SplitPkgInstallData *GetSplitPkgInstallData(const std::string &hash);
+    SplitPkgInstallData *AcquireSplitPkgInstallData(const std::string &hash);
+    void ReleaseSplitPkgInstallData(SplitPkgInstallData *pkg_data);
     void AddSplitPkgInstallData(const std::string &hash, SplitPkgInstallData *pkg_data);
     void RemoveSplitPkgInstallData(const std::string &hash);
     bool InstallSplitPkg(const std::string &path, SplitPkgInstallData* pkg_data, bool bg = false);

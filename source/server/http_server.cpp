@@ -4442,9 +4442,11 @@ namespace HttpServer
         svr->Get("/split_inst/(.*)", [&](const Request &req, Response &res)
         {
             std::string hash = req.matches[1];
-            SplitPkgInstallData *pkg_data = INSTALLER::GetSplitPkgInstallData(hash);
+            SplitPkgInstallData *pkg_data = INSTALLER::AcquireSplitPkgInstallData(hash);
             if (pkg_data == nullptr || pkg_data->split_file == nullptr)
             {
+                if (pkg_data != nullptr)
+                    INSTALLER::ReleaseSplitPkgInstallData(pkg_data);
                 failed(res, 500, "Cannot resume split_inst");
                 return;
             }
@@ -4456,6 +4458,7 @@ namespace HttpServer
                 res.status = 204;
                 res.set_header("Content-Length", std::to_string(file_size));
                 res.set_header("Accept-Ranges", "bytes");
+                INSTALLER::ReleaseSplitPkgInstallData(pkg_data);
                 return;
             }
 
@@ -4479,7 +4482,8 @@ namespace HttpServer
                         return false;
                     return sink.write(buf.data(), static_cast<size_t>(bytes_read));
                 },
-                [](bool success) {
+                [pkg_data](bool success) {
+                    INSTALLER::ReleaseSplitPkgInstallData(pkg_data);
                     return true;
                 });
         });

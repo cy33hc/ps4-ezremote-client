@@ -1,4 +1,6 @@
 #include <unistd.h>
+#include <mutex>
+#include <condition_variable>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -57,6 +59,8 @@ static bool s_bgft_initialized = false;
 
 static std::map<std::string, ArchivePkgInstallData *> archive_pkg_install_data_list;
 static std::map<std::string, SplitPkgInstallData *> split_pkg_install_data_list;
+static std::mutex split_pkg_mutex;
+static std::condition_variable split_pkg_cv;
 
 namespace INSTALLER
 {
@@ -372,6 +376,9 @@ namespace INSTALLER
 		}
 		else if (bg_check_data->split_pkg_data != nullptr)
 		{
+			// First remove the hash and wait for any active /split_inst HTTP
+			// streams. The writer must keep running while they drain.
+			RemoveSplitPkgInstallData(bg_check_data->hash);
 			bg_check_data->split_pkg_data->stop_write_thread = true;
 			bg_check_data->split_pkg_data->split_file->Close();
 			pthread_join(bg_check_data->split_pkg_data->thread, NULL);
@@ -379,7 +386,6 @@ namespace INSTALLER
 			if (bg_check_data->split_pkg_data->delete_client)
 				delete (bg_check_data->split_pkg_data->remote_client);
 			free(bg_check_data->split_pkg_data);
-			RemoveSplitPkgInstallData(bg_check_data->hash);
 			free(bg_check_data);
 		}
 		Windows::SetModalMode(false);
@@ -1069,11 +1075,37 @@ namespace INSTALLER
 
 	SplitPkgInstallData *GetSplitPkgInstallData(const std::string &hash)
 	{
-		return split_pkg_install_data_list[hash];
+		std::lock_guard<std::mutex> lock(split_pkg_mutex);
+		std::map<std::string, SplitPkgInstallData *>::iterator it = split_pkg_install_data_list.find(hash);
+		return it == split_pkg_install_data_list.end() ? nullptr : it->second;
+	}
+
+	SplitPkgInstallData *AcquireSplitPkgInstallData(const std::string &hash)
+	{
+		std::lock_guard<std::mutex> lock(split_pkg_mutex);
+		std::map<std::string, SplitPkgInstallData *>::iterator it = split_pkg_install_data_list.find(hash);
+		if (it == split_pkg_install_data_list.end() || it->second->closing)
+			return nullptr;
+		it->second->http_users++;
+		return it->second;
+	}
+
+	void ReleaseSplitPkgInstallData(SplitPkgInstallData *pkg_data)
+	{
+		if (pkg_data == nullptr)
+			return;
+		std::lock_guard<std::mutex> lock(split_pkg_mutex);
+		if (pkg_data->http_users > 0)
+			pkg_data->http_users--;
+		if (pkg_data->closing && pkg_data->http_users == 0)
+			split_pkg_cv.notify_all();
 	}
 
 	void AddSplitPkgInstallData(const std::string &hash, SplitPkgInstallData *pkg_data)
 	{
+		std::lock_guard<std::mutex> lock(split_pkg_mutex);
+		pkg_data->http_users = 0;
+		pkg_data->closing = false;
 		std::pair<std::string, SplitPkgInstallData *> pair = std::make_pair(hash, pkg_data);
 		split_pkg_install_data_list.erase(hash);
 		split_pkg_install_data_list.insert(pair);
@@ -1081,7 +1113,14 @@ namespace INSTALLER
 
 	void RemoveSplitPkgInstallData(const std::string &hash)
 	{
-		split_pkg_install_data_list.erase(hash);
+		std::unique_lock<std::mutex> lock(split_pkg_mutex);
+		std::map<std::string, SplitPkgInstallData *>::iterator it = split_pkg_install_data_list.find(hash);
+		if (it == split_pkg_install_data_list.end())
+			return;
+		SplitPkgInstallData *pkg_data = it->second;
+		pkg_data->closing = true;
+		split_pkg_install_data_list.erase(it);
+		split_pkg_cv.wait(lock, [pkg_data]() { return pkg_data->http_users == 0; });
 	}
 
 	bool InstallSplitPkg(const std::string &path, SplitPkgInstallData *pkg_data, bool bg)
@@ -1224,6 +1263,7 @@ namespace INSTALLER
 					Activities::ProgressCurrent(progress_info.transferred, progress_info.length);
 				}
 				sceSystemServicePowerTick();
+				sceKernelUsleep(500000);
 			}
 		}
 		else
@@ -1239,6 +1279,8 @@ namespace INSTALLER
 		}
 		ret = 1;
 	finish:
+		// Drain active /split_inst streams before closing/deleting the blocks.
+		RemoveSplitPkgInstallData(hash);
 		pkg_data->stop_write_thread = true;
 		pkg_data->split_file->Close();
 		pthread_join(pkg_data->thread, NULL);
@@ -1246,7 +1288,6 @@ namespace INSTALLER
 		if (pkg_data->delete_client)
 			delete (pkg_data->remote_client);
 		free(pkg_data);
-		RemoveSplitPkgInstallData(hash);
 		Windows::SetModalMode(false);
 		return ret;
 	}
