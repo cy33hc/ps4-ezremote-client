@@ -15,7 +15,6 @@
 #include "daemon.h"
 #include "fs.h"
 #include "util.h"
-#include "dbglogger.h"
 
 extern "C" {
 #include "orbis_jbc.h"
@@ -43,14 +42,12 @@ int MD5_hash_compare(const std::string &file1, const std::string &file2)
 	FILE* f1 = fopen(file1.c_str(), "rb");
 	if (!f1)
 	{
-		dbglogger_log("cannot open: %s", file1.c_str());
 		return true;
 	}
 
 	FILE* f2 = fopen(file2.c_str(), "rb");
 	if (!f2)
 	{
-		dbglogger_log("cannot open: %s", file2.c_str());
 		fclose(f1);
 		return true;
 	}
@@ -76,7 +73,6 @@ bool is_daemon_outdated(const std::string &title_id, const std::string &eboot_na
     if (FS::FileExists(dest_md5_path))
     {
         res = MD5_hash_compare(dest_md5_path, src_md5_path);
-        dbglogger_log("Daemon Is Outdated?: %s", res ? "Yes" : "No");
     }
     
     return res;
@@ -95,8 +91,6 @@ uint32_t launch_daemon(const std::string &title_id) {
 
     int32_t appid = sceLncUtilLaunchApp(title_id.c_str(), NULL,
                                         reinterpret_cast<LncAppParam *>(&param));
-    if (appid < 0)
-        dbglogger_log("sceLncUtilLaunchApp(%s) failed: 0x%08x", title_id.c_str(), appid);
     return (uint32_t)appid;
 }
 
@@ -121,7 +115,6 @@ static bool copy_directory(const std::string &src, const std::string &dst)
     DIR *dir = opendir(src.c_str());
     if (dir == nullptr)
     {
-        dbglogger_log("cannot open directory: %s", src.c_str());
         return false;
     }
 
@@ -149,7 +142,6 @@ static bool copy_directory(const std::string &src, const std::string &dst)
 
         if (!ok)
         {
-            dbglogger_log("copy failed: %s", src_path.c_str());
             break;
         }
     }
@@ -171,7 +163,6 @@ bool stop_daemon(const std::string &title_id)
     uint32_t appid = (uint32_t)sceLncUtilGetAppId(title_id.c_str());
     if (sceLncUtilKillApp(appid) != 0)
     {
-        dbglogger_log("sceLncUtilKillApp(%s / %x) failed", title_id.c_str(), appid);
         return false;
     }
 
@@ -183,13 +174,11 @@ bool stop_daemon(const std::string &title_id)
         usleep(100000);
     }
 
-    dbglogger_log("Daemon %s did not stop in time", title_id.c_str());
     return false;
 }
 
 bool boot_daemon_services(const std::string &title_id, const std::string &eboot_name)
 {
-    dbglogger_log("Booting Daemon Services");
     const std::string app0 = std::string("/mnt/sandbox/pfsmnt/") + APP_TITLE_ID + "-app0";
     std::string daemon_path = std::string(DAEMON_PATH) + "/" + title_id;
     std::string daemon_sce_sys_path = daemon_path + "/sce_sys";
@@ -221,13 +210,10 @@ bool boot_daemon_services(const std::string &title_id, const std::string &eboot_
         
         if (!!mount_large_fs("/dev/da0x4.crypt", "/system", "exfatfs", "511", MNT_UPDATE))
         {
-            dbglogger_log("mounting /system failed with %s.", strerror(errno));
             return false;
         }
         else
         {
-            dbglogger_log("Remount Successful");
-
             if (daemon_missing)
             {
                 FS::RmRecursive(daemon_path);
@@ -236,19 +222,16 @@ bool boot_daemon_services(const std::string &title_id, const std::string &eboot_
 
                 if (!FS::Copy(src_sfo_path, param_sfo))
                 {
-                    dbglogger_log("Copying Daemon files failed");
                     return false;
                 }
 
                 if (!FS::Copy(src_eboot_path, dest_eboot_path))
                 {
-                    dbglogger_log("Creating the Daemon eboot failed to create: %s", strerror(errno));
                     return false;
                 }
 
                 if (!FS::Copy(src_eboot_md5_path, dest_eboot_md5_path))
                 {
-                    dbglogger_log("Creating the Daemon eboot failed to create: %s", strerror(errno));
                     return false;
                 }
             }
@@ -258,20 +241,17 @@ bool boot_daemon_services(const std::string &title_id, const std::string &eboot_
                 FS::RmRecursive(dest_assets_path);
                 if (!copy_directory(src_assets_path, dest_assets_path))
                 {
-                    dbglogger_log("Copying Daemon assets failed");
                     return false;
                 }
 
                 FS::RmRecursive(dest_daemon_path);
                 if (!copy_directory(src_daemon_path, dest_daemon_path))
                 {
-                    dbglogger_log("Copying Daemon daemon failed");
                     return false;
                 }
 
                 if (!FS::Copy(src_version_path, dest_version_path))
                 {
-                    dbglogger_log("Copying Daemon version.txt failed");
                     return false;
                 }
             }
@@ -279,17 +259,9 @@ bool boot_daemon_services(const std::string &title_id, const std::string &eboot_
     }
 
     uint32_t appid = (uint32_t)sceLncUtilGetAppId(title_id.c_str());
-    //Launch Daemon with silent
     if (!is_daemon_running(title_id)) {
         appid = launch_daemon(title_id);
-        /* sleep(3);
-        if (!is_daemon_running(title_id)) {
-            Util::Notify("Failed to launch. Please retry");
-        } */
-        dbglogger_log("Launched Daemon AppId: %x", appid);
     }
-    else
-       dbglogger_log("Found Daemon AppId: %x", appid);
 
     return true;
 }
