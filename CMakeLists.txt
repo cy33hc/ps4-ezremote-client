@@ -241,6 +241,7 @@ target_link_libraries(ezremote_loader
   SceSystemService
   SceLncUtil
   SceNet
+  SceUserService
 )
 set_target_properties(ezremote_loader PROPERTIES SKIP_BUILD_RPATH TRUE)
 

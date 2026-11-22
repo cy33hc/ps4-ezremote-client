@@ -204,5 +204,6 @@ namespace CONFIG
     void SaveFavoriteUrl(int index, char *url);
     void SaveWebSite(const std::string &site);
     void SetClientType(RemoteSettings *settings);
+    void SetAccountIdOverride(uint64_t account_id);
 }
 #endif

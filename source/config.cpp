@@ -7,6 +7,7 @@
 #include <mutex>
 #include <regex>
 #include <stdlib.h>
+#include <stdio.h>
 #include "server/http_server.h"
 #include "config.h"
 #include "fs.h"
@@ -63,12 +64,22 @@ unsigned char cipher_iv[16] = {'Y', 'p', '3', 's', '6', 'v', '9', 'y', '$', 'B',
 static unsigned char account_cipher_key[32];
 static unsigned char account_cipher_iv[16];
 static bool account_cipher_ready = false;
+static bool account_id_override_ready = false;
+static uint64_t account_id_override = 0;
 
 RemoteClient *remoteclient;
+
 
 namespace CONFIG
 {
     static void DeriveAccountCipherKeys();
+
+    void SetAccountIdOverride(uint64_t account_id)
+    {
+        account_id_override = account_id;
+        account_id_override_ready = true;
+        account_cipher_ready = false;
+    }
 
     int Encrypt(const std::string &text, std::string &encrypt_text)
     {
@@ -89,11 +100,16 @@ namespace CONFIG
             return 0;
 
         unsigned char tmp_decrypt_text[tmp_decode_text.length() * 2];
-        int decrypt_text_len;
+        int decrypt_text_len = 0;
         memset(tmp_decrypt_text, 0, sizeof(tmp_decrypt_text));
         ret = openssl_decrypt((unsigned char *)tmp_decode_text.c_str(), tmp_decode_text.length(), cipher_key, cipher_iv, tmp_decrypt_text, &decrypt_text_len);
         if (ret == 0)
         {
+            // Clear any output from the failed attempt before trying the
+            // account-derived fallback key.
+            memset(tmp_decrypt_text, 0, sizeof(tmp_decrypt_text));
+            decrypt_text_len = 0;
+
             if (!account_cipher_ready)
                 DeriveAccountCipherKeys();
             ret = openssl_decrypt((unsigned char *)tmp_decode_text.c_str(), tmp_decode_text.length(), account_cipher_key, account_cipher_iv, tmp_decrypt_text, &decrypt_text_len);
@@ -148,10 +164,19 @@ namespace CONFIG
         memcpy(account_cipher_key, cipher_key, sizeof(account_cipher_key));
         memcpy(account_cipher_iv, cipher_iv, sizeof(account_cipher_iv));
 
-        int user_id = 0;
+        // Get the key and iv for encryption. Inject the account_id/MAC address as part of the key and iv.
+        int user_id;
         uint64_t account_id = 0;
-        sceUserServiceGetForegroundUser(&user_id);
-        sceUserServiceGetNpAccountId(user_id, &account_id);
+        if (account_id_override_ready)
+        {
+            user_id = -1;
+            account_id = account_id_override;
+        }
+        else
+        {
+            sceUserServiceGetForegroundUser(&user_id);
+            sceUserServiceGetNpAccountId(user_id, &account_id);
+        }
         unsigned char data[sizeof(account_id)];
         memcpy(data, &account_id, sizeof(account_id));
         OrbisNetEtherAddr addr;
@@ -341,18 +366,12 @@ namespace CONFIG
                 std::string decrypted_password;
                 int ret = Decrypt(tmp_password, decrypted_password);
                 if (ret == 0)
-                {
-                    setting.password[0] = '\0';
-                    write_password = false;
-                }
+                    sprintf(setting.password, "%s", tmp_password.c_str());
                 else
-                {
-                    snprintf(setting.password, sizeof(setting.password), "%s", decrypted_password.c_str());
-                    Encrypt(setting.password, encrypted_password);
-                }
+                    sprintf(setting.password, "%s", decrypted_password.c_str());
+                Encrypt(setting.password, encrypted_password);
             }
-            if (write_password)
-                WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_PASSWORD, encrypted_password.c_str());
+            WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_PASSWORD, encrypted_password.c_str());
 
             setting.enable_rpi = ReadBool(sites[i].c_str(), CONFIG_ENABLE_RPI, true);
             WriteBool(sites[i].c_str(), CONFIG_ENABLE_RPI, setting.enable_rpi);

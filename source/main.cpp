@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <sys/file.h>
 #include <orbis/libkernel.h>
@@ -238,7 +239,16 @@ int main(int argc, char *argv[])
 	// No buffering
 	setvbuf(stdout, NULL, _IONBF, 0);
 	signal(SIGPIPE, SIG_IGN);
-	
+
+	for (int i = 1; i + 1 < argc; i++)
+	{
+		if (strcmp(argv[i], "--account-id") == 0)
+		{
+			CONFIG::SetAccountIdOverride(strtoull(argv[i + 1], nullptr, 10));
+			break;
+		}
+	}
+
 	// load common modules
 #ifndef EZREMOTE_HEADLESS_APP
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_IME_DIALOG) < 0) return 0;
