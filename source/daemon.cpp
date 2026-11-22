@@ -177,7 +177,7 @@ bool stop_daemon(const std::string &title_id)
     return false;
 }
 
-bool boot_daemon_services(const std::string &title_id, const std::string &eboot_name)
+bool update_assets(const std::string &title_id, const std::string &eboot_name)
 {
     const std::string app0 = std::string("/mnt/sandbox/pfsmnt/") + APP_TITLE_ID + "-app0";
     std::string daemon_path = std::string(DAEMON_PATH) + "/" + title_id;
@@ -258,6 +258,11 @@ bool boot_daemon_services(const std::string &title_id, const std::string &eboot_
         }
     }
 
+    return true;
+}
+
+bool start_daemon(const std::string &title_id)
+{
     uint32_t appid = (uint32_t)sceLncUtilGetAppId(title_id.c_str());
     if (!is_daemon_running(title_id)) {
         appid = launch_daemon(title_id);
@@ -265,4 +270,8 @@ bool boot_daemon_services(const std::string &title_id, const std::string &eboot_
 
     return true;
 }
-/* *********************** daemon shit **********************/
+
+int start_self(const std::string &self_path, const char* argv[])
+{
+    return sceSystemServiceLoadExec(self_path.c_str(), argv);
+}

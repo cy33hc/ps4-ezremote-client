@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SDK="${1:-${OPENORBIS:-$ROOT/.sdk/pacbrew/ps4/openorbis}}"
 PKGTOOL="$SDK/bin/linux/PkgTool.Core"
-SFO="$ROOT/data/daemon/ezremote_client.sfo"
+SFO="$ROOT/data/daemon/ezremote_client_webui.sfo"
 
 if [[ ! -x "$PKGTOOL" ]]; then
     echo "error: PkgTool.Core not found at $PKGTOOL" >&2

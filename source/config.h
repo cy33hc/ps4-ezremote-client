@@ -23,7 +23,7 @@
 #define DAEMON_PATH "/system/vsh/app"
 #define EZREMOTE_CLIENT_DAEMON_TITLE_ID "EZRC00001"
 #define EZREMOTE_SERVER_DAEMON_TITLE_ID "EZSV00001"
-#define EZREMOTE_CLIENT_DAEMON_SELF "ezremote_client"
+#define EZREMOTE_CLIENT_DAEMON_SELF "ezremote_client_webui"
 #define EZREMOTE_SERVER_DAEMON_SELF "ezremote-server"
 
 #ifdef EZREMOTE_HEADLESS_APP

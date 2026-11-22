@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#ifdef EZREMOTE_LOADER
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 #include <sys/uio.h>
 #include <orbis/libkernel.h>
 #include <libjbc.h>
@@ -80,6 +84,14 @@ jbc_cred g_RootCreds;
 // Verify jailbreak
 static int is_jailbroken()
 {
+#ifdef EZREMOTE_LOADER
+    int fd = open("/user/.jailbreak", O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    if (fd < 0)
+        return 0;
+    close(fd);
+    unlink("/user/.jailbreak");
+    return 1;
+#else
     FILE *s_FilePointer = fopen("/user/.jailbreak", "w");
 
     if (!s_FilePointer)
@@ -88,6 +100,7 @@ static int is_jailbroken()
     fclose(s_FilePointer);
     remove("/user/.jailbreak");
     return 1;
+#endif
 }
 
 // Jailbreaks creds

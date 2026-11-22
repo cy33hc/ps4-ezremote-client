@@ -229,7 +229,7 @@ static void terminate()
 
 bool headless_mode = false;
 
-int main()
+int main(int argc, char *argv[])
 {
 	// dbglogger_init();
 	// dbglogger_log("If you see this you've set up dbglogger correctly.");
@@ -346,7 +346,12 @@ int main()
 		Shutdown();
 		return 0;
 	#else
-		boot_daemon_services(EZREMOTE_CLIENT_DAEMON_TITLE_ID, EZREMOTE_CLIENT_DAEMON_SELF);
+	    bool success = update_assets(EZREMOTE_CLIENT_DAEMON_TITLE_ID, EZREMOTE_CLIENT_DAEMON_SELF);
+		if (!success)
+		{
+			Util::Notify("Failed to update assets for ezRemote Client browse mode");
+			start_daemon(EZREMOTE_CLIENT_DAEMON_TITLE_ID);
+		}
 		Shutdown();
 		return 0;
 	#endif

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Build the normal PS4 app and package with the OpenOrbis SDK.
+# Build the native UI self, the web UI daemon self, and the loader package with
+# the OpenOrbis SDK. The loader package depends on both self payloads.
 #
 #   ./build_pkg.sh
 #
@@ -10,7 +11,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
 # Optional: ./build_pkg.sh upload
-# Uploads the built pkg and data/daemon via the CMake upload target.
+# Uploads the loader package via the loader CMake upload target.
 UPLOAD=0
 for arg in "$@"; do
     case "$arg" in
@@ -68,14 +69,20 @@ if [[ -f "$BUILD_DIR/CMakeCache.txt" ]]; then
 fi
 
 cmake -S "$ROOT" -B "$BUILD_DIR" -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN"
-cmake --build "$BUILD_DIR" --target ezremote_client_pkg -j8
+"$ROOT/scripts/make_daemon_sfo.sh" "$SDK"
+cmake --build "$BUILD_DIR" --target ezremote_loader_pkg -j8
 
 if [[ $UPLOAD -eq 1 ]]; then
     echo
-    echo "Uploading package and daemons..."
+    echo "Uploading package..."
     cmake --build "$BUILD_DIR" --target upload
 fi
 
 echo
 echo "Built:"
 ls -1 "$BUILD_DIR"/*.pkg
+echo "  $ROOT/data/daemon/ezremote_client_nativeui.self"
+echo "  $ROOT/data/daemon/ezremote_client_nativeui.md5"
+echo "  $ROOT/data/daemon/ezremote_client_webui.self"
+echo "  $ROOT/data/daemon/ezremote_client_webui.md5"
+echo "  $ROOT/data/daemon/ezremote_client_webui.sfo"
