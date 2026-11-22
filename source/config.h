@@ -10,6 +10,7 @@
 
 #include "clients/remote_client.h"
 
+#define APP_TITLE_ID "RMTC00001"
 #define APP_ID "ezremote-client"
 #define DATA_PATH "/data/" APP_ID
 #define CONFIG_INI_FILE DATA_PATH "/config.ini"
@@ -18,6 +19,22 @@
 #define TMP_SFO_PATH DATA_PATH "/tmp_pkg.sfo"
 #define TMP_ICON_PATH DATA_PATH "/tmp_icon.png"
 #define TMP_FOLDER_PATH DATA_PATH "/tmp"
+
+#define DAEMON_PATH "/system/vsh/app"
+#define EZREMOTE_CLIENT_DAEMON_TITLE_ID "EZRC00001"
+#define EZREMOTE_SERVER_DAEMON_TITLE_ID "EZSV00001"
+#define EZREMOTE_CLIENT_DAEMON_SELF "ezremote_client_webui"
+#define EZREMOTE_SERVER_DAEMON_SELF "ezremote-server"
+
+#ifdef EZREMOTE_HEADLESS_APP
+#define SERVER_ELF_PATH DAEMON_PATH "/" EZREMOTE_CLIENT_DAEMON_TITLE_ID "/daemon/ezremote-server.elf"
+#define WEB_ASSETS_ROOT DAEMON_PATH "/" EZREMOTE_CLIENT_DAEMON_TITLE_ID "/assets"
+#define WEB_VERSION_FILE DAEMON_PATH "/" EZREMOTE_CLIENT_DAEMON_TITLE_ID "/version.txt"
+#else
+#define SERVER_ELF_PATH "/mnt/sandbox/pfsmnt/RMTC00001-app0/daemon/ezremote-server.elf"
+#define WEB_ASSETS_ROOT "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets"
+#define WEB_VERSION_FILE DATA_PATH "/version.txt"
+#endif
 
 #define CONFIG_GLOBAL "Global"
 
@@ -45,7 +62,6 @@
 
 #define CONFIG_HTTP_SERVER "HttpServer"
 #define CONFIG_HTTP_SERVER_PORT "http_server_port"
-#define CONFIG_HTTP_SERVER_ENABLED "http_server_enabled"
 #define CONFIG_HTTP_SERVER_COMPRESSED_FILE_PATH "compressed_files_path"
 #define CONFIG_DEFAULT_COMPRESSED_FILE_PATH DATA_PATH "/compressed_files"
 
@@ -82,6 +98,7 @@
 
 #define CONFIG_ENABLE_BG_DOWNLOAD "enable_background_download"
 #define CONFIG_SHOW_ACTIVITY_DIALOG "show_activity_dialog"
+#define CONFIG_HEADLESS_MODE "headless_mode"
 #define CONFIG_BG_DOWNLOAD_SIZE "minimum_backgrond_file_size"
 
 #define HTTP_SERVER_APACHE "Apache"
@@ -116,7 +133,8 @@ struct RemoteSettings
     char site_name[32];
     char server[256];
     char username[33];
-    char password[128];
+    // Encrypted passwords are base64-expanded; leave room for long ones.
+    char password[512];
     ClientType type;
     bool enable_rpi;
     uint32_t supported_actions;
@@ -170,6 +188,8 @@ extern char temp_folder[256];
 extern std::string ezremote_server_version;
 extern bool enable_background_download;
 extern bool show_activity_dialog;
+// Serve only the web UI; no window, no ImGui. Read at start-up.
+extern bool headless_enabled;
 extern uint64_t minimum_backgrond_file_size;
 
 namespace CONFIG
@@ -178,6 +198,8 @@ namespace CONFIG
     void SaveConfig();
     void SaveSiteConfig(const std::string &site);
     void SaveGlobalConfig();
+    void SyncHeadlessModeToServer();
+    void SyncClientPortToServer();
     void SaveLocalDirecotry(const std::string &path);
     void SaveFavoriteUrl(int index, char *url);
     void SaveWebSite(const std::string &site);

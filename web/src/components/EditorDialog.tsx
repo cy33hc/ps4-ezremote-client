@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import * as api from "../api/client";
 import { Modal } from "./Modal";
@@ -19,10 +19,20 @@ export function EditorDialog({ item, name, onClose, onSaved, load, save: saveFil
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Keep the latest loader in a ref so a new inline callback from the parent
+  // does not trigger another content request for the same file.
+  const loadRef = useRef(load);
+  const hasCustomLoad = load !== undefined;
+
+  useEffect(() => {
+    loadRef.current = load;
+  }, [load]);
 
   useEffect(() => {
     let cancelled = false;
-    (load ?? api.getContent)(item)
+    setLoading(true);
+    setError(null);
+    (loadRef.current ?? api.getContent)(item)
       .then((text) => {
         if (cancelled) return;
         setContent(text);
@@ -37,7 +47,7 @@ export function EditorDialog({ item, name, onClose, onSaved, load, save: saveFil
     return () => {
       cancelled = true;
     };
-  }, [item, load]);
+  }, [item, hasCustomLoad]);
 
   const dirty = content !== original;
 

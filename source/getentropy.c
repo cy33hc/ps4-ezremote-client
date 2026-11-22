@@ -1,12 +1,12 @@
 #include <unistd.h>
-#include <sys/random.h>
 #include <pthread.h>
 #include <errno.h>
+#include <sys/random.h>
 
 int getentropy(void *buffer, size_t len)
 {
     int cs, ret = 0;
-    char *pos = buffer;
+    char *pos = (char *)buffer;
 
     if (len > 256) {
         errno = EIO;

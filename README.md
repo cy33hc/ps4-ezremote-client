@@ -26,6 +26,12 @@ ezRemote Client is an application that allows you to connect the PS4 to remote F
  - All 28 languages are available in the Web UI
  - The language is applied immediately after saving the settings
 
+**Run without the console screen (web browser mode only)**
+ - Enable "Use only from a web browser (no console screen)" in the Global Settings, then restart the app
+ - On the next start the app opens no window and does not draw the Native UI; the Web UI keeps working as before
+ - The setting can be changed from either the Native UI or the Web UI; it applies on the next restart
+ - Turn it off again to get the console screen back
+
 **The Cancel function now matches Windows Explorer behaviour**
  - Previously when you cancel a copy/move/upload/download/extract/compress, it cancels the operation on the files that follow, now the cancel is immediately on the current file and files that follow.  This makes the cancel function work just like in Windows Explorer. Example if you are  copying multiple files and a 1GB file is being copied to another location, if you decide to cancel the copy, previously it will wait until the full 1GB file is copied before cancelling files that follow. Now if you cancel, it will stop right away even if the file was partially copied. Like Windows Explorer, you will need to manually cleanup/delete the partial file
 
@@ -185,6 +191,8 @@ You need to launch the "ezRemote Client" app on the PS4. Then on any device(lapt
 
 The port# can be changed from the "Global Settings" dialog in the PS4 app. Any changes to the web server settings needs a restart of the application to take effect.
 
+If you only ever use the Web UI, enable "Use only from a web browser (no console screen)" in the Global Settings and restart the app. ezRemote Client then starts without the Native UI - the Web UI is the only front end and the app shows no window on the console. Disable the option (from the Web UI settings) and restart to bring the Native UI back.
+
 ## Installation
 Copy the **ezremote_client.pkg** in to a FAT32 format usb drive then install from package installer
 
@@ -311,4 +319,31 @@ Finally build the app
    openorbis-cmake ..
    make
 ```
+
+`cmake --build build --target upload` uploads the built package to `PS4_FTP_URL` and mirrors `data/assets` and `data/daemon` to `PS4_FTP_DATA_DIR/assets` and `PS4_FTP_DATA_DIR/daemon` on the console.
+
+### Headless payload ELF (elfldr)
+
+The client can also be built as a raw ELF with the [ps4-payload-sdk](https://github.com/ps4-payload-sdk) and loaded with elfldr. This build has **no native UI** (no SDL/ImGui): it always starts headless and serves the web UI. The normal OpenOrbis app/pkg build above is unaffected.
+
+```
+   export PS4_PAYLOAD_SDK=/opt/ps4-payload-sdk
+   cmake -S . -B build_elf -DCMAKE_TOOLCHAIN_FILE=/opt/ps4-payload-sdk/toolchain/orbis.cmake
+   cmake --build build_elf --target elf
+```
+
+The result is `build_elf/ezremote_client.elf`. The same build also compiles the `ps4-ezremote-server` submodule with the same payload SDK and stages its stripped payload at `data/daemon/ezremote-server.elf` (the stripped client payload is `data/daemon/ezremote_client.elf`). Run this before `build_pkg.sh` when you want the package to carry a freshly built server payload.
+
+Stage the web UI files for the console with:
+
+```
+   cmake --build build_elf --target payload-data
+```
+
+Deploy to the PS4:
+- `build_elf/ezremote_client.elf` - load it with elfldr
+- `build_elf/payload-data/assets` -> `/data/ezremote-client/assets`
+- optional: `data/daemon/ezremote-server.elf` -> `/data/ezremote-client/daemon/ezremote-server.elf` (without it, background install/download and "restart client" from the web UI are unavailable)
+
+The payload keeps its configuration in the same `/data/ezremote-client/config.ini`, and the web UI is served on the configured HTTP port (default 8080). The native Global Settings dialog is not present in this build; edit the web UI settings instead.
 

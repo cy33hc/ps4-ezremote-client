@@ -13,40 +13,7 @@
 #define LOCAL_BROWSER 1
 #define REMOTE_BROWSER 2
 
-extern int view_mode;
-extern bool handle_updates;
-extern std::vector<DirEntry> local_files;
-extern std::vector<DirEntry> remote_files;
-extern std::set<DirEntry> multi_selected_local_files;
-extern std::set<DirEntry> multi_selected_remote_files;
-extern std::vector<DirEntry> local_paste_files;
-extern std::vector<DirEntry> remote_paste_files;
-extern std::vector<DownloadProgress> bg_download_progress;
-extern ACTIONS paste_action;
-extern DirEntry selected_local_file;
-extern DirEntry selected_remote_file;
-extern ACTIONS selected_action;
-extern char status_message[];
-extern char local_file_to_select[];
-extern char remote_file_to_select[];
-extern char local_filter[];
-extern char remote_filter[];
-extern char activity_message[];
-extern char confirm_message[];
-extern int confirm_state;
-// Which button set the confirmation dialog shows.
-#define CONFIRM_KIND_YESNO 0
-#define CONFIRM_KIND_OVERWRITE 1
-extern int confirm_kind;
-extern int overwrite_type;
-extern bool dont_prompt_overwrite;
-extern bool dont_prompt_overwrite_cb;
-extern ACTIONS action_to_take;
-extern char extract_zip_folder[];
-extern char zip_file_path[];
-extern std::vector<std::string> edit_buffer;
-extern bool is_server_started;
-extern bool ezremote_server_version_match;
+#include "ui_state.h"
 
 static ImVector<ImRect> s_GroupPanelLabelStack;
 

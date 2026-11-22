@@ -13,7 +13,7 @@
 #include "util.h"
 #include "lang.h"
 #include "system.h"
-#include "windows.h"
+#include "ui_state.h"
 
 namespace FS
 {

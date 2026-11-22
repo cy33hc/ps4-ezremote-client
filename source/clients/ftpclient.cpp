@@ -14,7 +14,7 @@
 #include "lang.h"
 #include "clients/ftpclient.h"
 #include "util.h"
-#include "windows.h"
+#include "ui_state.h"
 #include "activity.h"
 
 #define FTP_CLIENT_BUFSIZ 1048576

@@ -11,7 +11,7 @@
 #include "fs.h"
 #include "lang.h"
 #include "util.h"
-#include "windows.h"
+#include "ui_state.h"
 #include "system.h"
 #include "activity.h"
 
@@ -108,6 +108,12 @@ std::string GetValue(const std::map<std::string, std::string> &options, const st
 
 int GDriveClient::RequestAuthorization()
 {
+#ifdef EZREMOTE_PAYLOAD
+    // Headless payload: there is no browser UI to launch.
+    login_state = -1;
+    return 0;
+#endif
+
     SceShellUIUtilLaunchByUriParam param;
     param.size = sizeof(SceShellUIUtilLaunchByUriParam);
     sceUserServiceGetForegroundUser((int *)&param.userId);

@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <mutex>
 #include <json-c/json.h>
 #include "json_object_ref.h"
 #include <lexbor/html/parser.h>
@@ -26,12 +27,13 @@
 #include "common.h"
 #include "fs.h"
 #include "config.h"
-#include "windows.h"
+#include "ui_state.h"
 #include "util.h"
 #include "activity.h"
 #include "lang.h"
 #include "actions.h"
 #include "installer.h"
+#include "payload_loader.h"
 #include "system.h"
 #include "sfo.h"
 #include "zip_util.h"
@@ -67,6 +69,11 @@ namespace Actions
 
     void RefreshLocalFiles(bool apply_filter)
     {
+        // These fill the native file lists; headless has no UI to feed and the
+        // web UI lists directories through its own endpoints.
+        if (headless_mode)
+            return;
+
         multi_selected_local_files.clear();
         local_files.clear();
         int err;
@@ -96,6 +103,11 @@ namespace Actions
 
     void RefreshRemoteFiles(bool apply_filter)
     {
+        // Same as above; the null check also protects callers that run before
+        // the console ever connected.
+        if (headless_mode || remoteclient == nullptr)
+            return;
+
         if (!remoteclient->Ping())
         {
             remoteclient->Quit();
@@ -358,6 +370,44 @@ namespace Actions
         }
     }
 
+    // Only one overwrite question is shown at a time; the answer belongs to the
+    // operation that asked it.
+    static std::mutex confirm_mutex;
+
+    // Returns true when the destination may be overwritten. Headless has no
+    // dialog to answer, so blocking on confirm_state would freeze the worker
+    // for good; skip the file instead of overwriting blindly.
+    static bool PromptOverwrite(const char *dest)
+    {
+        if (headless_mode)
+        {
+            confirm_state = CONFIRM_NO;
+            return false;
+        }
+
+        std::lock_guard<std::mutex> lock(confirm_mutex);
+        sprintf(confirm_message, "%s %s?", lang_strings[STR_OVERWRITE], dest);
+        confirm_kind = CONFIRM_KIND_OVERWRITE;
+        confirm_state = CONFIRM_WAIT;
+        action_to_take = selected_action;
+        while (confirm_state == CONFIRM_WAIT)
+        {
+            sceKernelUsleep(100000);
+        }
+        selected_action = action_to_take;
+        if (confirm_state == CONFIRM_ALL)
+        {
+            dont_prompt_overwrite = true;
+            confirm_state = CONFIRM_YES;
+        }
+        else if (confirm_state == CONFIRM_CANCEL)
+        {
+            Activities::Cancel(Activities::CurrentId());
+            confirm_state = CONFIRM_NO;
+        }
+        return confirm_state == CONFIRM_YES;
+    }
+
     int UploadFile(const char *src, const char *dest)
     {
         if (Activities::Stopped())
@@ -377,25 +427,7 @@ namespace Actions
 
         if (overwrite_type == OVERWRITE_PROMPT && remoteclient->FileExists(dest))
         {
-            sprintf(confirm_message, "%s %s?", lang_strings[STR_OVERWRITE], dest);
-            confirm_kind = CONFIRM_KIND_OVERWRITE;
-            confirm_state = CONFIRM_WAIT;
-            action_to_take = selected_action;
-            while (confirm_state == CONFIRM_WAIT)
-            {
-                sceKernelUsleep(100000);
-            }
-            selected_action = action_to_take;
-            if (confirm_state == CONFIRM_ALL)
-            {
-                dont_prompt_overwrite = true;
-                confirm_state = CONFIRM_YES;
-            }
-            else if (confirm_state == CONFIRM_CANCEL)
-            {
-                Activities::Cancel(Activities::CurrentId());
-                confirm_state = CONFIRM_NO;
-            }
+            PromptOverwrite(dest);
         }
         else if (overwrite_type == OVERWRITE_NONE && remoteclient->FileExists(dest))
         {
@@ -634,25 +666,7 @@ namespace Actions
 
         if (overwrite_type == OVERWRITE_PROMPT && FS::FileExists(dest))
         {
-            sprintf(confirm_message, "%s %s?", lang_strings[STR_OVERWRITE], dest);
-            confirm_kind = CONFIRM_KIND_OVERWRITE;
-            confirm_state = CONFIRM_WAIT;
-            action_to_take = selected_action;
-            while (confirm_state == CONFIRM_WAIT)
-            {
-                sceKernelUsleep(100000);
-            }
-            selected_action = action_to_take;
-            if (confirm_state == CONFIRM_ALL)
-            {
-                dont_prompt_overwrite = true;
-                confirm_state = CONFIRM_YES;
-            }
-            else if (confirm_state == CONFIRM_CANCEL)
-            {
-                Activities::Cancel(Activities::CurrentId());
-                confirm_state = CONFIRM_NO;
-            }
+            PromptOverwrite(dest);
         }
         else if (overwrite_type == OVERWRITE_NONE && FS::FileExists(dest))
         {
@@ -982,6 +996,11 @@ namespace Actions
     {
         ssize_t len;
         char *buffer = (char*) malloc(ARCHIVE_TRANSFER_SIZE);
+        if (buffer == nullptr)
+        {
+            sprintf(status_message, "archive install buffer allocation failed");
+            return NULL;
+        }
 
         ArchivePkgInstallData *install_data = (ArchivePkgInstallData*) argp;
         SplitFile *sp = install_data->split_file;
@@ -1673,25 +1692,7 @@ namespace Actions
         int ret;
         if (overwrite_type == OVERWRITE_PROMPT && FS::FileExists(dest))
         {
-            sprintf(confirm_message, "%s %s?", lang_strings[STR_OVERWRITE], dest);
-            confirm_kind = CONFIRM_KIND_OVERWRITE;
-            confirm_state = CONFIRM_WAIT;
-            action_to_take = selected_action;
-            while (confirm_state == CONFIRM_WAIT)
-            {
-                sceKernelUsleep(100000);
-            }
-            selected_action = action_to_take;
-            if (confirm_state == CONFIRM_ALL)
-            {
-                dont_prompt_overwrite = true;
-                confirm_state = CONFIRM_YES;
-            }
-            else if (confirm_state == CONFIRM_CANCEL)
-            {
-                Activities::Cancel(Activities::CurrentId());
-                confirm_state = CONFIRM_NO;
-            }
+            PromptOverwrite(dest);
         }
         else if (overwrite_type == OVERWRITE_NONE && FS::FileExists(dest))
         {
@@ -1918,25 +1919,7 @@ namespace Actions
         int ret;
         if (overwrite_type == OVERWRITE_PROMPT && remoteclient->FileExists(dest))
         {
-            sprintf(confirm_message, "%s %s?", lang_strings[STR_OVERWRITE], dest.c_str());
-            confirm_kind = CONFIRM_KIND_OVERWRITE;
-            confirm_state = CONFIRM_WAIT;
-            action_to_take = selected_action;
-            while (confirm_state == CONFIRM_WAIT)
-            {
-                sceKernelUsleep(100000);
-            }
-            selected_action = action_to_take;
-            if (confirm_state == CONFIRM_ALL)
-            {
-                dont_prompt_overwrite = true;
-                confirm_state = CONFIRM_YES;
-            }
-            else if (confirm_state == CONFIRM_CANCEL)
-            {
-                Activities::Cancel(Activities::CurrentId());
-                confirm_state = CONFIRM_NO;
-            }
+            PromptOverwrite(dest.c_str());
         }
         else if (overwrite_type == OVERWRITE_NONE && remoteclient->FileExists(dest))
         {
@@ -2270,9 +2253,9 @@ namespace Actions
 
     void RestartServer()
     {
-        INSTALLER::StopEzRemoteServer();
+        PAYLOAD::StopEzRemoteServer();
         sleep(2);
-        INSTALLER::StartEzRemoteServer();
+        PAYLOAD::StartEzRemoteServer();
         sleep(2);
     }
 

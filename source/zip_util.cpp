@@ -9,8 +9,6 @@
 #include <sys/stat.h>
 #include <minizip/unzip.h>
 #include <minizip/zip.h>
-#include <un7zip.h>
-#include <unrar.h>
 #include <archive.h>
 #include <archive_entry.h>
 #include <orbis/SystemService.h>
@@ -19,10 +17,12 @@
 #include "config.h"
 #include "common.h"
 #include "fs.h"
+#ifndef EZREMOTE_HEADLESS_APP
 #include "ime_dialog.h"
+#endif
 #include "lang.h"
 #include "system.h"
-#include "windows.h"
+#include "ui_state.h"
 #include "util.h"
 #include "zip_util.h"
 #include "activity.h"
@@ -31,11 +31,6 @@ namespace ZipUtil
 {
     static char filename_extracted[256];
     static char password[128];
-
-    void callback_7zip(const char *fileName, unsigned long fileSize, unsigned fileNum, unsigned numFiles)
-    {
-        sprintf(activity_message, "%s %s: %s", lang_strings[STR_EXTRACTING], filename_extracted, fileName);
-    }
 
     void convertToZipTime(time_t time, tm_zip *tmzip)
     {
@@ -101,7 +96,19 @@ namespace ZipUtil
         }
 
         // Add file to zip
+#ifdef EZREMOTE_HEADLESS_APP
+        void *buf = nullptr;
+        if (posix_memalign(&buf, 4096, ARCHIVE_TRANSFER_SIZE) != 0)
+            buf = nullptr;
+#else
         void *buf = memalign(4096, ARCHIVE_TRANSFER_SIZE);
+#endif
+        if (buf == nullptr)
+        {
+            FS::Close(fd);
+            zipCloseFileInZip(zf);
+            return 0;
+        }
         uint64_t seek = 0;
 
         while (1)
@@ -305,6 +312,8 @@ namespace ZipUtil
     {
         ssize_t len;
         unsigned char *buffer = (unsigned char *)malloc(ARCHIVE_TRANSFER_SIZE);
+        if (buffer == nullptr)
+            return 0;
 
         /* loop over file contents and write to fd */
         for (int n = 0;; n++)
@@ -462,6 +471,10 @@ namespace ZipUtil
     {
         memset(password, 0, sizeof(password));
 
+#ifdef EZREMOTE_HEADLESS_APP
+        // Headless build: there is no UI to ask for a passphrase.
+        return password;
+#else
         /* Extraction runs on a worker thread. An IME dialog can only be pumped
          * from the UI thread, and if one is already open (e.g. the user is
          * editing something) we must not terminate it from here and use its
@@ -486,6 +499,7 @@ namespace ZipUtil
         {
             snprintf(password, sizeof(password) - 1, "%s", (char *)Dialog::getImeDialogInputText());
         }
+#endif
 
         return password;
     }

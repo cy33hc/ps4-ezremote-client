@@ -7,6 +7,8 @@
 #include <map>
 #include <dirent.h>
 
+#define LANG_ASSETS_ROOT WEB_ASSETS_ROOT "/langs"
+
 char lang_identifiers[LANG_STRINGS_NUM][LANG_ID_SIZE] = {
 	FOREACH_STR(GET_STRING)};
 
@@ -206,6 +208,9 @@ char lang_strings[LANG_STRINGS_NUM][LANG_STR_SIZE] = {
 	"Skip",																											  // STR_SKIP
 	"Always overwrite",																						  // STR_ALWAYS_OVERWRITE
 	"Cancelling…",																								  // STR_CANCELLING
+	"Use only from a web browser (no console screen)",																								  // STR_HEADLESS_MODE
+	"ezRemote Client started in web browser mode",																								  // STR_HEADLESS_STARTED_MSG
+	"ezRemote Client browse mode is closing",																								  // STR_CLOSING_MSG
 };
 
 bool needs_extended_font = false;
@@ -219,8 +224,10 @@ static std::map<std::string, std::string> lang_file_cache;
 static bool ReadLanguageFile(const std::string &name, std::string *out)
 {
     const char *roots[] = {
-        "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/",
+        LANG_ASSETS_ROOT "/",
+#ifndef EZREMOTE_HEADLESS_APP
         "/app0/assets/langs/",
+#endif
     };
     for (size_t i = 0; i < sizeof(roots) / sizeof(roots[0]); i++)
     {
@@ -266,13 +273,15 @@ static void CacheLanguageFiles()
 			lang_file_cache[name] = content;
 	}
 
-	const char *lang_root = "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs";
+	const char *lang_root = LANG_ASSETS_ROOT;
 	DIR *dir = opendir(lang_root);
+#ifndef EZREMOTE_HEADLESS_APP
 	if (dir == nullptr)
 	{
 		lang_root = "/app0/assets/langs";
 		dir = opendir(lang_root);
 	}
+#endif
 	if (dir == nullptr)
 		return;
 
@@ -379,77 +388,77 @@ namespace Lang
 		lang = Util::Trim(lang, " ");
 		if (lang.size() > 0 && lang.compare("Default") != 0)
 		{
-			sprintf(langFile, "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/%s.ini", lang.c_str());
+			sprintf(langFile, LANG_ASSETS_ROOT "/%s.ini", lang.c_str());
 		}
 		else
 		{
 			switch (lang_idx)
 			{
 			case ORBIS_SYSTEM_PARAM_LANG_ITALIAN:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Italiano.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Italiano.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_SPANISH:
 			case ORBIS_SYSTEM_PARAM_LANG_SPANISH_LA:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Spanish.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Spanish.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_GERMAN:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/German.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/German.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_PORTUGUESE_PT:
 			case ORBIS_SYSTEM_PARAM_LANG_PORTUGUESE_BR:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Portuguese_BR.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Portuguese_BR.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_RUSSIAN:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Russian.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Russian.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_DUTCH:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Dutch.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Dutch.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_FRENCH:
 			case ORBIS_SYSTEM_PARAM_LANG_FRENCH_CA:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/French.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/French.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_POLISH:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Polish.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Polish.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_JAPANESE:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Japanese.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Japanese.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_KOREAN:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Korean.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Korean.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_CHINESE_S:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Simplified Chinese.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Simplified Chinese.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_CHINESE_T:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Traditional Chinese.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Traditional Chinese.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_INDONESIAN:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Indonesian.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Indonesian.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_HUNGARIAN:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Hungarian.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Hungarian.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_GREEK:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Greek.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Greek.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_VIETNAMESE:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Vietnamese.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Vietnamese.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_TURKISH:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Turkish.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Turkish.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_ARABIC:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Arabic.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Arabic.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_ROMANIAN:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Romanian.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Romanian.ini");
 				break;
 			case ORBIS_SYSTEM_PARAM_LANG_NORWEGIAN:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/Norwegian.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/Norwegian.ini");
 				break;
 			default:
-				sprintf(langFile, "%s", "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets/langs/English.ini");
+				sprintf(langFile, "%s", LANG_ASSETS_ROOT "/English.ini");
 				break;
 			}
 		}

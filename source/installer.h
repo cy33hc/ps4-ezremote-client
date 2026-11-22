@@ -146,6 +146,8 @@ struct SplitPkgInstallData
     pthread_t thread;
     bool stop_write_thread;
     bool delete_client;
+    int http_users;
+    bool closing;
 };
 
 struct DownloadPkgData
@@ -187,16 +189,14 @@ namespace INSTALLER
     void RemoveArchivePkgInstallData(const std::string &hash);
     bool InstallArchivePkg(const std::string &path, ArchivePkgInstallData* pkg_data, bool bg = false);
     SplitPkgInstallData *GetSplitPkgInstallData(const std::string &hash);
+    SplitPkgInstallData *AcquireSplitPkgInstallData(const std::string &hash);
+    void ReleaseSplitPkgInstallData(SplitPkgInstallData *pkg_data);
     void AddSplitPkgInstallData(const std::string &hash, SplitPkgInstallData *pkg_data);
     void RemoveSplitPkgInstallData(const std::string &hash);
     bool InstallSplitPkg(const std::string &path, SplitPkgInstallData* pkg_data, bool bg = false);
-    std::string EzRemoteServerVersion();
-    int StartEzRemoteServer();
-    void StopEzRemoteServer();
     std::string StoreBgInstallHostData(RemoteSettings *remote_settings, const std::string &path, uint64_t size);
     RemoteClient *GetRemoteClient(int site_idx);
     RemoteClient *GetRemoteClient(RemoteSettings *settings);
-    bool IsPortOpen(const char *ip, uint16_t port, int timeout_sec);
     bool CanInstallViaRPI(const std::string &path, pkg_header *pkg_header);
     bool CanInstallViaRPI(RemoteClient *client, const std::string &path, pkg_header *pkg_header);
 }

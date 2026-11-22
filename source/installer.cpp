@@ -1,4 +1,6 @@
 #include <unistd.h>
+#include <mutex>
+#include <condition_variable>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,14 +36,12 @@
 #include "installer.h"
 #include "util.h"
 #include "config.h"
-#include "windows.h"
+#include "ui_state.h"
 #include "lang.h"
 #include "system.h"
 #include "fs.h"
 #include "sfo.h"
 #include "activity.h"
-
-#define SERVER_ELF_PATH "/mnt/sandbox/pfsmnt/RMTC00001-app0/daemon/daemon.elf"
 
 #define BGFT_HEAP_SIZE (1 * 1024 * 1024)
 
@@ -59,6 +59,8 @@ static bool s_bgft_initialized = false;
 
 static std::map<std::string, ArchivePkgInstallData *> archive_pkg_install_data_list;
 static std::map<std::string, SplitPkgInstallData *> split_pkg_install_data_list;
+static std::mutex split_pkg_mutex;
+static std::condition_variable split_pkg_cv;
 
 namespace INSTALLER
 {
@@ -374,6 +376,9 @@ namespace INSTALLER
 		}
 		else if (bg_check_data->split_pkg_data != nullptr)
 		{
+			// First remove the hash and wait for any active /split_inst HTTP
+			// streams. The writer must keep running while they drain.
+			RemoveSplitPkgInstallData(bg_check_data->hash);
 			bg_check_data->split_pkg_data->stop_write_thread = true;
 			bg_check_data->split_pkg_data->split_file->Close();
 			pthread_join(bg_check_data->split_pkg_data->thread, NULL);
@@ -381,7 +386,6 @@ namespace INSTALLER
 			if (bg_check_data->split_pkg_data->delete_client)
 				delete (bg_check_data->split_pkg_data->remote_client);
 			free(bg_check_data->split_pkg_data);
-			RemoveSplitPkgInstallData(bg_check_data->hash);
 			free(bg_check_data);
 		}
 		Windows::SetModalMode(false);
@@ -1071,11 +1075,37 @@ namespace INSTALLER
 
 	SplitPkgInstallData *GetSplitPkgInstallData(const std::string &hash)
 	{
-		return split_pkg_install_data_list[hash];
+		std::lock_guard<std::mutex> lock(split_pkg_mutex);
+		std::map<std::string, SplitPkgInstallData *>::iterator it = split_pkg_install_data_list.find(hash);
+		return it == split_pkg_install_data_list.end() ? nullptr : it->second;
+	}
+
+	SplitPkgInstallData *AcquireSplitPkgInstallData(const std::string &hash)
+	{
+		std::lock_guard<std::mutex> lock(split_pkg_mutex);
+		std::map<std::string, SplitPkgInstallData *>::iterator it = split_pkg_install_data_list.find(hash);
+		if (it == split_pkg_install_data_list.end() || it->second->closing)
+			return nullptr;
+		it->second->http_users++;
+		return it->second;
+	}
+
+	void ReleaseSplitPkgInstallData(SplitPkgInstallData *pkg_data)
+	{
+		if (pkg_data == nullptr)
+			return;
+		std::lock_guard<std::mutex> lock(split_pkg_mutex);
+		if (pkg_data->http_users > 0)
+			pkg_data->http_users--;
+		if (pkg_data->closing && pkg_data->http_users == 0)
+			split_pkg_cv.notify_all();
 	}
 
 	void AddSplitPkgInstallData(const std::string &hash, SplitPkgInstallData *pkg_data)
 	{
+		std::lock_guard<std::mutex> lock(split_pkg_mutex);
+		pkg_data->http_users = 0;
+		pkg_data->closing = false;
 		std::pair<std::string, SplitPkgInstallData *> pair = std::make_pair(hash, pkg_data);
 		split_pkg_install_data_list.erase(hash);
 		split_pkg_install_data_list.insert(pair);
@@ -1083,7 +1113,14 @@ namespace INSTALLER
 
 	void RemoveSplitPkgInstallData(const std::string &hash)
 	{
-		split_pkg_install_data_list.erase(hash);
+		std::unique_lock<std::mutex> lock(split_pkg_mutex);
+		std::map<std::string, SplitPkgInstallData *>::iterator it = split_pkg_install_data_list.find(hash);
+		if (it == split_pkg_install_data_list.end())
+			return;
+		SplitPkgInstallData *pkg_data = it->second;
+		pkg_data->closing = true;
+		split_pkg_install_data_list.erase(it);
+		split_pkg_cv.wait(lock, [pkg_data]() { return pkg_data->http_users == 0; });
 	}
 
 	bool InstallSplitPkg(const std::string &path, SplitPkgInstallData *pkg_data, bool bg)
@@ -1226,6 +1263,7 @@ namespace INSTALLER
 					Activities::ProgressCurrent(progress_info.transferred, progress_info.length);
 				}
 				sceSystemServicePowerTick();
+				sceKernelUsleep(500000);
 			}
 		}
 		else
@@ -1241,6 +1279,8 @@ namespace INSTALLER
 		}
 		ret = 1;
 	finish:
+		// Drain active /split_inst streams before closing/deleting the blocks.
+		RemoveSplitPkgInstallData(hash);
 		pkg_data->stop_write_thread = true;
 		pkg_data->split_file->Close();
 		pthread_join(pkg_data->thread, NULL);
@@ -1248,170 +1288,9 @@ namespace INSTALLER
 		if (pkg_data->delete_client)
 			delete (pkg_data->remote_client);
 		free(pkg_data);
-		RemoveSplitPkgInstallData(hash);
 		Windows::SetModalMode(false);
 		return ret;
 	}
-
-	std::string EzRemoteServerVersion()
-	{
-		if (!IsPortOpen("127.0.0.1", 6701, 1))
-			return "";
-
-		httplib::Client tmp_client = httplib::Client("http://127.0.0.1:6701");
-
-		tmp_client.set_connection_timeout(1);
-
-		if (auto res = tmp_client.Get("/version"))
-		{
-			if (HTTP_SUCCESS(res->status))
-			{
-				return res->body;
-			}
-		}
-
-		return "";
-	}
-
-	bool IsPortOpen(const char *ip, uint16_t port, int timeout_sec)
-	{
-		int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-		if (sockfd < 0)
-			return 0;
-
-		// Set socket to non-blocking mode
-		int flags = fcntl(sockfd, F_GETFL, 0);
-		fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
-
-		struct sockaddr_in addr;
-		memset(&addr, 0, sizeof(addr));
-		addr.sin_family = AF_INET;
-		addr.sin_port = htons(port);
-		inet_pton(AF_INET, ip, &addr.sin_addr);
-
-		// Attempt connection
-		int res = connect(sockfd, (struct sockaddr *)&addr, sizeof(addr));
-
-		if (res < 0)
-		{
-			if (errno == EINPROGRESS)
-			{
-				// Wait for connection completion using select()
-				fd_set write_fds;
-				struct timeval timeout;
-
-				FD_ZERO(&write_fds);
-				FD_SET(sockfd, &write_fds);
-
-				timeout.tv_sec = timeout_sec;
-				timeout.tv_usec = 0;
-
-				res = select(sockfd + 1, NULL, &write_fds, NULL, &timeout);
-
-				if (res > 0)
-				{
-					// Check if connection succeeded or failed with an error
-					int so_error;
-					socklen_t len = sizeof(so_error);
-					getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &so_error, &len);
-
-					if (so_error == 0)
-					{
-						// Port is open! Clean up and return success
-						close(sockfd);
-						return 1;
-					}
-				}
-			}
-		}
-		else
-		{
-			// Connected instantly (e.g., local loopback)
-			close(sockfd);
-			return 1;
-		}
-
-		close(sockfd);
-		return 0; // Port is closed or timed out
-	}
-
-	int StartEzRemoteServer()
-	{
-		char buffer[8192];
-		in_addr_t in_addr;
-		in_addr_t server_addr;
-		int filefd;
-		int sockfd;
-		ssize_t i;
-		ssize_t read_return;
-		struct hostent *hostent;
-		struct sockaddr_in sockaddr_in;
-		unsigned short server_port = 9090;
-
-		if (IsPortOpen("127.0.0.1", 6701, 1))
-		{
-			return 0;
-		}
-
-		filefd = open(SERVER_ELF_PATH, O_RDONLY);
-		if (filefd == -1)
-		{
-			return -1;
-		}
-
-		sockfd = socket(AF_INET, SOCK_STREAM, 0);
-		if (sockfd == -1)
-		{
-			return -1;
-		}
-
-		hostent = gethostbyname("127.0.0.1");
-		if (hostent == NULL)
-		{
-			return -1;
-		}
-
-		in_addr = inet_addr(inet_ntoa(*(struct in_addr *)*(hostent->h_addr_list)));
-		if (in_addr == (in_addr_t)-1)
-		{
-			return -1;
-		}
-
-		sockaddr_in.sin_addr.s_addr = in_addr;
-		sockaddr_in.sin_family = AF_INET;
-		sockaddr_in.sin_port = htons(server_port);
-
-		if (connect(sockfd, (struct sockaddr *)&sockaddr_in, sizeof(sockaddr_in)) == -1)
-		{
-			return -1;
-		}
-
-		while (1)
-		{
-			read_return = read(filefd, buffer, 8192);
-			if (read_return == 0)
-				break;
-			if (read_return == -1)
-			{
-				return -1;
-			}
-			if (write(sockfd, buffer, read_return) == -1)
-			{
-				return -1;
-			}
-		}
-
-		close(filefd);
-		close(sockfd);
-
-		return 0;
-	}
-
-	void StopEzRemoteServer()
-    {
-        httplib::Client tmp_client = httplib::Client("http://127.0.0.1:6701");
-        tmp_client.Get("/stop");
-    }
 
 	RemoteClient *GetRemoteClient(int site_idx)
 	{

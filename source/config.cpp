@@ -52,15 +52,24 @@ char temp_folder[256];
 std::string ezremote_server_version;
 bool enable_background_download;
 bool show_activity_dialog = true;
+bool headless_enabled = false;
 uint64_t minimum_backgrond_file_size;
 
 unsigned char cipher_key[32] = {'s', '5', 'v', '8', 'y', '/', 'B', '?', 'E', '(', 'H', '+', 'M', 'b', 'Q', 'e', 'T', 'h', 'W', 'm', 'Z', 'q', '4', 't', '7', 'w', '9', 'z', '$', 'C', '&', 'F'};
 unsigned char cipher_iv[16] = {'Y', 'p', '3', 's', '6', 'v', '9', 'y', '$', 'B', '&', 'E', ')', 'H', '@', 'M'};
 
+// Older builds encrypted passwords with an account/MAC-derived key. Keep that
+// derivation only as a decryption fallback; new writes always use cipher_key.
+static unsigned char account_cipher_key[32];
+static unsigned char account_cipher_iv[16];
+static bool account_cipher_ready = false;
+
 RemoteClient *remoteclient;
 
 namespace CONFIG
 {
+    static void DeriveAccountCipherKeys();
+
     int Encrypt(const std::string &text, std::string &encrypt_text)
     {
         unsigned char tmp_encrypt_text[text.length() * 2];
@@ -83,6 +92,12 @@ namespace CONFIG
         int decrypt_text_len;
         memset(tmp_decrypt_text, 0, sizeof(tmp_decrypt_text));
         ret = openssl_decrypt((unsigned char *)tmp_decode_text.c_str(), tmp_decode_text.length(), cipher_key, cipher_iv, tmp_decrypt_text, &decrypt_text_len);
+        if (ret == 0)
+        {
+            if (!account_cipher_ready)
+                DeriveAccountCipherKeys();
+            ret = openssl_decrypt((unsigned char *)tmp_decode_text.c_str(), tmp_decode_text.length(), account_cipher_key, account_cipher_iv, tmp_decrypt_text, &decrypt_text_len);
+        }
         if (ret == 0)
             return 0;
 
@@ -128,10 +143,12 @@ namespace CONFIG
         }
     }
 
-    void LoadCipherKeys()
+    static void DeriveAccountCipherKeys()
     {
-        // Get the key and iv for encryption. Inject the account_id/MAC address as part of the key and iv.
-        int user_id;
+        memcpy(account_cipher_key, cipher_key, sizeof(account_cipher_key));
+        memcpy(account_cipher_iv, cipher_iv, sizeof(account_cipher_iv));
+
+        int user_id = 0;
         uint64_t account_id = 0;
         sceUserServiceGetForegroundUser(&user_id);
         sceUserServiceGetNpAccountId(user_id, &account_id);
@@ -142,17 +159,25 @@ namespace CONFIG
         sceNetGetMacAddress(&addr, 0);
         for (int i = 0; i < sizeof(data); i++)
         {
-            cipher_key[i] = data[i];
-            cipher_key[i + 16] = data[i];
-            cipher_iv[i] = data[i];
+            account_cipher_key[i] = data[i];
+            account_cipher_key[i + 16] = data[i];
+            account_cipher_iv[i] = data[i];
         }
         int offset = sizeof(data);
         for (int i = 0; i < sizeof(addr.data); i++)
         {
-            cipher_key[offset + i] = addr.data[i];
-            cipher_key[offset + i + 16] = data[i];
-            cipher_iv[offset + i] = addr.data[i];
+            account_cipher_key[offset + i] = addr.data[i];
+            account_cipher_key[offset + i + 16] = data[i];
+            account_cipher_iv[offset + i] = addr.data[i];
         }
+        account_cipher_ready = true;
+    }
+
+    void LoadCipherKeys()
+    {
+        // Encryption always uses the built-in key/iv. The account-derived key is
+        // only tried as a fallback when decrypting values from older builds.
+        account_cipher_ready = false;
     }
 
     void LoadConfig()
@@ -213,6 +238,9 @@ namespace CONFIG
 
         show_activity_dialog = ReadBool(CONFIG_GLOBAL, CONFIG_SHOW_ACTIVITY_DIALOG, true);
         WriteBool(CONFIG_GLOBAL, CONFIG_SHOW_ACTIVITY_DIALOG, show_activity_dialog);
+
+        headless_enabled = ReadBool(CONFIG_GLOBAL, CONFIG_HEADLESS_MODE, false);
+        WriteBool(CONFIG_GLOBAL, CONFIG_HEADLESS_MODE, headless_enabled);
 
         minimum_backgrond_file_size = ReadLong(CONFIG_GLOBAL, CONFIG_BG_DOWNLOAD_SIZE, 1024*1024*1024);
         WriteLong(CONFIG_GLOBAL, CONFIG_BG_DOWNLOAD_SIZE, minimum_backgrond_file_size);
@@ -283,9 +311,6 @@ namespace CONFIG
         sprintf(compressed_file_path, "%s", ReadString(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_COMPRESSED_FILE_PATH, CONFIG_DEFAULT_COMPRESSED_FILE_PATH));
         WriteString(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_COMPRESSED_FILE_PATH, compressed_file_path);
 
-        web_server_enabled = ReadBool(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_ENABLED, true);
-        WriteBool(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_ENABLED, web_server_enabled);
-
         for (int i = 0; i < sites.size(); i++)
         {
             RemoteSettings setting;
@@ -305,20 +330,29 @@ namespace CONFIG
             sprintf(setting.username, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_USER, ""));
             WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_USER, setting.username);
 
-            char tmp_password[128];
-            sprintf(tmp_password, "%s", ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_PASSWORD, ""));
+            // Stored values are base64 ciphertext, not plaintext. Never treat
+            // an undecryptable value as a password or rewrite it with the
+            // generic key; that inflates the config on every launch.
+            std::string tmp_password = ReadString(sites[i].c_str(), CONFIG_REMOTE_SERVER_PASSWORD, "");
             std::string encrypted_password;
-            if (strlen(tmp_password) > 0)
+            bool write_password = true;
+            if (!tmp_password.empty())
             {
                 std::string decrypted_password;
                 int ret = Decrypt(tmp_password, decrypted_password);
                 if (ret == 0)
-                    sprintf(setting.password, "%s", tmp_password);
+                {
+                    setting.password[0] = '\0';
+                    write_password = false;
+                }
                 else
-                    sprintf(setting.password, "%s", decrypted_password.c_str());
-                Encrypt(setting.password, encrypted_password);
+                {
+                    snprintf(setting.password, sizeof(setting.password), "%s", decrypted_password.c_str());
+                    Encrypt(setting.password, encrypted_password);
+                }
             }
-            WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_PASSWORD, encrypted_password.c_str());
+            if (write_password)
+                WriteString(sites[i].c_str(), CONFIG_REMOTE_SERVER_PASSWORD, encrypted_password.c_str());
 
             setting.enable_rpi = ReadBool(sites[i].c_str(), CONFIG_ENABLE_RPI, true);
             WriteBool(sites[i].c_str(), CONFIG_ENABLE_RPI, setting.enable_rpi);
@@ -521,10 +555,10 @@ namespace CONFIG
         WriteString(CONFIG_GLOBAL, CONFIG_LANGUAGE, language);
         WriteInt(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_PORT, http_server_port);
         WriteString(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_COMPRESSED_FILE_PATH, compressed_file_path);
-        WriteBool(CONFIG_HTTP_SERVER, CONFIG_HTTP_SERVER_ENABLED, web_server_enabled);
         WriteBool(CONFIG_GLOBAL, CONFIG_ENABLE_BG_DOWNLOAD, enable_background_download);
         WriteLong(CONFIG_GLOBAL, CONFIG_BG_DOWNLOAD_SIZE, minimum_backgrond_file_size);
         WriteBool(CONFIG_GLOBAL, CONFIG_SHOW_ACTIVITY_DIALOG, show_activity_dialog);
+        WriteBool(CONFIG_GLOBAL, CONFIG_HEADLESS_MODE, headless_enabled);
 
         WriteIniFile(CONFIG_INI_FILE);
 
@@ -544,9 +578,28 @@ namespace CONFIG
             FS::MkDirs(compressed_file_path);
         }
 
+        SyncClientPortToServer();
+        SyncHeadlessModeToServer();
+    }
+
+    void SyncClientPortToServer()
+    {
         httplib::Client client = httplib::Client("http://127.0.0.1:6701");
+        client.set_connection_timeout(1, 0);
+        client.set_read_timeout(1, 0);
         std::string port = std::to_string(http_server_port);
         client.Post("/change_ezremote_client_port", port.c_str(), port.length(), "text/html");
+    }
+
+    void SyncHeadlessModeToServer()
+    {
+        httplib::Client client("http://127.0.0.1:6701");
+        client.set_connection_timeout(1, 0);
+        client.set_read_timeout(1, 0);
+        std::string value = headless_enabled
+            ? "{\"headless_mode\":true}"
+            : "{\"headless_mode\":false}";
+        client.Post("/set_headless_mode", value.c_str(), value.length(), "application/json");
     }
 
     void SaveLocalDirecotry(const std::string &path)

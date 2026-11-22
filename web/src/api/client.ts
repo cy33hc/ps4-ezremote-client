@@ -270,7 +270,7 @@ export interface Settings {
   enableBackgroundDownload: boolean;
   showActivityDialog: boolean;
   minimumBackgroundFileSize: number;
-  webServerEnabled: boolean;
+  headlessMode: boolean;
   httpServerPort: number;
   compressedFilePath: string;
   hasAllDebridKey: boolean;

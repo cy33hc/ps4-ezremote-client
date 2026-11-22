@@ -15,24 +15,33 @@
 #include <orbis/Pad.h>
 #include <orbis/AudioOut.h>
 #include <orbis/Net.h>
-#include <dbglogger.h>
+// #include <dbglogger.h>
+
+#ifndef EZREMOTE_HEADLESS_APP
+#include <orbis/Pad.h>
+#include <orbis/AudioOut.h>
 
 #include "imgui.h"
 #include "SDL2/SDL.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
+#include "gui.h"
+#include "textures.h"
+#include "fonts.h"
+#include "windows.h"
+#endif
+
 #include "server/http_server.h"
 #include "clients/gdrive.h"
 #include "config.h"
 #include "lang.h"
-#include "gui.h"
 #include "util.h"
 #include "installer.h"
+#include "payload_loader.h"
 #include "system.h"
-#include "textures.h"
-#include "fonts.h"
 #include "activity.h"
-#include "windows.h"
+#include "daemon.h"
+#include "ui_state.h"
 
 extern "C"
 {
@@ -43,12 +52,15 @@ extern "C"
 #define FRAME_HEIGHT 1080
 #define NET_HEAP_SIZE   (5 * 1024 * 1024)
 
-// SDL window and software renderer
-SDL_Window *window;
-SDL_Renderer *renderer;
+
 
 static std::atomic<bool> g_shutdown_started{false};
 static bool g_http_started = false;
+
+#ifndef EZREMOTE_HEADLESS_APP
+// SDL window and software renderer
+SDL_Window *window;
+SDL_Renderer *renderer;
 
 ImVec4 ColorFromBytes(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255)
 {
@@ -146,6 +158,8 @@ void InitImgui()
 	colors[ImGuiCol_TabHovered]           = panelHoverColor;
 }
 
+#endif  // EZREMOTE_HEADLESS_APP
+
 static int instance_lock_fd = -1;
 
 static void Shutdown()
@@ -169,8 +183,10 @@ static void Shutdown()
 		usleep(100000);
 
 	INSTALLER::Exit();
+
 	GDriveClient::StopRefreshToken();
 
+#ifndef EZREMOTE_HEADLESS_APP
 	if (ImGui::GetCurrentContext() != nullptr)
 	{
 		ImGui_ImplSDLRenderer_Shutdown();
@@ -192,6 +208,8 @@ static void Shutdown()
 		ImGui::DestroyContext();
 	SDL_Quit();
 
+#endif
+
 	terminate_jbc();
 	sceNetTerm();
 
@@ -209,57 +227,84 @@ static void terminate()
 	sceSystemServiceLoadExec("exit", NULL);
 }
 
-int main()
+bool headless_mode = false;
+
+int main(int argc, char *argv[])
 {
-	dbglogger_init();
-	dbglogger_log("If you see this you've set up dbglogger correctly.");
+	// dbglogger_init();
+	// dbglogger_log("If you see this you've set up dbglogger correctly.");
 
 	int rc;
 	// No buffering
 	setvbuf(stdout, NULL, _IONBF, 0);
 	signal(SIGPIPE, SIG_IGN);
 	
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
-	{
-		return 0;
-	}
-
 	// load common modules
+#ifndef EZREMOTE_HEADLESS_APP
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_IME_DIALOG) < 0) return 0;
+#endif
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_SYSTEM_SERVICE) < 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_USER_SERVICE) < 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_BGFT) < 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_APP_INST_UTIL) < 0) return 0;
+#ifndef EZREMOTE_HEADLESS_APP
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_PAD) < 0) return 0;
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_AUDIOOUT) < 0 || sceAudioOutInit() != 0) return 0;
+#endif
 	if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_NET) < 0 || sceNetInit() != 0) return 0;
 
 	sceNetPoolCreate("ezremote_client", NET_HEAP_SIZE, 0);
 
 	if (INSTALLER::Init() < 0)
+	{
+#ifndef EZREMOTE_HEADLESS_APP
 		return 0;
+#else
+		// A payload has no app context; keep the web UI usable even if BGFT
+		// cannot be initialised (background installs then fail at use).
+		Util::Notify("ezRemote Client could not initialise BGFT; background installs are unavailable");
+#endif
+	}
 
 	CONFIG::LoadConfig();
+	headless_mode = headless_enabled;
+#ifdef EZREMOTE_HEADLESS_APP
+	// The payload build has no native UI at all.
+	headless_mode = true;
+#endif
 
-	// Create a window context
-	window = SDL_CreateWindow("main", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, FRAME_WIDTH, FRAME_HEIGHT, 0);
-	if (window == NULL)
-		return 0;
+#ifndef EZREMOTE_HEADLESS_APP
+	// Headless: no window, no ImGui, no font atlas. Everything inside this
+	// branch is the native front end.
+	if (!headless_mode)
+	{
+		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
+		{
+			return 0;
+		}
 
-	renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-	if (renderer == NULL)
-		return 0;
+		// Create a window context
+		window = SDL_CreateWindow("main", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, FRAME_WIDTH, FRAME_HEIGHT, 0);
+		if (window == NULL)
+			return 0;
 
-	Textures::Init(renderer);
-	InitImgui();
+		renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		if (renderer == NULL)
+			return 0;
 
-	// Setup Platform/Renderer backends
-	ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
-	ImGui_ImplSDLRenderer_Init(renderer);
-	ImGui_ImplSDLRenderer_CreateFontsTexture();
+		Textures::Init(renderer);
+		InitImgui();
+
+		// Setup Platform/Renderer backends
+		ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
+		ImGui_ImplSDLRenderer_Init(renderer);
+		ImGui_ImplSDLRenderer_CreateFontsTexture();
+	}
+#endif  // EZREMOTE_HEADLESS_APP
 
 	if (!initialize_jbc())
 		terminate();
+
 	if (load_sys_modules() != 0)
 	{
 		Shutdown();
@@ -267,16 +312,58 @@ int main()
 	}
 	atexit(terminate);
 
-	HttpServer::Start();
-	g_http_started = true;
-
-	if (INSTALLER::StartEzRemoteServer() < 0)
+	// The ezRemote Server answers on port 6701 and relaunches the client, so it
+	// must be up in both modes. Starting it is slow, hence a helper.
+	auto ensure_ezremote_server = []()
 	{
-		Util::Notify("Cloud not load ezRemote Server. It is needed for background install and download. Please ensure Goldhen payload server is enabled");
+		if (PAYLOAD::StartEzRemoteServer() < 0)
+		{
+			Util::Notify("Cloud not load ezRemote Server. It is needed for background install and download. Please ensure Goldhen payload server is enabled");
+		}
+	};
+
+	if (headless_mode)
+	{
+	#ifdef EZREMOTE_HEADLESS_APP
+		int32_t sys_lang = 0;
+		sceSystemServiceParamGetInt(ORBIS_SYSTEM_SERVICE_PARAM_ID_LANG, &sys_lang);
+		Lang::SetSystemLangIndex(sys_lang);
+		Lang::SetTranslation(sys_lang);
+
+		// No window appears, so say where the app went.
+		Util::Notify("%s", lang_strings[STR_HEADLESS_STARTED_MSG]);
+
+		ensure_ezremote_server();
+
+		// No UI loop keeps the process alive, so serve on this thread: listen()
+		// blocks and only returns once "/stop" has stopped the server. A return
+		// with done still false means the port could not be bound.
+		bool serving = HttpServer::Start(true);
+		if (!serving || !done)
+			Util::Notify("ezRemote Client could not start the web server on port %d", http_server_port);
+
+		Util::Notify("%s", lang_strings[STR_CLOSING_MSG]);
+		Shutdown();
+		return 0;
+	#else
+	    bool success = update_assets(EZREMOTE_CLIENT_DAEMON_TITLE_ID, EZREMOTE_CLIENT_DAEMON_SELF);
+		if (!success)
+		{
+			Util::Notify("Failed to update assets for ezRemote Client browse mode");
+			start_daemon(EZREMOTE_CLIENT_DAEMON_TITLE_ID);
+		}
+		Shutdown();
+		return 0;
+	#endif
 	}
 
+	g_http_started = HttpServer::Start();
+	ensure_ezremote_server();
+
+#ifndef EZREMOTE_HEADLESS_APP
 	GUI::RenderLoop(renderer);
 
 	Shutdown();
+#endif
 	return 0;
 }

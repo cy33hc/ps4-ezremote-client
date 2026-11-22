@@ -89,6 +89,7 @@ int load_sys_modules()
         return -1;
     }
 
+#ifndef EZREMOTE_HEADLESS_APP
     handle = sceKernelLoadStartModule("/system/common/lib/libSceShellUIUtil.sprx", 0, NULL, 0, 0, 0);
     if (handle == 0)
     {
@@ -108,6 +109,7 @@ int load_sys_modules()
     }
 
     if (sceShellUIUtilInitialize() < 0) return -1;
+#endif
 
     return 0;
 }

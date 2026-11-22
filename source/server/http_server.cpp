@@ -26,8 +26,9 @@
 #include "clients/rclone.h"
 #include "filehost/filehost.h"
 #include "config.h"
+#include "system.h"
 #include "fs.h"
-#include "windows.h"
+#include "ui_state.h"
 #include "lang.h"
 #include "zip_util.h"
 #include "sfo.h"
@@ -37,12 +38,15 @@
 #include "remote_pool.h"
 
 extern bool done;
-#include <dbglogger.h>
 
 #define SUCCESS_MSG "{ \"result\": { \"success\": true, \"error\": null } }"
 #define FAILURE_MSG "{ \"result\": { \"success\": false, \"error\": \"%s\" } }"
 #define SUCCESS_MSG_LEN 48
+#ifdef EZREMOTE_HEADLESS_APP
+#define PKG_INITIAL_REQUEST_SIZE (512 * 1024ul)
+#else
 #define PKG_INITIAL_REQUEST_SIZE 8388608ul
+#endif
 
 std::mutex mutex_;
 
@@ -52,7 +56,6 @@ Server *svr;
 int http_server_port = 9090;
 int http_int_server_port = 6701;
 char compressed_file_path[1024];
-bool web_server_enabled = false;
 
 
 namespace HttpServer
@@ -1129,14 +1132,54 @@ namespace HttpServer
         return "application/octet-stream";
     }
 
-    static void CacheOneAsset(const std::string &url_path)
+    // Reads a web asset from disk. In the app build the files live in the pkg
+    // sandbox; a payload has no app sandbox, so it serves them from its data
+    // folder. The URL prefix stays /app0/assets so index.html's absolute
+    // script/style paths keep working in both cases.
+    static bool ReadAssetFile(const std::string &url_path, std::string *out)
     {
         static const char *url_prefix = "/app0/assets";
-        static const char *fs_root = "/mnt/sandbox/pfsmnt/RMTC00001-app0/assets";
+        static const char *fs_root = WEB_ASSETS_ROOT;
 
         if (url_path.rfind(url_prefix, 0) != 0)
-            return;
+            return false;
 
+        std::string asset_path = url_path;
+        size_t query = asset_path.find('?');
+        if (query != std::string::npos)
+            asset_path.resize(query);
+
+        std::string relative = asset_path.substr(strlen(url_prefix));
+        if (relative.find("..") != std::string::npos)
+            return false;
+
+        std::string fs_path = std::string(fs_root) + relative;
+        FILE *fp = fopen(fs_path.c_str(), "rb");
+        if (fp == nullptr)
+            return false;
+
+        fseek(fp, 0, SEEK_END);
+        long size = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+        if (size <= 0 || size > (8 * 1024 * 1024))
+        {
+            fclose(fp);
+            return false;
+        }
+
+        std::string content;
+        content.resize((size_t) size);
+        size_t read = fread(&content[0], 1, content.size(), fp);
+        fclose(fp);
+        if (read != content.size())
+            return false;
+
+        *out = std::move(content);
+        return true;
+    }
+
+    static void CacheOneAsset(const std::string &url_path)
+    {
         std::string asset_path = url_path;
         size_t query = asset_path.find('?');
         if (query != std::string::npos)
@@ -1145,26 +1188,12 @@ namespace HttpServer
         if (static_assets.find(asset_path) != static_assets.end())
             return;
 
-        std::string fs_path = std::string(fs_root) + asset_path.substr(strlen(url_prefix));
-        FILE *fp = fopen(fs_path.c_str(), "rb");
-        if (fp == nullptr)
-            return;
-
-        fseek(fp, 0, SEEK_END);
-        long size = ftell(fp);
-        fseek(fp, 0, SEEK_SET);
-        if (size > 0 && size <= (8 * 1024 * 1024))
+        std::string content;
+        if (ReadAssetFile(asset_path, &content))
         {
-            std::string content;
-            content.resize((size_t) size);
-            size_t read = fread(&content[0], 1, content.size(), fp);
-            if (read == content.size())
-            {
-                static_assets[asset_path] = content;
-                static_asset_types[asset_path] = AssetMimeType(asset_path);
-            }
+            static_assets[asset_path] = std::move(content);
+            static_asset_types[asset_path] = AssetMimeType(asset_path);
         }
-        fclose(fp);
     }
 
     // /app0 stops accepting new opens after the app has been running for a
@@ -1198,12 +1227,29 @@ namespace HttpServer
 
     static bool ServeCachedAsset(const std::string &path, Response &res)
     {
-        std::map<std::string, std::string>::iterator it = static_assets.find(path);
-        if (it == static_assets.end())
-            return false;
+        std::string asset_path = path;
+        size_t query = asset_path.find('?');
+        if (query != std::string::npos)
+            asset_path.resize(query);
 
-        res.set_content(it->second, static_asset_types[path]);
-        return true;
+        std::map<std::string, std::string>::iterator it = static_assets.find(asset_path);
+        if (it != static_assets.end())
+        {
+            res.set_content(it->second, static_asset_types[asset_path]);
+            return true;
+        }
+
+#ifdef EZREMOTE_HEADLESS_APP
+        // The payload serves everything under /app0/assets straight from its
+        // data folder, including fonts and files not referenced by index.html.
+        std::string content;
+        if (ReadAssetFile(asset_path, &content))
+        {
+            res.set_content(content, AssetMimeType(asset_path));
+            return true;
+        }
+#endif
+        return false;
     }
 
     static bool IsWebInstallablePath(const std::string &path)
@@ -2248,7 +2294,7 @@ namespace HttpServer
         svr->Get("/version", [&](const Request &req, Response &res)
         {
             std::string version = "unknown";
-            FILE *file = fopen(DATA_PATH "/version.txt", "r");
+            FILE *file = fopen(WEB_VERSION_FILE, "r");
             if (file != nullptr)
             {
                 char buffer[64] = {0};
@@ -3234,7 +3280,7 @@ namespace HttpServer
             json_object_object_add(result, "hasWebPassword", json_object_new_boolean(strlen(web_password) > 0));
             json_object_object_add(result, "webSessionTimeout", json_object_new_int(web_session_timeout));
             json_object_object_add(result, "minimumBackgroundFileSize", json_object_new_int64((int64_t)minimum_backgrond_file_size));
-            json_object_object_add(result, "webServerEnabled", json_object_new_boolean(web_server_enabled));
+            json_object_object_add(result, "headlessMode", json_object_new_boolean(headless_enabled));
             json_object_object_add(result, "httpServerPort", json_object_new_int(http_server_port));
             json_object_object_add(result, "compressedFilePath", json_object_new_string(compressed_file_path));
             json_object_object_add(result, "hasAllDebridKey", json_object_new_boolean(strlen(alldebrid_api_key) > 0));
@@ -3311,9 +3357,9 @@ namespace HttpServer
             if (bool_obj != nullptr)
                 show_activity_dialog = json_object_get_boolean(bool_obj) != 0;
 
-            bool_obj = json_object_object_get(jobj, "webServerEnabled");
+            bool_obj = json_object_object_get(jobj, "headlessMode");
             if (bool_obj != nullptr)
-                web_server_enabled = json_object_get_boolean(bool_obj) != 0;
+                headless_enabled = json_object_get_boolean(bool_obj) != 0;
 
             json_object *num_obj = json_object_object_get(jobj, "minimumBackgroundFileSize");
             if (num_obj != nullptr)
@@ -4350,126 +4396,97 @@ namespace HttpServer
 
         svr->Get("/archive_inst/(.*)", [&](const Request &req, Response &res)
         {
-            RemoteClient *tmp_client;
-            RemoteSettings *tmp_settings;
             std::string hash = req.matches[1];
-
             ArchivePkgInstallData *pkg_data = INSTALLER::GetArchivePkgInstallData(hash);
+            if (pkg_data == nullptr || pkg_data->archive_entry == nullptr || pkg_data->split_file == nullptr)
+            {
+                failed(res, 500, "Cannot resume archive_inst");
+                return;
+            }
+
+            const size_t file_size = pkg_data->archive_entry->filesize;
 
             if (req.method == "HEAD")
             {
                 res.status = 204;
-                res.set_header("Content-Length", std::to_string(pkg_data->archive_entry->filesize));
+                res.set_header("Content-Length", std::to_string(file_size));
                 res.set_header("Accept-Ranges", "bytes");
                 return;
             }
 
-            if (req.ranges.empty())
-            {
-                res.status = 200;
-                res.set_content_provider(
-                    pkg_data->archive_entry->filesize, "application/octet-stream",
-                    [pkg_data](size_t offset, size_t length, DataSink &sink) {
-                        char *buf = (char*) malloc(131072);
-                        size_t bytes_read = pkg_data->split_file->Read(buf, 131072, offset);
-                        sink.write(buf, bytes_read);
-                        free(buf);
-                        return true;
-                    },
-                    [](bool success) {
-                        return true;
-                    });
-            }
-            else
-            {
-                res.status = 206;
-                size_t range_len = (req.ranges[0].second - req.ranges[0].first) + 1;
-                if (req.ranges[0].second >= 18000000000000000000ul)
-                {
-                    range_len = PKG_INITIAL_REQUEST_SIZE;
-                    res.set_header("Content-Length", std::to_string(range_len));
-                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+PKG_INITIAL_REQUEST_SIZE-1) + "/"+std::to_string(pkg_data->archive_entry->filesize));
-                    OrbisTick archive_tick;
-                    sceRtcGetCurrentTick(&archive_tick);
-                }
-                std::pair<ssize_t, ssize_t> range = req.ranges[0];
-                res.set_content_provider(
-                    pkg_data->archive_entry->filesize, "application/octet-stream",
-                    [pkg_data, range, range_len](size_t offset, size_t length, DataSink &sink) {
-                        char *buf = (char*) malloc(range_len);
-                        size_t bytes_read = pkg_data->split_file->Read(buf, range_len, range.first);
-                        sink.write(buf, bytes_read);
-                        free(buf);
-                        return true;
-                    },
-                    [](bool success) {
-                        return true;
-                    });
-            }
+            // httplib applies the Range header and passes the resolved offset
+            // and length. Read at that offset; do not add range.first again.
+            res.set_content_provider(
+                file_size, "application/octet-stream",
+                [pkg_data, file_size](size_t offset, size_t length, DataSink &sink) {
+                    if (offset >= file_size)
+                        return false;
+
+                    size_t to_read = std::min(length, file_size - offset);
+                    to_read = std::min(to_read, static_cast<size_t>(PKG_INITIAL_REQUEST_SIZE));
+                    if (to_read == 0)
+                        return false;
+
+                    std::vector<char> buf(to_read);
+                    ssize_t bytes_read = static_cast<ssize_t>(
+                        pkg_data->split_file->Read(buf.data(), to_read, offset));
+                    if (bytes_read <= 0)
+                        return false;
+                    return sink.write(buf.data(), static_cast<size_t>(bytes_read));
+                },
+                [](bool success) {
+                    return true;
+                });
         });
 
         svr->Get("/split_inst/(.*)", [&](const Request &req, Response &res)
         {
             std::string hash = req.matches[1];
-
-            SplitPkgInstallData *pkg_data = INSTALLER::GetSplitPkgInstallData(hash);
-
-            if (pkg_data == nullptr)
+            SplitPkgInstallData *pkg_data = INSTALLER::AcquireSplitPkgInstallData(hash);
+            if (pkg_data == nullptr || pkg_data->split_file == nullptr)
             {
+                if (pkg_data != nullptr)
+                    INSTALLER::ReleaseSplitPkgInstallData(pkg_data);
                 failed(res, 500, "Cannot resume split_inst");
                 return;
             }
 
+            const size_t file_size = pkg_data->size;
+
             if (req.method == "HEAD")
             {
                 res.status = 204;
-                res.set_header("Content-Length", std::to_string(pkg_data->size));
+                res.set_header("Content-Length", std::to_string(file_size));
                 res.set_header("Accept-Ranges", "bytes");
+                INSTALLER::ReleaseSplitPkgInstallData(pkg_data);
                 return;
             }
 
-            if (req.ranges.empty())
-            {
-                res.status = 200;
-                res.set_content_provider(
-                    pkg_data->size, "application/octet-stream",
-                    [pkg_data](size_t offset, size_t length, DataSink &sink) {
-                        char *buf = (char*) malloc(131072);
-                        size_t bytes_read = pkg_data->split_file->Read(buf, 131072, offset);
-                        sink.write(buf, bytes_read);
-                        free(buf);
-                        return true;
-                    },
-                    [](bool success) {
-                        return true;
-                    });
-            }
-            else
-            {
-                res.status = 206;
-                size_t range_len = (req.ranges[0].second - req.ranges[0].first) + 1;
-                if (req.ranges[0].second >= 18000000000000000000ul)
-                {
-                    range_len = PKG_INITIAL_REQUEST_SIZE;
-                    res.set_header("Content-Length", std::to_string(range_len));
-                    res.set_header("Content-Range", std::string("bytes ") + std::to_string(req.ranges[0].first)+"-" + std::to_string(req.ranges[0].first+PKG_INITIAL_REQUEST_SIZE-1) + "/"+std::to_string(pkg_data->size));
-                    OrbisTick split_tick;
-                    sceRtcGetCurrentTick(&split_tick);
-                }
-                std::pair<ssize_t, ssize_t> range = req.ranges[0];
-                res.set_content_provider(
-                    pkg_data->size, "application/octet-stream",
-                    [pkg_data, range, range_len](size_t offset, size_t length, DataSink &sink) {
-                        char *buf = (char*) malloc(range_len);
-                        size_t bytes_read = pkg_data->split_file->Read(buf, range_len, range.first);
-                        sink.write(buf, bytes_read);
-                        free(buf);
-                        return true;
-                    },
-                    [](bool success) {
-                        return true;
-                    });
-            } });
+            // Same as /archive_inst: httplib applies Range and passes the
+            // resolved offset/length, so read from offset and stream in chunks.
+            res.set_content_provider(
+                file_size, "application/octet-stream",
+                [pkg_data, file_size](size_t offset, size_t length, DataSink &sink) {
+                    if (offset >= file_size)
+                        return false;
+
+                    size_t to_read = std::min(length, file_size - offset);
+                    to_read = std::min(to_read, static_cast<size_t>(PKG_INITIAL_REQUEST_SIZE));
+                    if (to_read == 0)
+                        return false;
+
+                    std::vector<char> buf(to_read);
+                    ssize_t bytes_read = static_cast<ssize_t>(
+                        pkg_data->split_file->Read(buf.data(), to_read, offset));
+                    if (bytes_read <= 0)
+                        return false;
+                    return sink.write(buf.data(), static_cast<size_t>(bytes_read));
+                },
+                [pkg_data](bool success) {
+                    INSTALLER::ReleaseSplitPkgInstallData(pkg_data);
+                    return true;
+                });
+        });
 
         svr->Post("/__local__/install_url", [&](const Request &req, Response &res)
         {
@@ -4757,7 +4774,10 @@ namespace HttpServer
         {
             res.status = 200;
             res.set_content("Stopping", "text/plain");
-            // The render loop exits and main's Shutdown() stops the server once.
+            // The listening socket must be closed for listen() to return, which
+            // is what headless mode (serving on the main thread) is blocked on.
+            Stop();
+            // Ends the render loop in gui.cpp so the client terminates.
             done = true;
         });
 
@@ -4803,25 +4823,36 @@ namespace HttpServer
             res.set_content("{\"success\":false,\"error\":\"Authentication required\"}", "application/json");
             return Server::HandlerResponse::Handled;
         });
+        #ifdef EZREMOTE_HEADLESS_APP
+        svr->set_mount_point("/", DATA_PATH);
+        #else
         svr->set_mount_point("/", "/");
+        #endif
 
-        if (web_server_enabled)
-            svr->listen("0.0.0.0", http_server_port);
-        else
-            svr->listen("127.0.0.1", http_server_port);
+        // Always reachable: the web UI is the only front end in headless mode
+        // and there is no setting to turn the server off.
+        svr->listen("0.0.0.0", http_server_port);
 
         return NULL;
     }
 
-    void Start()
+    bool Start(bool blocking)
     {
         if (svr == nullptr)
             svr = new Server();
         if (!svr->is_valid())
         {
-            return;
+            return false;
         }
-        int ret = pthread_create(&http_server_thid, NULL, ServerThread, NULL);
+
+        if (blocking)
+        {
+            // Native: serve on the calling thread until "/stop".
+            ServerThread(NULL);
+            return true;
+        }
+
+        return pthread_create(&http_server_thid, NULL, ServerThread, NULL) == 0;
     }
 
     bool AnyTransferRunning()
