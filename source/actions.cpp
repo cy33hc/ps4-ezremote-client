@@ -427,6 +427,7 @@ namespace Actions
         if (confirm_state == CONFIRM_ALL)
         {
             dont_prompt_overwrite = true;
+            Activities::SetOverwriteType(OVERWRITE_ALL);
             confirm_state = CONFIRM_YES;
         }
         else if (confirm_state == CONFIRM_CANCEL)
@@ -454,11 +455,11 @@ namespace Actions
         if (upload_size > 0)
             RemotePool::CurrentClient()->SetTotalBytes((uint64_t) upload_size);
 
-        if (overwrite_type == OVERWRITE_PROMPT && RemotePool::CurrentClient()->FileExists(dest))
+        if (Activities::OverwriteType() == OVERWRITE_PROMPT && RemotePool::CurrentClient()->FileExists(dest))
         {
             PromptOverwrite(dest);
         }
-        else if (overwrite_type == OVERWRITE_NONE && RemotePool::CurrentClient()->FileExists(dest))
+        else if (Activities::OverwriteType() == OVERWRITE_NONE && RemotePool::CurrentClient()->FileExists(dest))
         {
             confirm_state = CONFIRM_NO;
         }
@@ -700,11 +701,11 @@ namespace Actions
         }
         RemotePool::CurrentClient()->SetTotalBytes(total_size);
 
-        if (overwrite_type == OVERWRITE_PROMPT && FS::FileExists(dest))
+        if (Activities::OverwriteType() == OVERWRITE_PROMPT && FS::FileExists(dest))
         {
             PromptOverwrite(dest);
         }
-        else if (overwrite_type == OVERWRITE_NONE && FS::FileExists(dest))
+        else if (Activities::OverwriteType() == OVERWRITE_NONE && FS::FileExists(dest))
         {
             confirm_state = CONFIRM_NO;
         }
@@ -1751,11 +1752,11 @@ namespace Actions
             return 0;
         Activities::ItemCurrent(src);
         int ret;
-        if (overwrite_type == OVERWRITE_PROMPT && FS::FileExists(dest))
+        if (Activities::OverwriteType() == OVERWRITE_PROMPT && FS::FileExists(dest))
         {
             PromptOverwrite(dest);
         }
-        else if (overwrite_type == OVERWRITE_NONE && FS::FileExists(dest))
+        else if (Activities::OverwriteType() == OVERWRITE_NONE && FS::FileExists(dest))
         {
             confirm_state = CONFIRM_NO;
         }
@@ -1978,11 +1979,11 @@ namespace Actions
             return 0;
         Activities::ItemCurrent(src);
         int ret;
-        if (overwrite_type == OVERWRITE_PROMPT && RemotePool::CurrentClient()->FileExists(dest))
+        if (Activities::OverwriteType() == OVERWRITE_PROMPT && RemotePool::CurrentClient()->FileExists(dest))
         {
             PromptOverwrite(dest.c_str());
         }
-        else if (overwrite_type == OVERWRITE_NONE && RemotePool::CurrentClient()->FileExists(dest))
+        else if (Activities::OverwriteType() == OVERWRITE_NONE && RemotePool::CurrentClient()->FileExists(dest))
         {
             confirm_state = CONFIRM_NO;
         }
