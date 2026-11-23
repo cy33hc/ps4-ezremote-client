@@ -35,6 +35,18 @@ namespace
 
 namespace RemotePool
 {
+    static thread_local RemoteClient *tls_client = nullptr;
+
+    RemoteClient *CurrentClient()
+    {
+        return tls_client != nullptr ? tls_client : remoteclient;
+    }
+
+    void SetThreadClient(RemoteClient *client)
+    {
+        tls_client = client;
+    }
+
     static RemoteClient *AcquireLocked(const RemoteSettings &settings, const std::string &key);
 
     RemoteClient *Acquire(const RemoteSettings &settings)

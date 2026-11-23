@@ -58,6 +58,26 @@ namespace Actions
         std::shared_ptr<RemoteClient> client;
     };
 
+    // Worker-thread connection guard. All action helpers read
+    // RemotePool::CurrentClient(), so a disconnect cannot invalidate the
+    // client while a background operation is running.
+    struct ThreadClient
+    {
+        std::shared_ptr<RemoteClient> held;
+
+        ThreadClient()
+        {
+            if (remote_settings != nullptr)
+                held = RemotePool::AcquireShared(*remote_settings);
+            RemotePool::SetThreadClient(held.get());
+        }
+
+        ~ThreadClient()
+        {
+            RemotePool::SetThreadClient(nullptr);
+        }
+    };
+
     static int FtpCallback(int64_t xfered, void *arg)
     {
         if (arg != nullptr)
@@ -107,12 +127,12 @@ namespace Actions
     {
         // Same as above; the null check also protects callers that run before
         // the console ever connected.
-        if (headless_mode || remoteclient == nullptr)
+        if (headless_mode || RemotePool::CurrentClient() == nullptr)
             return;
 
-        if (!remoteclient->Ping())
+        if (!RemotePool::CurrentClient()->Ping())
         {
-            remoteclient->Quit();
+            RemotePool::CurrentClient()->Quit();
             sprintf(status_message, "%s", lang_strings[STR_CONNECTION_CLOSE_ERR_MSG]);
             return;
         }
@@ -122,7 +142,7 @@ namespace Actions
         remote_files.clear();
         if (strlen(remote_filter) > 0 && apply_filter)
         {
-            std::vector<DirEntry> temp_files = remoteclient->ListDir(remote_directory);
+            std::vector<DirEntry> temp_files = RemotePool::CurrentClient()->ListDir(remote_directory);
             std::string lower_filter = Util::ToLower(remote_filter);
             for (std::vector<DirEntry>::iterator it = temp_files.begin(); it != temp_files.end();)
             {
@@ -137,7 +157,7 @@ namespace Actions
         }
         else
         {
-            remote_files = remoteclient->ListDir(remote_directory);
+            remote_files = RemotePool::CurrentClient()->ListDir(remote_directory);
         }
         DirEntry::Sort(remote_files);
     }
@@ -180,9 +200,9 @@ namespace Actions
         if (!entry.isDir)
             return;
 
-        if (!remoteclient->Ping())
+        if (!RemotePool::CurrentClient()->Ping())
         {
-            remoteclient->Quit();
+            RemotePool::CurrentClient()->Quit();
             sprintf(status_message, "%s", lang_strings[STR_CONNECTION_CLOSE_ERR_MSG]);
             return;
         }
@@ -229,7 +249,7 @@ namespace Actions
 
     void HandleRefreshRemoteFiles()
     {
-        if (remoteclient != nullptr)
+        if (RemotePool::CurrentClient() != nullptr)
         {
             int prev_count = remote_files.size();
             RefreshRemoteFiles(false);
@@ -258,15 +278,15 @@ namespace Actions
         sprintf(status_message, "%s", "");
         std::string folder = std::string(new_folder);
         folder = Util::Rtrim(Util::Trim(folder, " "), "/");
-        std::string path = remoteclient->GetPath(remote_directory, folder.c_str());
-        if (remoteclient->Mkdir(path.c_str()))
+        std::string path = RemotePool::CurrentClient()->GetPath(remote_directory, folder.c_str());
+        if (RemotePool::CurrentClient()->Mkdir(path.c_str()))
         {
             RefreshRemoteFiles(false);
             sprintf(remote_file_to_select, "%s", folder.c_str());
         }
         else
         {
-            sprintf(status_message, "%s - %s", lang_strings[STR_FAILED], remoteclient->LastResponse());
+            sprintf(status_message, "%s - %s", lang_strings[STR_FAILED], RemotePool::CurrentClient()->LastResponse());
         }
     }
 
@@ -287,14 +307,14 @@ namespace Actions
         std::string new_name = std::string(new_path);
         new_name = Util::Rtrim(Util::Trim(new_name, " "), "/");
         std::string path = FS::GetPath(remote_directory, new_name);
-        if (remoteclient->Rename(old_path, path.c_str()))
+        if (RemotePool::CurrentClient()->Rename(old_path, path.c_str()))
         {
             RefreshRemoteFiles(false);
             sprintf(remote_file_to_select, "%s", new_name.c_str());
         }
         else
         {
-            sprintf(status_message, "%s - %s", lang_strings[STR_FAILED], remoteclient->LastResponse());
+            sprintf(status_message, "%s - %s", lang_strings[STR_FAILED], RemotePool::CurrentClient()->LastResponse());
         }
     }
 
@@ -330,7 +350,14 @@ namespace Actions
     void *DeleteSelectedRemotesFilesThread(void *argp)
     {
         Activities::Guard activity(ACTIVITY_DELETE, STR_DELETING, ACTIVITY_NATIVE, ACTIVITY_REMOTE);
-        if (remoteclient->Ping())
+        ThreadClient thread_client;
+        if (thread_client.held == nullptr)
+        {
+            Windows::SetModalMode(false);
+            return NULL;
+        }
+
+        if (RemotePool::CurrentClient()->Ping())
         {
             std::vector<DirEntry> files;
             if (multi_selected_remote_files.size() > 0)
@@ -342,13 +369,13 @@ namespace Actions
             {
                 Activities::ItemCurrent(it->path);
                 if (it->isDir)
-                    remoteclient->Rmdir(it->path, true);
+                    RemotePool::CurrentClient()->Rmdir(it->path, true);
                 else
                 {
                     sprintf(activity_message, "%s %s", lang_strings[STR_DELETING], it->path);
-                    if (!remoteclient->Delete(it->path))
+                    if (!RemotePool::CurrentClient()->Delete(it->path))
                     {
-                        sprintf(status_message, "%s - %s", lang_strings[STR_FAILED], remoteclient->LastResponse());
+                        sprintf(status_message, "%s - %s", lang_strings[STR_FAILED], RemotePool::CurrentClient()->LastResponse());
                     }
                 }
             }
@@ -416,22 +443,22 @@ namespace Actions
             return 0;
         Activities::ItemCurrent(src);
         int ret;
-        if (!remoteclient->Ping())
+        if (!RemotePool::CurrentClient()->Ping())
         {
-            remoteclient->Quit();
+            RemotePool::CurrentClient()->Quit();
             sprintf(status_message, "%s", lang_strings[STR_CONNECTION_CLOSE_ERR_MSG]);
             return 0;
         }
 
         int64_t upload_size = FS::GetSize(src);
         if (upload_size > 0)
-            remoteclient->SetTotalBytes((uint64_t) upload_size);
+            RemotePool::CurrentClient()->SetTotalBytes((uint64_t) upload_size);
 
-        if (overwrite_type == OVERWRITE_PROMPT && remoteclient->FileExists(dest))
+        if (overwrite_type == OVERWRITE_PROMPT && RemotePool::CurrentClient()->FileExists(dest))
         {
             PromptOverwrite(dest);
         }
-        else if (overwrite_type == OVERWRITE_NONE && remoteclient->FileExists(dest))
+        else if (overwrite_type == OVERWRITE_NONE && RemotePool::CurrentClient()->FileExists(dest))
         {
             confirm_state = CONFIRM_NO;
         }
@@ -442,7 +469,7 @@ namespace Actions
 
         if (confirm_state == CONFIRM_YES)
         {
-            return remoteclient->Put(src, dest);
+            return RemotePool::CurrentClient()->Put(src, dest);
         }
 
         sceSystemServicePowerTick();
@@ -459,7 +486,7 @@ namespace Actions
         {
             int err;
             std::vector<DirEntry> entries = FS::ListDir(src.path, &err);
-            remoteclient->Mkdir(dest);
+            RemotePool::CurrentClient()->Mkdir(dest);
             for (int i = 0; i < entries.size(); i++)
             {
                 if (Activities::Stopped())
@@ -474,7 +501,7 @@ namespace Actions
                     if (strcmp(entries[i].name, "..") == 0)
                         continue;
 
-                    remoteclient->Mkdir(new_path);
+                    RemotePool::CurrentClient()->Mkdir(new_path);
                     ret = Upload(entries[i], new_path);
                     if (ret <= 0)
                     {
@@ -486,8 +513,8 @@ namespace Actions
                 {
                     Activities::ItemCurrent(entries[i].path);
                     snprintf(activity_message, 1024, "%s %s", lang_strings[STR_UPLOADING], entries[i].path);
-                    remoteclient->SetTotalBytes(entries[i].file_size);
-                    remoteclient->ResetTransferredBytes();
+                    RemotePool::CurrentClient()->SetTotalBytes(entries[i].file_size);
+                    RemotePool::CurrentClient()->ResetTransferredBytes();
                     ret = UploadFile(entries[i].path, new_path);
                     if (ret <= 0)
                     {
@@ -506,7 +533,7 @@ namespace Actions
             snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", src.name);
             Activities::ItemCurrent(src.path);
             snprintf(activity_message, 1024, "%s %s", lang_strings[STR_UPLOADING], src.name);
-            remoteclient->SetTotalBytes(src.file_size);
+            RemotePool::CurrentClient()->SetTotalBytes(src.file_size);
             ret = UploadFile(src.path, new_path);
             if (ret <= 0)
             {
@@ -526,6 +553,13 @@ namespace Actions
         std::vector<DirEntry> files = job->files;
         std::string target = job->target;
         delete job;
+
+        ThreadClient thread_client;
+        if (thread_client.held == nullptr)
+        {
+            Windows::SetModalMode(false);
+            return NULL;
+        }
 
         for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
         {
@@ -592,12 +626,12 @@ namespace Actions
 
         if (remote_settings->type == CLIENT_TYPE_HTTP_SERVER && strcmp(remote_settings->http_server_type, HTTP_SERVER_GITHUB) == 0)
         {
-            GithubClient *tmp_client = (GithubClient*) remoteclient;
+            GithubClient *tmp_client = (GithubClient*) RemotePool::CurrentClient();
             _src = tmp_client->GetRedirectUrl(src);
         }
         else if (remote_settings->type == CLIENT_TYPE_GOOGLE)
         {
-            GDriveClient *tmp_client = (GDriveClient*) remoteclient;
+            GDriveClient *tmp_client = (GDriveClient*) RemotePool::CurrentClient();
             _src = tmp_client->GetDownloadUrl(src);
         }
         json_object_object_add(params, "src_path", json_object_new_string(_src.c_str()));
@@ -615,9 +649,9 @@ namespace Actions
 			json_object_object_add(params, "url", json_object_new_string(remote_settings->server));
 		}
 
-		if (remote_settings->type == CLIENT_TYPE_GOOGLE && (remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_GOOGLE))
+		if (remote_settings->type == CLIENT_TYPE_GOOGLE && (RemotePool::CurrentClient() != nullptr && RemotePool::CurrentClient()->clientType() == CLIENT_TYPE_GOOGLE))
 		{
-			GDriveClient* tmp_client = (GDriveClient*) remoteclient;
+			GDriveClient* tmp_client = (GDriveClient*) RemotePool::CurrentClient();
 			json_object_object_add(params, "password", json_object_new_string(gg_app.client_secret));
 			json_object_object_add(params, "refresh_token", json_object_new_string(remote_settings->gg_account.refresh_token));
 		}
@@ -656,15 +690,15 @@ namespace Actions
         if (Activities::Stopped())
             return 0;
         Activities::ItemCurrent(src);
-        remoteclient->ResetTransferredBytes();
+        RemotePool::CurrentClient()->ResetTransferredBytes();
         uint64_t total_size = 0;
-        if (!remoteclient->Size(src, &total_size))
+        if (!RemotePool::CurrentClient()->Size(src, &total_size))
         {
-            remoteclient->Quit();
+            RemotePool::CurrentClient()->Quit();
             sprintf(status_message, "%s", lang_strings[STR_CONNECTION_CLOSE_ERR_MSG]);
             return 0;
         }
-        remoteclient->SetTotalBytes(total_size);
+        RemotePool::CurrentClient()->SetTotalBytes(total_size);
 
         if (overwrite_type == OVERWRITE_PROMPT && FS::FileExists(dest))
         {
@@ -681,11 +715,11 @@ namespace Actions
 
         if (confirm_state == CONFIRM_YES)
         {
-            if (enable_background_download && remoteclient->TotalBytes() > minimum_backgrond_file_size)
+            if (enable_background_download && RemotePool::CurrentClient()->TotalBytes() > minimum_backgrond_file_size)
             {
-                return BackgroundDownload(src, dest, remoteclient->TotalBytes());
+                return BackgroundDownload(src, dest, RemotePool::CurrentClient()->TotalBytes());
             }
-            return remoteclient->Get(dest, src);
+            return RemotePool::CurrentClient()->Get(dest, src);
         }
 
         sceSystemServicePowerTick();
@@ -701,7 +735,7 @@ namespace Actions
         if (src.isDir)
         {
             int err;
-            std::vector<DirEntry> entries = remoteclient->ListDir(src.path);
+            std::vector<DirEntry> entries = RemotePool::CurrentClient()->ListDir(src.path);
             FS::MkDirs(dest);
             for (int i = 0; i < entries.size(); i++)
             {
@@ -767,6 +801,13 @@ namespace Actions
         std::string target = job->target;
         delete job;
 
+        ThreadClient thread_client;
+        if (thread_client.held == nullptr)
+        {
+            Windows::SetModalMode(false);
+            return NULL;
+        }
+
         for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
         {
             if (Activities::Stopped())
@@ -815,6 +856,13 @@ namespace Actions
     void *InstallRemotePkgsThread(void *argp)
     {
         Activities::Guard activity(ACTIVITY_INSTALL, STR_INSTALLING, ACTIVITY_NATIVE, ACTIVITY_REMOTE);
+        ThreadClient thread_client;
+        if (thread_client.held == nullptr)
+        {
+            Windows::SetModalMode(false);
+            return NULL;
+        }
+
         int failed = 0;
         int success = 0;
         int skipped = 0;
@@ -827,7 +875,7 @@ namespace Actions
 
         std::vector<DirEntry> files;
         for (size_t i = 0; i < selected.size(); i++)
-            CollectRemoteInstallFiles(remoteclient, selected[i], &files);
+            CollectRemoteInstallFiles(RemotePool::CurrentClient(), selected[i], &files);
 
         for (size_t index = 0; index < files.size(); index++)
         {
@@ -846,7 +894,7 @@ namespace Actions
                     pkg_header header;
                     memset(&header, 0, sizeof(header));
 
-                    if (remoteclient->Head(file.path, (void *)&header, sizeof(header)) == 0)
+                    if (RemotePool::CurrentClient()->Head(file.path, (void *)&header, sizeof(header)) == 0)
                         failed++;
                     else
                     {
@@ -896,11 +944,11 @@ namespace Actions
                                         else
                                         {
                                             install_data->path = file.path;
-                                            remoteclient->Size(file.path, &install_data->size);
+                                            RemotePool::CurrentClient()->Size(file.path, &install_data->size);
                                             install_data->stop_write_thread = false;
                                             /* The Google Drive client is shared with the UI, the
                                              * download thread must not delete it */
-                                            install_data->delete_client = (install_data->remote_client != remoteclient);
+                                            install_data->delete_client = (install_data->remote_client != RemotePool::CurrentClient());
 
                                             int ret = pthread_create(&install_data->thread, NULL, DownloadSplitPkg, install_data);
 
@@ -913,9 +961,9 @@ namespace Actions
                                     else
                                     {
                                         uint64_t file_size;
-                                        remoteclient->Size(file.path, &file_size);
+                                        RemotePool::CurrentClient()->Size(file.path, &file_size);
                                         std::string url = INSTALLER::getRemoteUrl(file.path, file_size, true);
-                                        std::string title = INSTALLER::GetRemotePkgTitle(remoteclient, file.path, &header);
+                                        std::string title = INSTALLER::GetRemotePkgTitle(RemotePool::CurrentClient(), file.path, &header);
                                         if (INSTALLER::InstallRemotePkg(url, &header, title) == 0)
                                             failed++;
                                         else
@@ -936,7 +984,7 @@ namespace Actions
                 else if (Util::EndsWith(path,".zip") || Util::EndsWith(path,".rar") || Util::EndsWith(path,".7z") ||
                         Util::EndsWith(path,".tar.xz") || Util::EndsWith(path,".tar.gz"))
                 {
-                    ArchiveEntry *entry = ZipUtil::GetPackageEntry(file.path, remoteclient);
+                    ArchiveEntry *entry = ZipUtil::GetPackageEntry(file.path, RemotePool::CurrentClient());
                     if (entry != nullptr)
                     {
                         while (entry != nullptr)
@@ -1570,7 +1618,7 @@ namespace Actions
         if (strncmp(remote_settings->server, GOOGLE_DRIVE_BASE_URL, strlen(GOOGLE_DRIVE_BASE_URL)) == 0)
         {
             remoteclient = new GDriveClient();
-            remoteclient->Connect("", "", "");
+            RemotePool::CurrentClient()->Connect("", "", "");
         }
         else if (strncmp(remote_settings->server, "https://", 8) == 0 || strncmp(remote_settings->server, "http://", 7) == 0)
         {
@@ -1622,22 +1670,22 @@ namespace Actions
             return;
         }
 
-        if (remoteclient->Connect(remote_settings->server, remote_settings->username, remote_settings->password))
+        if (RemotePool::CurrentClient()->Connect(remote_settings->server, remote_settings->username, remote_settings->password))
         {
             RefreshRemoteFiles(false);
 
-            if (remoteclient->clientType() == CLIENT_TYPE_FTP)
+            if (RemotePool::CurrentClient()->clientType() == CLIENT_TYPE_FTP)
             {
                 int res = pthread_create(&ftp_keep_alive_thid, NULL, KeepAliveThread, NULL);
             }
         }
         else
         {
-            sprintf(status_message, "%s - %s", lang_strings[STR_FAIL_TIMEOUT_MSG], remoteclient->LastResponse());
-            if (remoteclient != nullptr)
+            sprintf(status_message, "%s - %s", lang_strings[STR_FAIL_TIMEOUT_MSG], RemotePool::CurrentClient()->LastResponse());
+            if (RemotePool::CurrentClient() != nullptr)
             {
-                remoteclient->Quit();
-                delete remoteclient;
+                RemotePool::CurrentClient()->Quit();
+                delete RemotePool::CurrentClient();
                 remoteclient = nullptr;
             }
         }
@@ -1646,14 +1694,14 @@ namespace Actions
 
     void Disconnect()
     {
-        if (remoteclient != nullptr)
+        if (RemotePool::CurrentClient() != nullptr)
         {
-            if (remoteclient->IsConnected())
-                remoteclient->Quit();
+            if (RemotePool::CurrentClient()->IsConnected())
+                RemotePool::CurrentClient()->Quit();
             multi_selected_remote_files.clear();
             remote_files.clear();
             sprintf(status_message, "%s", "");
-            delete remoteclient;
+            delete RemotePool::CurrentClient();
             remoteclient = nullptr;
         }
     }
@@ -1679,9 +1727,9 @@ namespace Actions
     void *KeepAliveThread(void *argp)
     {
         long idle;
-        while (remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_FTP && remoteclient->IsConnected())
+        while (RemotePool::CurrentClient() != nullptr && RemotePool::CurrentClient()->clientType() == CLIENT_TYPE_FTP && RemotePool::CurrentClient()->IsConnected())
         {
-            FtpClient *client = (FtpClient *)remoteclient;
+            FtpClient *client = (FtpClient *)RemotePool::CurrentClient();
             idle = client->GetIdleTime();
             if (idle > 60000000)
             {
@@ -1930,11 +1978,11 @@ namespace Actions
             return 0;
         Activities::ItemCurrent(src);
         int ret;
-        if (overwrite_type == OVERWRITE_PROMPT && remoteclient->FileExists(dest))
+        if (overwrite_type == OVERWRITE_PROMPT && RemotePool::CurrentClient()->FileExists(dest))
         {
             PromptOverwrite(dest.c_str());
         }
-        else if (overwrite_type == OVERWRITE_NONE && remoteclient->FileExists(dest))
+        else if (overwrite_type == OVERWRITE_NONE && RemotePool::CurrentClient()->FileExists(dest))
         {
             confirm_state = CONFIRM_NO;
         }
@@ -1946,9 +1994,9 @@ namespace Actions
         if (confirm_state == CONFIRM_YES)
         {
             if (isCopy)
-                return remoteclient->Copy(src, dest);
+                return RemotePool::CurrentClient()->Copy(src, dest);
             else
-                return remoteclient->Move(src, dest);
+                return RemotePool::CurrentClient()->Move(src, dest);
         }
 
         return 1;
@@ -1961,6 +2009,13 @@ namespace Actions
         std::vector<DirEntry> files = job->files;
         std::string target = job->target;
         delete job;
+
+        ThreadClient thread_client;
+        if (thread_client.held == nullptr)
+        {
+            Windows::SetModalMode(false);
+            return NULL;
+        }
 
         for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
         {
@@ -2021,8 +2076,8 @@ namespace Actions
         if (src.isDir)
         {
             int err;
-            std::vector<DirEntry> entries = remoteclient->ListDir(src.path);
-            remoteclient->Mkdir(dest);
+            std::vector<DirEntry> entries = RemotePool::CurrentClient()->ListDir(src.path);
+            RemotePool::CurrentClient()->Mkdir(dest);
             for (int i = 0; i < entries.size(); i++)
             {
                 if (Activities::Stopped())
@@ -2037,7 +2092,7 @@ namespace Actions
                     if (strcmp(entries[i].name, "..") == 0)
                         continue;
 
-                    remoteclient->Mkdir(new_path);
+                    RemotePool::CurrentClient()->Mkdir(new_path);
                     ret = CopyRemotePath(entries[i], new_path);
                     if (ret <= 0)
                     {
@@ -2048,8 +2103,8 @@ namespace Actions
                 else
                 {
                     snprintf(activity_message, 1024, "%s %s", lang_strings[STR_COPYING], entries[i].path);
-                    remoteclient->SetTotalBytes(entries[i].file_size);
-                    remoteclient->ResetTransferredBytes();
+                    RemotePool::CurrentClient()->SetTotalBytes(entries[i].file_size);
+                    RemotePool::CurrentClient()->ResetTransferredBytes();
                     ret = CopyOrMoveRemoteFile(entries[i].path, new_path, true);
                     if (ret <= 0)
                     {
@@ -2086,6 +2141,13 @@ namespace Actions
         std::vector<DirEntry> files = job->files;
         std::string target = job->target;
         delete job;
+
+        ThreadClient thread_client;
+        if (thread_client.held == nullptr)
+        {
+            Windows::SetModalMode(false);
+            return NULL;
+        }
 
         for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
         {
@@ -2147,10 +2209,10 @@ namespace Actions
 
         sprintf(activity_message, "%s %s to %s", lang_strings[STR_DOWNLOADING], filename.c_str(), local_file);
         uint64_t total_size = 0;
-        remoteclient->Size(filename, &total_size);
-        remoteclient->SetTotalBytes(total_size);
-        remoteclient->ResetTransferredBytes();
-        int ret = remoteclient->Get(local_file, filename);
+        RemotePool::CurrentClient()->Size(filename, &total_size);
+        RemotePool::CurrentClient()->SetTotalBytes(total_size);
+        RemotePool::CurrentClient()->ResetTransferredBytes();
+        int ret = RemotePool::CurrentClient()->Get(local_file, filename);
         if (ret == 0)
             return 0;
 
@@ -2247,7 +2309,7 @@ namespace Actions
         int i = 1;
         while (true)
         {
-            if (!remoteclient->FileExists(temp_file))
+            if (!RemotePool::CurrentClient()->FileExists(temp_file))
                 break;
             temp_file = new_file + "." + std::to_string(i);
             i++;
@@ -2258,7 +2320,7 @@ namespace Actions
         std::string local_tmp = std::string(DATA_PATH) + "/" + std::to_string(tick.mytick);
         FILE *f = FS::Create(local_tmp);
         FS::Close(f);
-        remoteclient->Put(local_tmp, temp_file);
+        RemotePool::CurrentClient()->Put(local_tmp, temp_file);
         FS::Rm(local_tmp);
         RefreshRemoteFiles(false);
         sprintf(remote_file_to_select, "%s", temp_file.c_str());

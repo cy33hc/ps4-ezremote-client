@@ -7,6 +7,7 @@
 #include "common.h"
 #include "server/http_server.h"
 #include "clients/remote_client.h"
+#include "remote_pool.h"
 #include "clients/gdrive.h"
 #include "fs.h"
 #include "lang.h"
@@ -72,9 +73,9 @@ int RefreshAccessToken()
                     remote_settings->gg_account.token_expiry = tick.mytick + (json_object_get_uint64(val) * 1000000);
                 }
             }
-            if (remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_GOOGLE)
+            if (RemotePool::CurrentClient() != nullptr && RemotePool::CurrentClient()->clientType() == CLIENT_TYPE_GOOGLE)
             {
-                GDriveClient *client = (GDriveClient *)remoteclient;
+                GDriveClient *client = (GDriveClient *)RemotePool::CurrentClient();
                 client->SetAccessToken(remote_settings->gg_account.access_token);
             }
             CONFIG::SaveConfig();

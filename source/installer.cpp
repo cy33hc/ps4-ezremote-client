@@ -16,6 +16,7 @@
 #include <orbis/SystemService.h>
 #include "clients/webdav.h"
 #include "clients/remote_client.h"
+#include "remote_pool.h"
 #include "clients/smbclient.h"
 #include "clients/sftpclient.h"
 #include "clients/ftpclient.h"
@@ -246,7 +247,7 @@ namespace INSTALLER
 			json_object_object_add(history_item_obj, "url", json_object_new_string(settings->server));
 		}
 
-		if (settings->type == CLIENT_TYPE_GOOGLE && (remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_GOOGLE))
+		if (settings->type == CLIENT_TYPE_GOOGLE && (RemotePool::CurrentClient() != nullptr && RemotePool::CurrentClient()->clientType() == CLIENT_TYPE_GOOGLE))
 		{
 			json_object_object_add(history_item_obj, "password", json_object_new_string(gg_app.client_secret));
 			json_object_object_add(history_item_obj, "refresh_token", json_object_new_string(remote_settings->gg_account.refresh_token));
@@ -256,7 +257,7 @@ namespace INSTALLER
 			json_object_object_add(history_item_obj, "password", json_object_new_string(settings->password));
 		}
 
-		if (settings->type == CLIENT_TYPE_GOOGLE && (remoteclient != nullptr && remoteclient->clientType() == CLIENT_TYPE_GOOGLE))
+		if (settings->type == CLIENT_TYPE_GOOGLE && (RemotePool::CurrentClient() != nullptr && RemotePool::CurrentClient()->clientType() == CLIENT_TYPE_GOOGLE))
 		{
 			json_object_object_add(history_item_obj, "username", json_object_new_string(gg_app.client_id));
 		}
@@ -324,12 +325,12 @@ namespace INSTALLER
 		{
 			if (remote_settings->type == CLIENT_TYPE_HTTP_SERVER && strcmp(remote_settings->http_server_type, HTTP_SERVER_GITHUB) == 0)
 			{
-				GithubClient *tmp_client = (GithubClient*) remoteclient;
+				GithubClient *tmp_client = (GithubClient*) RemotePool::CurrentClient();
 				_path = tmp_client->GetRedirectUrl(path);
 			}
 			else if (remote_settings->type == CLIENT_TYPE_GOOGLE)
 			{
-				GDriveClient *tmp_client = (GDriveClient*) remoteclient;
+				GDriveClient *tmp_client = (GDriveClient*) RemotePool::CurrentClient();
 				_path = tmp_client->GetDownloadUrl(path);
 			}
 
@@ -810,7 +811,7 @@ namespace INSTALLER
 	bool ExtractRemotePkg(const std::string &path, const std::string sfo_path, const std::string icon_path)
 	{
 		pkg_header tmp_hdr;
-		if (!remoteclient->Head(path, &tmp_hdr, sizeof(pkg_header)))
+		if (!RemotePool::CurrentClient()->Head(path, &tmp_hdr, sizeof(pkg_header)))
 			return false;
 
 		return ExtractRemotePkg(path, &tmp_hdr, sfo_path, icon_path);
@@ -818,7 +819,7 @@ namespace INSTALLER
 
 	bool ExtractRemotePkg(const std::string &path, pkg_header *pkg_header, const std::string sfo_path, const std::string icon_path)
 	{
-		return ExtractRemotePkg(remoteclient, path, pkg_header, sfo_path, icon_path);
+		return ExtractRemotePkg(RemotePool::CurrentClient(), path, pkg_header, sfo_path, icon_path);
 	}
 
 	bool ExtractRemotePkg(RemoteClient *client, const std::string &path, pkg_header *pkg_header, const std::string sfo_path, const std::string icon_path)
@@ -1360,7 +1361,7 @@ namespace INSTALLER
 
 	bool CanInstallViaRPI(const std::string &path, pkg_header *pkg_header)
 	{
-		return CanInstallViaRPI(remoteclient, path, pkg_header);
+		return CanInstallViaRPI(RemotePool::CurrentClient(), path, pkg_header);
 	}
 	
     bool CanInstallViaRPI(RemoteClient *client, const std::string &path, pkg_header *pkg_header)

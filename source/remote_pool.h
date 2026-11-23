@@ -26,6 +26,11 @@ namespace RemotePool
 
     // Closes the idle connections of one site only.
     void ClearFor(const RemoteSettings &settings);
+
+    // Thread-local override used by native worker threads. Returns the
+    // thread's checked-out client, otherwise the browsing client.
+    RemoteClient *CurrentClient();
+    void SetThreadClient(RemoteClient *client);
 }
 
 #endif
