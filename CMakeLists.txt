@@ -136,7 +136,7 @@ target_link_libraries(ezremote_client
 
 # Ship the client version inside the package. The server's launcher reads it
 # to know which client build is running.
-file(WRITE "${CMAKE_SOURCE_DIR}/data/version.txt" "2.11\n")
+file(WRITE "${CMAKE_SOURCE_DIR}/data/version.txt" "${APP_VERSION}\n")
 
 # The native UI app is shipped as a self payload for the loader package.
 set(EZREMOTE_NATIVEUI_AUTHINFO "000000000000000000000000001C004000FF000000000080000000000000000000000000000000000000008000400040000000000000008000000000000000080040FFFF000000F000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" CACHE STRING "create-fself authinfo for the native UI self")
