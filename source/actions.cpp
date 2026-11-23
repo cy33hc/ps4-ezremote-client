@@ -27,6 +27,7 @@
 #include "common.h"
 #include "fs.h"
 #include "config.h"
+#include "remote_pool.h"
 #include "ui_state.h"
 #include "util.h"
 #include "activity.h"
@@ -54,6 +55,7 @@ namespace Actions
     {
         std::vector<DirEntry> files;
         std::string target;
+        std::shared_ptr<RemoteClient> client;
     };
 
     static int FtpCallback(int64_t xfered, void *arg)
@@ -1280,6 +1282,7 @@ namespace Actions
         Activities::Guard activity(ACTIVITY_EXTRACT, STR_EXTRACTING, ACTIVITY_NATIVE, ACTIVITY_REMOTE);
         std::vector<DirEntry> files = job->files;
         std::string target = job->target;
+        std::shared_ptr<RemoteClient> client = job->client;
         delete job;
 
         FS::MkDirs(target.c_str());
@@ -1290,7 +1293,7 @@ namespace Actions
             if (!it->isDir)
             {
                 Activities::ItemCurrent("\"" + std::string(it->path) + "\" to \"" + target + "\"");
-                int ret = ZipUtil::Extract(*it, target.c_str(), remoteclient);
+                int ret = ZipUtil::Extract(*it, target.c_str(), client.get());
                 if (ret == 0)
                 {
                     sprintf(status_message, "%s %s", lang_strings[STR_FAILED_TO_EXTRACT], it->name);
@@ -1313,6 +1316,16 @@ namespace Actions
         else
             job->files.push_back(selected_remote_file);
         job->target = extract_zip_folder;
+        if (remote_settings != nullptr)
+            job->client = RemotePool::AcquireShared(*remote_settings);
+        if (job->client == nullptr)
+        {
+            sprintf(status_message, "%s", lang_strings[STR_FAILED_TO_EXTRACT]);
+            delete job;
+            multi_selected_remote_files.clear();
+            Windows::SetModalMode(false);
+            return;
+        }
 
         int res = pthread_create(&bk_activity_thid, NULL, ExtractRemoteZipThread, job);
         if (res != 0)
