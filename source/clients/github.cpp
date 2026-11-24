@@ -60,9 +60,9 @@ std::vector<DirEntry> GithubClient::ListDir(const std::string &path)
             entry.isDir = true;
             entry.selectable = true;
             entry.file_size = 0;
-            snprintf(entry.directory, 512, "%s", "/");
-            snprintf(entry.name, 256, "%s", release->name.c_str());
-            snprintf(entry.path, 768, "/%s", release->name.c_str());
+            DirEntrySetString(entry.directory, "%s", "/");
+            DirEntrySetString(entry.name, "%s", release->name.c_str());
+            DirEntrySetString(entry.path, "/%s", release->name.c_str());
             snprintf(entry.display_size, 48, "%s", lang_strings[STR_FOLDER]);
             entry.modified = release->modified;
             
@@ -77,12 +77,12 @@ std::vector<DirEntry> GithubClient::ListDir(const std::string &path)
         for (std::map<std::string, GitAsset>::iterator asset = assets.begin(); asset != assets.end();)
         {
             DirEntry entry;
-            memset(&entry, 0, sizeof(DirEntry));
+            entry = DirEntry();
             entry.isDir = false;
             entry.selectable = true;
-            snprintf(entry.directory, 512, "%s", path.c_str());
-            snprintf(entry.name, 256, "%s", asset->second.name.c_str());
-            snprintf(entry.path, 768, "%s/%s", path.c_str(), asset->second.name.c_str());
+            DirEntrySetString(entry.directory, "%s", path.c_str());
+            DirEntrySetString(entry.name, "%s", asset->second.name.c_str());
+            DirEntrySetString(entry.path, "%s/%s", path.c_str(), asset->second.name.c_str());
             entry.file_size = asset->second.size;
             entry.modified = asset->second.modified;
             DirEntry::SetDisplaySize(&entry);

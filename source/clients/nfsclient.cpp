@@ -153,22 +153,22 @@ int NfsClient::Rmdir(const std::string &path, bool recursive)
 
 		if (list[i].isDir && recursive)
 		{
-			if (strcmp(list[i].name, "..") == 0)
+			if (strcmp(list[i].name.c_str(), "..") == 0)
 				continue;
 			ret = Rmdir(list[i].path, recursive);
 			if (ret == 0)
 			{
-				sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_DIR_MSG], list[i].path);
+				sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_DIR_MSG], list[i].path.c_str());
 				return 0;
 			}
 		}
 		else
 		{
-			sprintf(activity_message, "%s %s\n", lang_strings[STR_DELETING], list[i].path);
+			sprintf(activity_message, "%s %s\n", lang_strings[STR_DELETING], list[i].path.c_str());
 			ret = Delete(list[i].path);
 			if (ret == 0)
 			{
-				sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_FILE_MSG], list[i].path);
+				sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_FILE_MSG], list[i].path.c_str());
 				return 0;
 			}
 		}
@@ -527,21 +527,21 @@ std::vector<DirEntry> NfsClient::ListDir(const std::string &path)
 	while ((nfsdirent = nfs_readdir(nfs, nfsdir)))
 	{
 		DirEntry entry;
-		memset(&entry, 0, sizeof(entry));
+		entry = DirEntry();
 
 		if (!show_hidden_files && nfsdirent->name[0] == '.')
 			continue;
 
 		entry.selectable = true;
-		snprintf(entry.directory, 511, "%s", path.c_str());
-		snprintf(entry.name, 255, "%s", nfsdirent->name);
+		DirEntrySetString(entry.directory, "%s", path.c_str());
+		DirEntrySetString(entry.name, "%s", nfsdirent->name);
 		if (path.length() > 0 && path[path.length() - 1] == '/')
 		{
-			sprintf(entry.path, "%s%s", path.c_str(), nfsdirent->name);
+			DirEntrySetString(entry.path, "%s%s", path.c_str(), nfsdirent->name);
 		}
 		else
 		{
-			sprintf(entry.path, "%s/%s", path.c_str(), nfsdirent->name);
+			DirEntrySetString(entry.path, "%s/%s", path.c_str(), nfsdirent->name);
 		}
 
 		entry.file_size = nfsdirent->size;
@@ -584,7 +584,7 @@ std::vector<DirEntry> NfsClient::ListDir(const std::string &path)
 			continue;
 			break;
 		}
-		if (strcmp(entry.name, "..") != 0 && strcmp(entry.name, ".") != 0)
+		if (strcmp(entry.name.c_str(), "..") != 0 && strcmp(entry.name.c_str(), ".") != 0)
 			out.push_back(entry);
 	}
 	nfs_closedir(nfs, nfsdir);

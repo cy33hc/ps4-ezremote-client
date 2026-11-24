@@ -380,13 +380,13 @@ namespace HttpServer
             FS::MkDirs(dest);
             for (int i = 0; i < entries.size(); i++)
             {
-                int path_length = strlen(dest) + strlen(entries[i].name) + 2;
+                int path_length = strlen(dest) + strlen(entries[i].name.c_str()) + 2;
                 char *new_path = (char *)malloc(path_length);
-                snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", entries[i].name);
+                snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", entries[i].name.c_str());
 
                 if (entries[i].isDir)
                 {
-                    if (strcmp(entries[i].name, "..") == 0)
+                    if (strcmp(entries[i].name.c_str(), "..") == 0)
                         continue;
 
                     FS::MkDirs(new_path);
@@ -418,9 +418,9 @@ namespace HttpServer
         }
         else
         {
-            int path_length = strlen(dest) + strlen(src.name) + 2;
+            int path_length = strlen(dest) + strlen(src.name.c_str()) + 2;
             char *new_path = (char *)malloc(path_length);
-            snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", src.name);
+            snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", src.name.c_str());
             if (isCopy)
             {
                 ret = FS::Copy(src.path, new_path);
@@ -664,7 +664,7 @@ namespace HttpServer
             std::vector<DirEntry> entries = client->ListDir(src);
             for (size_t i = 0; i < entries.size(); i++)
             {
-                if (strcmp(entries[i].name, "..") == 0)
+                if (strcmp(entries[i].name.c_str(), "..") == 0)
                     continue;
                 std::string target = dest + "/" + entries[i].name;
                 ProbeRemoteConflicts(client, entries[i].path, target, entries[i].isDir, conflicts);
@@ -702,7 +702,7 @@ namespace HttpServer
         uint64_t total = 0;
         for (size_t i = 0; i < entries.size(); i++)
         {
-            if (strcmp(entries[i].name, "..") == 0)
+            if (strcmp(entries[i].name.c_str(), "..") == 0)
                 continue;
             if (entries[i].isDir)
                 total += RemoteTreeSize(client, entries[i].path, skip);
@@ -831,7 +831,7 @@ namespace HttpServer
             bool ok = true;
             for (size_t i = 0; i < entries.size(); i++)
             {
-                if (strcmp(entries[i].name, "..") == 0)
+                if (strcmp(entries[i].name.c_str(), "..") == 0)
                     continue;
 
                 // Cancelled: unwinds the whole walk, not just this folder.
@@ -1283,7 +1283,7 @@ namespace HttpServer
 
         for (size_t i = 0; i < entries.size(); i++)
         {
-            if (strcmp(entries[i].name, "..") == 0)
+            if (strcmp(entries[i].name.c_str(), "..") == 0)
                 continue;
             CollectLocalInstallPaths(entries[i].path, out, depth + 1);
         }
@@ -1304,7 +1304,7 @@ namespace HttpServer
         std::vector<DirEntry> entries = client->ListDir(path);
         for (size_t i = 0; i < entries.size(); i++)
         {
-            if (strcmp(entries[i].name, "..") == 0)
+            if (strcmp(entries[i].name.c_str(), "..") == 0)
                 continue;
             CollectRemoteInstallPaths(client, entries[i].path, out, depth + 1);
         }
@@ -1365,12 +1365,12 @@ namespace HttpServer
             json_object *json_files = json_object_new_array();
             for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end();)
             {
-                if (((onlyFolders && it->isDir) || !onlyFolders) && strcmp(it->name, "..") != 0)
+                if (((onlyFolders && it->isDir) || !onlyFolders) && strcmp(it->name.c_str(), "..") != 0)
                 {
                     json_object *new_file = json_object_new_object();
                     char display_date[32];
                     sprintf(display_date, "%04d-%02d-%02d %02d:%02d:%02d", it->modified.year, it->modified.month, it->modified.day, it->modified.hours, it->modified.minutes, it->modified.seconds);
-                    json_object_object_add(new_file, "name", json_object_new_string(it->name));
+                    json_object_object_add(new_file, "name", json_object_new_string(it->name.c_str()));
                     json_object_object_add(new_file, "rights", json_object_new_string(it->rights));
                     json_object_object_add(new_file, "date", json_object_new_string(display_date));
                     json_object_object_add(new_file, "size", json_object_new_string(it->isDir ? "" : std::to_string(it->file_size).c_str()));
@@ -1483,8 +1483,8 @@ namespace HttpServer
                 DirEntry entry;
                 std::string temp = std::string(item);
                 size_t slash_pos = temp.find_last_of("/");
-                sprintf(entry.name, "%s", temp.substr(slash_pos+1).c_str());
-                sprintf(entry.path, "%s", item);
+                DirEntrySetString(entry.name, "%s", temp.substr(slash_pos+1).c_str());
+                DirEntrySetString(entry.path, "%s", item);
                 entry.isDir = FS::IsFolder(item);
                 std::string dest_path = TrimSlash(newPath) + "/" + entry.name;
 
@@ -1624,8 +1624,8 @@ namespace HttpServer
                 std::string temp = std::string(src);
                 size_t slash_pos = temp.find_last_of("/");
                 DirEntry entry;
-                sprintf(entry.name, "%s", temp.substr(slash_pos+1).c_str());
-                sprintf(entry.path, "%s", src);
+                DirEntrySetString(entry.name, "%s", temp.substr(slash_pos+1).c_str());
+                DirEntrySetString(entry.path, "%s", src);
                 entry.isDir = FS::IsFolder(src);
                 // The caller already chose the target name; honour it directly.
                 if (skip.count(TrimSlash(src)) > 0)
@@ -1663,8 +1663,8 @@ namespace HttpServer
                     DirEntry entry;
                     std::string temp = std::string(item);
                     size_t slash_pos = temp.find_last_of("/");
-                    sprintf(entry.name, "%s", temp.substr(slash_pos+1).c_str());
-                    sprintf(entry.path, "%s", item);
+                    DirEntrySetString(entry.name, "%s", temp.substr(slash_pos+1).c_str());
+                    DirEntrySetString(entry.path, "%s", item);
                     entry.isDir = FS::IsFolder(item);
                     std::string dest_dir = TrimSlash(newPath);
                     std::string dest_path = dest_dir + "/" + entry.name;
@@ -3521,7 +3521,7 @@ namespace HttpServer
                     DirEntry &entry = files[i];
                     char display_date[32] = "";
 
-                    if (strcmp(entry.name, "..") == 0)
+                    if (strcmp(entry.name.c_str(), "..") == 0)
                         continue;
 
                     if (entry.modified.year != 0)
@@ -3532,7 +3532,7 @@ namespace HttpServer
                     }
 
                     json_object *file = json_object_new_object();
-                    json_object_object_add(file, "name", json_object_new_string(entry.name));
+                    json_object_object_add(file, "name", json_object_new_string(entry.name.c_str()));
                     json_object_object_add(file, "type", json_object_new_string(entry.isDir ? "dir" : "file"));
                     json_object_object_add(file, "size", json_object_new_string(entry.isDir ? "" : std::to_string(entry.file_size).c_str()));
                     json_object_object_add(file, "date", json_object_new_string(display_date));
@@ -3655,8 +3655,8 @@ namespace HttpServer
             std::string extract_folder = std::string(destination) + "/" + folderName;
 
             DirEntry entry;
-            sprintf(entry.name, "%s", "");
-            sprintf(entry.path, "%s", item);
+            DirEntrySetString(entry.name, "%s", "");
+            DirEntrySetString(entry.path, "%s", item);
             entry.isDir = false;
 
             Activities::Guard activity(ACTIVITY_EXTRACT, STR_EXTRACTING, ACTIVITY_WEB, ACTIVITY_REMOTE);
@@ -4023,8 +4023,8 @@ namespace HttpServer
 
             std::string extract_zip_folder = std::string(destination) + "/" + folderName;
             DirEntry entry;
-            sprintf(entry.name, "%s", "");
-            sprintf(entry.path, "%s", item);
+            DirEntrySetString(entry.name, "%s", "");
+            DirEntrySetString(entry.path, "%s", item);
             entry.isDir = false;
 
             int ret;

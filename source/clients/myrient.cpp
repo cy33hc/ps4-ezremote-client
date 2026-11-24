@@ -145,15 +145,15 @@ std::vector<DirEntry> MyrientClient::ListDir(const std::string &path)
             if (tmp_string[tmp_string.length()-1] == '/')
                 tmp_string = tmp_string.substr(0, tmp_string.length()-1);
             tmp_string = BaseClient::UnEscape(tmp_string);
-            sprintf(entry.name, "%s", tmp_string.c_str());
-            sprintf(entry.directory, "%s", path.c_str());
+            DirEntrySetString(entry.name, "%s", tmp_string.c_str());
+            DirEntrySetString(entry.directory, "%s", path.c_str());
             if (path.length() > 0 && path[path.length() - 1] == '/')
             {
-                sprintf(entry.path, "%s%s", path.c_str(), entry.name);
+                DirEntrySetString(entry.path, "%s%s", path.c_str(), entry.name.c_str());
             }
             else
             {
-                sprintf(entry.path, "%s/%s", path.c_str(), entry.name);
+                DirEntrySetString(entry.path, "%s/%s", path.c_str(), entry.name.c_str());
             }
 
             // next td contains file size, if fize size is "-", then it's a directory
@@ -223,7 +223,7 @@ std::vector<DirEntry> MyrientClient::ListDir(const std::string &path)
             }
 
             lxb_dom_collection_destroy(td_collection, true);
-            if (strcmp(entry.name, "..") != 0 && strcmp(entry.name, ".") != 0)
+            if (strcmp(entry.name.c_str(), "..") != 0 && strcmp(entry.name.c_str(), ".") != 0)
             {
                 out.push_back(entry);
             }

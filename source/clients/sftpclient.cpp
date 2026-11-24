@@ -214,22 +214,22 @@ int SFTPClient::Rmdir(const std::string &path, bool recursive)
 
         if (list[i].isDir && recursive)
         {
-            if (strcmp(list[i].name, "..") == 0)
+            if (strcmp(list[i].name.c_str(), "..") == 0)
                 continue;
             ret = Rmdir(list[i].path, recursive);
             if (ret == 0)
             {
-                sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_DIR_MSG], list[i].path);
+                sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_DIR_MSG], list[i].path.c_str());
                 return 0;
             }
         }
         else
         {
-            sprintf(activity_message, "%s %s\n", lang_strings[STR_DELETING], list[i].path);
+            sprintf(activity_message, "%s %s\n", lang_strings[STR_DELETING], list[i].path.c_str());
             ret = Delete(list[i].path);
             if (ret == 0)
             {
-                sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_FILE_MSG], list[i].path);
+                sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_FILE_MSG], list[i].path.c_str());
                 return 0;
             }
         }
@@ -572,7 +572,7 @@ std::vector<DirEntry> SFTPClient::ListDir(const std::string &path)
         char mem[512];
         LIBSSH2_SFTP_ATTRIBUTES attrs;
         DirEntry entry;
-        memset(&entry, 0, sizeof(entry));
+        entry = DirEntry();
         entry.selectable = true;
 
         /* loop until we fail */
@@ -587,15 +587,15 @@ std::vector<DirEntry> SFTPClient::ListDir(const std::string &path)
             if (!show_hidden_files && new_path[0] == '.')
                 continue;
 
-            sprintf(entry.name, "%s", new_path.c_str());
-            sprintf(entry.directory, "%s", path.c_str());
+            DirEntrySetString(entry.name, "%s", new_path.c_str());
+            DirEntrySetString(entry.directory, "%s", path.c_str());
             if (path.length() > 0 && path[path.length() - 1] == '/')
             {
-                sprintf(entry.path, "%s%s", path.c_str(), entry.name);
+                DirEntrySetString(entry.path, "%s%s", path.c_str(), entry.name.c_str());
             }
             else
             {
-                sprintf(entry.path, "%s/%s", path.c_str(), entry.name);
+                DirEntrySetString(entry.path, "%s/%s", path.c_str(), entry.name.c_str());
             }
 
             if (LIBSSH2_SFTP_S_ISDIR(attrs.permissions))

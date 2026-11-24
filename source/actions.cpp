@@ -106,7 +106,7 @@ namespace Actions
             for (std::vector<DirEntry>::iterator it = temp_files.begin(); it != temp_files.end();)
             {
                 std::string lower_name = Util::ToLower(it->name);
-                if (lower_name.find(lower_filter) != std::string::npos || strcmp(it->name, "..") == 0)
+                if (lower_name.find(lower_filter) != std::string::npos || strcmp(it->name.c_str(), "..") == 0)
                 {
                     local_files.push_back(*it);
                 }
@@ -147,7 +147,7 @@ namespace Actions
             for (std::vector<DirEntry>::iterator it = temp_files.begin(); it != temp_files.end();)
             {
                 std::string lower_name = Util::ToLower(it->name);
-                if (lower_name.find(lower_filter) != std::string::npos || strcmp(it->name, "..") == 0)
+                if (lower_name.find(lower_filter) != std::string::npos || strcmp(it->name.c_str(), "..") == 0)
                 {
                     remote_files.push_back(*it);
                 }
@@ -167,7 +167,7 @@ namespace Actions
         if (!entry.isDir)
             return;
 
-        if (strcmp(entry.name, "..") == 0)
+        if (strcmp(entry.name.c_str(), "..") == 0)
         {
             std::string temp_path = std::string(entry.directory);
             if (temp_path.size() > 1)
@@ -185,12 +185,12 @@ namespace Actions
         }
         else
         {
-            sprintf(local_directory, "%s", entry.path);
+            sprintf(local_directory, "%s", entry.path.c_str());
         }
         RefreshLocalFiles(false);
-        if (strcmp(entry.name, "..") != 0)
+        if (strcmp(entry.name.c_str(), "..") != 0)
         {
-            sprintf(local_file_to_select, "%s", local_files[0].name);
+            sprintf(local_file_to_select, "%s", local_files[0].name.c_str());
         }
         selected_action = ACTION_NONE;
     }
@@ -207,7 +207,7 @@ namespace Actions
             return;
         }
 
-        if (strcmp(entry.name, "..") == 0)
+        if (strcmp(entry.name.c_str(), "..") == 0)
         {
             std::string temp_path = std::string(entry.directory);
             if (temp_path.size() > 1)
@@ -225,12 +225,12 @@ namespace Actions
         }
         else
         {
-            sprintf(remote_directory, "%s", entry.path);
+            sprintf(remote_directory, "%s", entry.path.c_str());
         }
         RefreshRemoteFiles(false);
-        if (strcmp(entry.name, "..") != 0)
+        if (strcmp(entry.name.c_str(), "..") != 0)
         {
-            sprintf(remote_file_to_select, "%s", remote_files[0].name);
+            sprintf(remote_file_to_select, "%s", remote_files[0].name.c_str());
         }
         selected_action = ACTION_NONE;
     }
@@ -242,7 +242,7 @@ namespace Actions
         int new_count = local_files.size();
         if (prev_count != new_count)
         {
-            sprintf(local_file_to_select, "%s", local_files[0].name);
+            sprintf(local_file_to_select, "%s", local_files[0].name.c_str());
         }
         selected_action = ACTION_NONE;
     }
@@ -256,7 +256,7 @@ namespace Actions
             int new_count = remote_files.size();
             if (prev_count != new_count)
             {
-                sprintf(remote_file_to_select, "%s", remote_files[0].name);
+                sprintf(remote_file_to_select, "%s", remote_files[0].name.c_str());
             }
         }
         selected_action = ACTION_NONE;
@@ -372,7 +372,7 @@ namespace Actions
                     RemotePool::CurrentClient()->Rmdir(it->path, true);
                 else
                 {
-                    sprintf(activity_message, "%s %s", lang_strings[STR_DELETING], it->path);
+                    sprintf(activity_message, "%s %s", lang_strings[STR_DELETING], it->path.c_str());
                     if (!RemotePool::CurrentClient()->Delete(it->path))
                     {
                         sprintf(status_message, "%s - %s", lang_strings[STR_FAILED], RemotePool::CurrentClient()->LastResponse());
@@ -493,13 +493,13 @@ namespace Actions
                 if (Activities::Stopped())
                     return 1;
 
-                int path_length = strlen(dest) + strlen(entries[i].name) + 2;
+                int path_length = strlen(dest) + strlen(entries[i].name.c_str()) + 2;
                 char *new_path = (char *)malloc(path_length);
-                snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", entries[i].name);
+                snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", entries[i].name.c_str());
 
                 if (entries[i].isDir)
                 {
-                    if (strcmp(entries[i].name, "..") == 0)
+                    if (strcmp(entries[i].name.c_str(), "..") == 0)
                         continue;
 
                     RemotePool::CurrentClient()->Mkdir(new_path);
@@ -513,13 +513,13 @@ namespace Actions
                 else
                 {
                     Activities::ItemCurrent(entries[i].path);
-                    snprintf(activity_message, 1024, "%s %s", lang_strings[STR_UPLOADING], entries[i].path);
+                    snprintf(activity_message, 1024, "%s %s", lang_strings[STR_UPLOADING], entries[i].path.c_str());
                     RemotePool::CurrentClient()->SetTotalBytes(entries[i].file_size);
                     RemotePool::CurrentClient()->ResetTransferredBytes();
-                    ret = UploadFile(entries[i].path, new_path);
+                    ret = UploadFile(entries[i].path.c_str(), new_path);
                     if (ret <= 0)
                     {
-                        sprintf(status_message, "%s %s", lang_strings[STR_FAIL_UPLOAD_MSG], entries[i].path);
+                        sprintf(status_message, "%s %s", lang_strings[STR_FAIL_UPLOAD_MSG], entries[i].path.c_str());
                         free(new_path);
                         return ret;
                     }
@@ -529,17 +529,17 @@ namespace Actions
         }
         else
         {
-            int path_length = strlen(dest) + strlen(src.name) + 2;
+            int path_length = strlen(dest) + strlen(src.name.c_str()) + 2;
             char *new_path = (char *)malloc(path_length);
-            snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", src.name);
+            snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", src.name.c_str());
             Activities::ItemCurrent(src.path);
-            snprintf(activity_message, 1024, "%s %s", lang_strings[STR_UPLOADING], src.name);
+            snprintf(activity_message, 1024, "%s %s", lang_strings[STR_UPLOADING], src.name.c_str());
             RemotePool::CurrentClient()->SetTotalBytes(src.file_size);
-            ret = UploadFile(src.path, new_path);
+            ret = UploadFile(src.path.c_str(), new_path);
             if (ret <= 0)
             {
                 free(new_path);
-                sprintf(status_message, "%s %s", lang_strings[STR_FAIL_UPLOAD_MSG], src.name);
+                sprintf(status_message, "%s %s", lang_strings[STR_FAIL_UPLOAD_MSG], src.name.c_str());
                 return 0;
             }
             free(new_path);
@@ -570,7 +570,7 @@ namespace Actions
             if (it->isDir)
             {
                 char new_dir[512];
-                sprintf(new_dir, "%s%s%s", target.c_str(), FS::hasEndSlash(target.c_str()) ? "" : "/", it->name);
+                sprintf(new_dir, "%s%s%s", target.c_str(), FS::hasEndSlash(target.c_str()) ? "" : "/", it->name.c_str());
                 Upload(*it, new_dir);
             }
             else
@@ -743,13 +743,13 @@ namespace Actions
                 if (Activities::Stopped())
                     return 1;
 
-                int path_length = strlen(dest) + strlen(entries[i].name) + 2;
+                int path_length = strlen(dest) + strlen(entries[i].name.c_str()) + 2;
                 char *new_path = (char *)malloc(path_length);
-                snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", entries[i].name);
+                snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", entries[i].name.c_str());
 
                 if (entries[i].isDir)
                 {
-                    if (strcmp(entries[i].name, "..") == 0)
+                    if (strcmp(entries[i].name.c_str(), "..") == 0)
                         continue;
 
                     FS::MkDirs(new_path);
@@ -763,11 +763,11 @@ namespace Actions
                 else
                 {
                     Activities::ItemCurrent(entries[i].path);
-                    snprintf(activity_message, 1024, "%s %s", lang_strings[STR_DOWNLOADING], entries[i].path);
-                    ret = DownloadFile(entries[i].path, new_path);
+                    snprintf(activity_message, 1024, "%s %s", lang_strings[STR_DOWNLOADING], entries[i].path.c_str());
+                    ret = DownloadFile(entries[i].path.c_str(), new_path);
                     if (ret <= 0)
                     {
-                        sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DOWNLOAD_MSG], entries[i].path);
+                        sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DOWNLOAD_MSG], entries[i].path.c_str());
                         free(new_path);
                         return ret;
                     }
@@ -777,16 +777,16 @@ namespace Actions
         }
         else
         {
-            int path_length = strlen(dest) + strlen(src.name) + 2;
+            int path_length = strlen(dest) + strlen(src.name.c_str()) + 2;
             char *new_path = (char *)malloc(path_length);
-            snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", src.name);
+            snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", src.name.c_str());
             Activities::ItemCurrent(src.path);
-            snprintf(activity_message, 1024, "%s %s", lang_strings[STR_DOWNLOADING], src.path);
-            ret = DownloadFile(src.path, new_path);
+            snprintf(activity_message, 1024, "%s %s", lang_strings[STR_DOWNLOADING], src.path.c_str());
+            ret = DownloadFile(src.path.c_str(), new_path);
             if (ret <= 0)
             {
                 free(new_path);
-                sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DOWNLOAD_MSG], src.path);
+                sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DOWNLOAD_MSG], src.path.c_str());
                 return 0;
             }
             free(new_path);
@@ -818,7 +818,7 @@ namespace Actions
             if (it->isDir)
             {
                 char new_dir[512];
-                sprintf(new_dir, "%s%s%s", target.c_str(), FS::hasEndSlash(target.c_str()) ? "" : "/", it->name);
+                sprintf(new_dir, "%s%s%s", target.c_str(), FS::hasEndSlash(target.c_str()) ? "" : "/", it->name.c_str());
                 Download(*it, new_dir);
             }
             else
@@ -884,7 +884,7 @@ namespace Actions
             if (Activities::Stopped())
                 break;
             Activities::CountCurrent((uint32_t)(index + 1), (uint32_t) files.size());
-            sprintf(activity_message, "%s %s", lang_strings[STR_INSTALLING], file.name);
+            sprintf(activity_message, "%s %s", lang_strings[STR_INSTALLING], file.name.c_str());
 
             if (!file.isDir)
             {
@@ -937,7 +937,7 @@ namespace Actions
                                         {
                                             /* No usable client for this site: fail instead of
                                              * handing a NULL client to the download thread */
-                                            sprintf(status_message, "%s %s", lang_strings[STR_INSTALL_FAILED], file.name);
+                                            sprintf(status_message, "%s %s", lang_strings[STR_INSTALL_FAILED], file.name.c_str());
                                             delete sp;
                                             free(install_data);
                                             failed++;
@@ -1128,7 +1128,7 @@ namespace Actions
 
         for (size_t i = 0; i < entries.size(); i++)
         {
-            if (strcmp(entries[i].name, "..") == 0)
+            if (strcmp(entries[i].name.c_str(), "..") == 0)
                 continue;
             CollectLocalInstallFiles(entries[i], out, depth + 1);
         }
@@ -1150,7 +1150,7 @@ namespace Actions
         std::vector<DirEntry> entries = client->ListDir(entry.path);
         for (size_t i = 0; i < entries.size(); i++)
         {
-            if (strcmp(entries[i].name, "..") == 0)
+            if (strcmp(entries[i].name.c_str(), "..") == 0)
                 continue;
             CollectRemoteInstallFiles(client, entries[i], out, depth + 1);
         }
@@ -1180,7 +1180,7 @@ namespace Actions
             if (Activities::Stopped())
                 break;
             Activities::CountCurrent((uint32_t)(index + 1), (uint32_t) files.size());
-            sprintf(activity_message, "%s %s", lang_strings[STR_INSTALLING], file.name);
+            sprintf(activity_message, "%s %s", lang_strings[STR_INSTALLING], file.name.c_str());
 
             if (!file.isDir)
             {
@@ -1201,12 +1201,12 @@ namespace Actions
                             {
                                 if (ret == -1)
                                 {
-                                    sprintf(activity_message, "%s - %s", file.name, lang_strings[STR_INSTALL_FROM_DATA_MSG]);
+                                    sprintf(activity_message, "%s - %s", file.name.c_str(), lang_strings[STR_INSTALL_FROM_DATA_MSG]);
                                     sceKernelUsleep(3000000);
                                 }
                                 else if (ret == -2)
                                 {
-                                    sprintf(activity_message, "%s - %s", file.name, lang_strings[STR_ALREADY_INSTALLED_MSG]);
+                                    sprintf(activity_message, "%s - %s", file.name.c_str(), lang_strings[STR_ALREADY_INSTALLED_MSG]);
                                     sceKernelUsleep(3000000);
                                 }
                                 failed++;
@@ -1295,7 +1295,7 @@ namespace Actions
                 int ret = ZipUtil::Extract(*it, target.c_str());
                 if (ret == 0)
                 {
-                    sprintf(status_message, "%s %s", lang_strings[STR_FAILED_TO_EXTRACT], it->name);
+                    sprintf(status_message, "%s %s", lang_strings[STR_FAILED_TO_EXTRACT], it->name.c_str());
                     sceKernelUsleep(100000);
                 }
             }
@@ -1345,7 +1345,7 @@ namespace Actions
                 int ret = ZipUtil::Extract(*it, target.c_str(), client.get());
                 if (ret == 0)
                 {
-                    sprintf(status_message, "%s %s", lang_strings[STR_FAILED_TO_EXTRACT], it->name);
+                    sprintf(status_message, "%s %s", lang_strings[STR_FAILED_TO_EXTRACT], it->name.c_str());
                     sceKernelUsleep(100000);
                 }
             }
@@ -1402,7 +1402,7 @@ namespace Actions
                     break;
 
                 Activities::ItemCurrent("\"" + std::string(it->path) + "\" to \"" + target + "\"");
-                int res = ZipUtil::ZipAddPath(zf, it->path, strlen(it->directory) + 1, Z_DEFAULT_COMPRESSION);
+                int res = ZipUtil::ZipAddPath(zf, it->path.c_str(), strlen(it->directory.c_str()) + 1, Z_DEFAULT_COMPRESSION);
                 if (res <= 0)
                 {
                     sprintf(status_message, "%s", lang_strings[STR_ERROR_CREATE_ZIP]);
@@ -1711,7 +1711,7 @@ namespace Actions
     {
         for (int i = 0; i < local_files.size(); i++)
         {
-            if (strcmp(local_files[i].name, "..") != 0)
+            if (strcmp(local_files[i].name.c_str(), "..") != 0)
                 multi_selected_local_files.insert(local_files[i]);
         }
     }
@@ -1720,7 +1720,7 @@ namespace Actions
     {
         for (int i = 0; i < remote_files.size(); i++)
         {
-            if (strcmp(remote_files[i].name, "..") != 0)
+            if (strcmp(remote_files[i].name.c_str(), "..") != 0)
                 multi_selected_remote_files.insert(remote_files[i]);
         }
     }
@@ -1789,7 +1789,7 @@ namespace Actions
             if (!isCopy && !FS::FolderExists(dest))
             {
                 errno = 0;
-                int ret = rename(src.path, dest);
+                int ret = rename(src.path.c_str(), dest);
                 if (ret != 0 && errno != EXDEV && errno != EEXIST)
                 {
                     return 0;
@@ -1803,13 +1803,13 @@ namespace Actions
                 if (Activities::Stopped())
                     return 1;
 
-                int path_length = strlen(dest) + strlen(entries[i].name) + 2;
+                int path_length = strlen(dest) + strlen(entries[i].name.c_str()) + 2;
                 char *new_path = (char *)malloc(path_length);
-                snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", entries[i].name);
+                snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", entries[i].name.c_str());
 
                 if (entries[i].isDir)
                 {
-                    if (strcmp(entries[i].name, "..") == 0)
+                    if (strcmp(entries[i].name.c_str(), "..") == 0)
                     {
                         free(new_path);
                         continue;
@@ -1824,11 +1824,11 @@ namespace Actions
                 }
                 else
                 {
-                    snprintf(activity_message, 1024, "%s %s", isCopy ? lang_strings[STR_COPYING] : lang_strings[STR_MOVING], entries[i].path);
-                    ret = CopyOrMoveLocalFile(entries[i].path, new_path, isCopy);
+                    snprintf(activity_message, 1024, "%s %s", isCopy ? lang_strings[STR_COPYING] : lang_strings[STR_MOVING], entries[i].path.c_str());
+                    ret = CopyOrMoveLocalFile(entries[i].path.c_str(), new_path, isCopy);
                     if (ret <= 0)
                     {
-                        sprintf(status_message, "%s %s", isCopy ? lang_strings[STR_FAIL_COPY_MSG] : lang_strings[STR_FAIL_MOVE_MSG], entries[i].path);
+                        sprintf(status_message, "%s %s", isCopy ? lang_strings[STR_FAIL_COPY_MSG] : lang_strings[STR_FAIL_MOVE_MSG], entries[i].path.c_str());
                         free(new_path);
                         return ret;
                     }
@@ -1843,15 +1843,15 @@ namespace Actions
         }
         else
         {
-            int path_length = strlen(dest) + strlen(src.name) + 2;
+            int path_length = strlen(dest) + strlen(src.name.c_str()) + 2;
             char *new_path = (char *)malloc(path_length);
-            snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", src.name);
-            snprintf(activity_message, 1024, "%s %s", isCopy ? lang_strings[STR_COPYING] : lang_strings[STR_MOVING], src.name);
-            ret = CopyOrMoveLocalFile(src.path, new_path, isCopy);
+            snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", src.name.c_str());
+            snprintf(activity_message, 1024, "%s %s", isCopy ? lang_strings[STR_COPYING] : lang_strings[STR_MOVING], src.name.c_str());
+            ret = CopyOrMoveLocalFile(src.path.c_str(), new_path, isCopy);
             if (ret <= 0)
             {
                 free(new_path);
-                sprintf(status_message, "%s %s", isCopy ? lang_strings[STR_FAIL_COPY_MSG] : lang_strings[STR_FAIL_MOVE_MSG], src.name);
+                sprintf(status_message, "%s %s", isCopy ? lang_strings[STR_FAIL_COPY_MSG] : lang_strings[STR_FAIL_MOVE_MSG], src.name.c_str());
                 return 0;
             }
             free(new_path);
@@ -1872,15 +1872,15 @@ namespace Actions
             if (Activities::Stopped())
                 break;
 
-            if (strcmp(it->directory, target.c_str()) == 0)
+            if (strcmp(it->directory.c_str(), target.c_str()) == 0)
                 continue;
 
             char new_path[1024];
-            sprintf(new_path, "%s%s%s", target.c_str(), FS::hasEndSlash(target.c_str()) ? "" : "/", it->name);
+            sprintf(new_path, "%s%s%s", target.c_str(), FS::hasEndSlash(target.c_str()) ? "" : "/", it->name.c_str());
 
             if (it->isDir)
             {
-                if (strncmp(target.c_str(), it->path, strlen(it->path)) == 0)
+                if (strncmp(target.c_str(), it->path.c_str(), strlen(it->path.c_str())) == 0)
                 {
                     sprintf(status_message, "%s", lang_strings[STR_CANT_MOVE_TO_SUBDIR_MSG]);
                     continue;
@@ -1926,7 +1926,7 @@ namespace Actions
             if (Activities::Stopped())
                 break;
 
-            bool same_folder = strcmp(it->directory, target.c_str()) == 0;
+            bool same_folder = strcmp(it->directory.c_str(), target.c_str()) == 0;
             std::string dest_name = it->name;
             if (same_folder)
                 dest_name = UniqueLocalName(target, it->name);
@@ -1936,7 +1936,7 @@ namespace Actions
 
             if (it->isDir)
             {
-                if (!same_folder && strncmp(target.c_str(), it->path, strlen(it->path)) == 0)
+                if (!same_folder && strncmp(target.c_str(), it->path.c_str(), strlen(it->path.c_str())) == 0)
                 {
                     sprintf(status_message, "%s", lang_strings[STR_CANT_COPY_TO_SUBDIR_MSG]);
                     continue;
@@ -1945,7 +1945,7 @@ namespace Actions
             }
             else if (same_folder)
             {
-                CopyOrMoveLocalFile(it->path, new_path, true);
+                CopyOrMoveLocalFile(it->path.c_str(), new_path, true);
             }
             else
             {
@@ -2023,27 +2023,27 @@ namespace Actions
             if (Activities::Stopped())
                 break;
 
-            if (strcmp(it->directory, target.c_str()) == 0)
+            if (strcmp(it->directory.c_str(), target.c_str()) == 0)
                 continue;
 
             char new_path[1024];
-            sprintf(new_path, "%s%s%s", target.c_str(), FS::hasEndSlash(target.c_str()) ? "" : "/", it->name);
+            sprintf(new_path, "%s%s%s", target.c_str(), FS::hasEndSlash(target.c_str()) ? "" : "/", it->name.c_str());
             if (it->isDir)
             {
-                if (strncmp(target.c_str(), it->path, strlen(it->path)) == 0)
+                if (strncmp(target.c_str(), it->path.c_str(), strlen(it->path.c_str())) == 0)
                 {
                     sprintf(status_message, "%s", lang_strings[STR_CANT_MOVE_TO_SUBDIR_MSG]);
                     continue;
                 }
                 int res = CopyOrMoveRemoteFile(it->path, new_path, false);
                 if (res == 0)
-                    sprintf(status_message, "%s - %s", it->name, lang_strings[STR_FAIL_COPY_MSG]);
+                    sprintf(status_message, "%s - %s", it->name.c_str(), lang_strings[STR_FAIL_COPY_MSG]);
             }
             else
             {
                 int res = CopyOrMoveRemoteFile(it->path, new_path, false);
                 if (res == 0)
-                    sprintf(status_message, "%s - %s", it->name, lang_strings[STR_FAIL_COPY_MSG]);
+                    sprintf(status_message, "%s - %s", it->name.c_str(), lang_strings[STR_FAIL_COPY_MSG]);
             }
         }
         remote_paste_files.clear();
@@ -2084,13 +2084,13 @@ namespace Actions
                 if (Activities::Stopped())
                     return 1;
 
-                int path_length = strlen(dest) + strlen(entries[i].name) + 2;
+                int path_length = strlen(dest) + strlen(entries[i].name.c_str()) + 2;
                 char *new_path = (char *)malloc(path_length);
-                snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", entries[i].name);
+                snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", entries[i].name.c_str());
 
                 if (entries[i].isDir)
                 {
-                    if (strcmp(entries[i].name, "..") == 0)
+                    if (strcmp(entries[i].name.c_str(), "..") == 0)
                         continue;
 
                     RemotePool::CurrentClient()->Mkdir(new_path);
@@ -2103,13 +2103,13 @@ namespace Actions
                 }
                 else
                 {
-                    snprintf(activity_message, 1024, "%s %s", lang_strings[STR_COPYING], entries[i].path);
+                    snprintf(activity_message, 1024, "%s %s", lang_strings[STR_COPYING], entries[i].path.c_str());
                     RemotePool::CurrentClient()->SetTotalBytes(entries[i].file_size);
                     RemotePool::CurrentClient()->ResetTransferredBytes();
                     ret = CopyOrMoveRemoteFile(entries[i].path, new_path, true);
                     if (ret <= 0)
                     {
-                        sprintf(status_message, "%s %s", lang_strings[STR_FAIL_COPY_MSG], entries[i].path);
+                        sprintf(status_message, "%s %s", lang_strings[STR_FAIL_COPY_MSG], entries[i].path.c_str());
                         free(new_path);
                         return ret;
                     }
@@ -2119,15 +2119,15 @@ namespace Actions
         }
         else
         {
-            int path_length = strlen(dest) + strlen(src.name) + 2;
+            int path_length = strlen(dest) + strlen(src.name.c_str()) + 2;
             char *new_path = (char *)malloc(path_length);
-            snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", src.name);
-            snprintf(activity_message, 1024, "%s %s", lang_strings[STR_COPYING], src.name);
+            snprintf(new_path, path_length, "%s%s%s", dest, FS::hasEndSlash(dest) ? "" : "/", src.name.c_str());
+            snprintf(activity_message, 1024, "%s %s", lang_strings[STR_COPYING], src.name.c_str());
             ret = CopyOrMoveRemoteFile(src.path, new_path, true);
             if (ret <= 0)
             {
                 free(new_path);
-                sprintf(status_message, "%s %s", lang_strings[STR_FAIL_COPY_MSG], src.name);
+                sprintf(status_message, "%s %s", lang_strings[STR_FAIL_COPY_MSG], src.name.c_str());
                 return 0;
             }
             free(new_path);
@@ -2155,27 +2155,27 @@ namespace Actions
             if (Activities::Stopped())
                 break;
 
-            if (strcmp(it->directory, target.c_str()) == 0)
+            if (strcmp(it->directory.c_str(), target.c_str()) == 0)
                 continue;
 
             char new_path[1024];
-            sprintf(new_path, "%s%s%s", target.c_str(), FS::hasEndSlash(target.c_str()) ? "" : "/", it->name);
+            sprintf(new_path, "%s%s%s", target.c_str(), FS::hasEndSlash(target.c_str()) ? "" : "/", it->name.c_str());
             if (it->isDir)
             {
-                if (strncmp(target.c_str(), it->path, strlen(it->path)) == 0)
+                if (strncmp(target.c_str(), it->path.c_str(), strlen(it->path.c_str())) == 0)
                 {
                     sprintf(status_message, "%s", lang_strings[STR_CANT_COPY_TO_SUBDIR_MSG]);
                     continue;
                 }
                 int res = CopyRemotePath(*it, new_path);
                 if (res == 0)
-                    sprintf(status_message, "%s - %s", it->name, lang_strings[STR_FAIL_COPY_MSG]);
+                    sprintf(status_message, "%s - %s", it->name.c_str(), lang_strings[STR_FAIL_COPY_MSG]);
             }
             else
             {
                 int res = CopyRemotePath(*it, new_path);
                 if (res == 0)
-                    sprintf(status_message, "%s - %s", it->name, lang_strings[STR_FAIL_COPY_MSG]);
+                    sprintf(status_message, "%s - %s", it->name.c_str(), lang_strings[STR_FAIL_COPY_MSG]);
             }
         }
         remote_paste_files.clear();
@@ -2466,7 +2466,7 @@ namespace Actions
             if (!entries[i].selectable)
                 continue;
 
-            if (strcmp(entries[i].name, ".") == 0 || strcmp(entries[i].name, "..") == 0)
+            if (strcmp(entries[i].name.c_str(), ".") == 0 || strcmp(entries[i].name.c_str(), "..") == 0)
                 continue;
 
             if (Activities::Stopped())
@@ -2479,7 +2479,7 @@ namespace Actions
             }
             else
             {
-                snprintf(activity_message, 1024, "%s %s", lang_strings[STR_DELETING], entries[i].path);
+                snprintf(activity_message, 1024, "%s %s", lang_strings[STR_DELETING], entries[i].path.c_str());
                 Activities::ItemCurrent(entries[i].path);
                 if (!client->Delete(entries[i].path))
                     return false;

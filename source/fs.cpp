@@ -245,11 +245,11 @@ namespace FS
         DirEntry entry;
         std::string path = ppath;
 
-        memset(&entry, 0, sizeof(DirEntry));
-        sprintf(entry.directory, "%s", path.c_str());
-        sprintf(entry.name, "..");
+        entry = DirEntry();
+        DirEntrySetString(entry.directory, "%s", path.c_str());
+        DirEntrySetString(entry.name, "..");
         sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
-        sprintf(entry.path, "%s", path.c_str());
+        DirEntrySetString(entry.path, "%s", path.c_str());
         entry.file_size = 0;
         entry.isDir = true;
         entry.selectable = false;
@@ -282,20 +282,20 @@ namespace FS
                     continue;
                 }
 
-                snprintf(entry.directory, 512, "%s", path.c_str());
-                snprintf(entry.name, 256, "%s", dirent->d_name);
+                DirEntrySetString(entry.directory, "%s", path.c_str());
+                DirEntrySetString(entry.name, "%s", dirent->d_name);
                 entry.selectable = true;
 
                 if (hasEndSlash(path.c_str()))
                 {
-                    sprintf(entry.path, "%s%s", path.c_str(), dirent->d_name);
+                    DirEntrySetString(entry.path, "%s%s", path.c_str(), dirent->d_name);
                 }
                 else
                 {
-                    sprintf(entry.path, "%s/%s", path.c_str(), dirent->d_name);
+                    DirEntrySetString(entry.path, "%s/%s", path.c_str(), dirent->d_name);
                 }
                 struct stat file_stat = {0};
-                stat(entry.path, &file_stat);
+                stat(entry.path.c_str(), &file_stat);
                 struct tm tm = *localtime(&file_stat.st_mtim.tv_sec);
 
                 OrbisDateTime gmt;

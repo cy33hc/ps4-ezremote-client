@@ -16,17 +16,17 @@ std::vector<DirEntry> ApacheClient::ListDir(const std::string &path)
 {
     std::vector<DirEntry> out;
     DirEntry entry;
-    memset(&entry, 0, sizeof(DirEntry));
+    entry = DirEntry();
     if (path[path.length() - 1] == '/' && path.length() > 1)
     {
-        strlcpy(entry.directory, path.c_str(), path.length() - 1);
+        entry.directory = path;
     }
     else
     {
-        sprintf(entry.directory, "%s", path.c_str());
+        DirEntrySetString(entry.directory, "%s", path.c_str());
     }
-    sprintf(entry.name, "..");
-    sprintf(entry.path, "%s", entry.directory);
+    DirEntrySetString(entry.name, "..");
+    DirEntrySetString(entry.path, "%s", entry.directory.c_str());
     sprintf(entry.display_size, "%s", lang_strings[STR_FOLDER]);
     entry.file_size = 0;
     entry.isDir = true;
@@ -78,7 +78,7 @@ std::vector<DirEntry> ApacheClient::ListDir(const std::string &path)
         for (size_t i = 0; i < lxb_dom_collection_length(collection); i++)
         {
             DirEntry entry;
-            memset(&entry, 0, sizeof(DirEntry));
+            entry = DirEntry();
 
             element = lxb_dom_collection_element(collection, i);
             node = NextChildElement(element);
@@ -142,15 +142,15 @@ std::vector<DirEntry> ApacheClient::ListDir(const std::string &path)
                     tmp_string = BaseClient::UnEscape(tmp_string);
                     if (tmp_string.compare("..") != 0)
                     {
-                        sprintf(entry.directory, "%s", path.c_str());
-                        sprintf(entry.name, "%s", tmp_string.c_str());
+                        DirEntrySetString(entry.directory, "%s", path.c_str());
+                        DirEntrySetString(entry.name, "%s", tmp_string.c_str());
                         if (path.length() > 0 && path[path.length() - 1] == '/')
                         {
-                            sprintf(entry.path, "%s%s", path.c_str(), entry.name);
+                            DirEntrySetString(entry.path, "%s%s", path.c_str(), entry.name.c_str());
                         }
                         else
                         {
-                            sprintf(entry.path, "%s/%s", path.c_str(), entry.name);
+                            DirEntrySetString(entry.path, "%s/%s", path.c_str(), entry.name.c_str());
                         }
                     }
                 }

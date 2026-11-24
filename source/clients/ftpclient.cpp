@@ -1238,22 +1238,22 @@ int FtpClient::Rmdir(const std::string &path, bool recursive)
 
 		if (list[i].isDir && recursive)
 		{
-			if (strcmp(list[i].name, "..") == 0)
+			if (strcmp(list[i].name.c_str(), "..") == 0)
 				continue;
 			ret = Rmdir(list[i].path, recursive);
 			if (ret == 0)
 			{
-				sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_DIR_MSG], list[i].path);
+				sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_DIR_MSG], list[i].path.c_str());
 				return 0;
 			}
 		}
 		else
 		{
-			sprintf(activity_message, "%s %s\n", lang_strings[STR_DELETING], list[i].path);
+			sprintf(activity_message, "%s %s\n", lang_strings[STR_DELETING], list[i].path.c_str());
 			ret = Delete(list[i].path);
 			if (ret == 0)
 			{
-				sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_FILE_MSG], list[i].path);
+				sprintf(status_message, "%s %s", lang_strings[STR_FAIL_DEL_FILE_MSG], list[i].path.c_str());
 				return 0;
 			}
 		}
@@ -1578,7 +1578,7 @@ int FtpClient::ParseDirEntry(char *line, DirEntry *dirEntry)
 		n = MIN(n, FTP_CLIENT_MAX_FILENAME_LEN);
 
 		// Copy the filename
-		strncpy(dirEntry->name, token, n);
+		dirEntry->name.assign(token, n);
 		// Properly terminate the string with a NULL character
 		dirEntry->name[n] = '\0';
 	}
@@ -1689,7 +1689,7 @@ int FtpClient::ParseDirEntry(char *line, DirEntry *dirEntry)
 		n = MIN(n, FTP_CLIENT_MAX_FILENAME_LEN);
 
 		// Copy the filename
-		strncpy(dirEntry->name, token, n);
+		dirEntry->name.assign(token, n);
 		// Properly terminate the string with a NULL character
 		dirEntry->name[n] = '\0';
 	}
@@ -1717,7 +1717,7 @@ int FtpClient::ParseMLSDDirEntry(char *line, DirEntry *dirEntry)
 
 	// path is the rest of the line after the space, strip trailing CR/LF
 	token = strtok_r(p, "\r\n", &p);
-	snprintf(dirEntry->name, 256, "%s", token);
+	DirEntrySetString(dirEntry->name, "%s", token);
 
 	// Split facts by semicolon and parse each key=value pair
 	factsSave = NULL;
@@ -1774,18 +1774,18 @@ std::vector<DirEntry> FtpClient::ListDir(const std::string &path)
 		while (ret > 0)
 		{
 			DirEntry entry;
-			memset(&entry, 0, sizeof(entry));
+			entry = DirEntry();
 			entry.selectable = true;
 			if (ParseDirEntry(buf, &entry) > 0)
 			{
-				sprintf(entry.directory, "%s", path.c_str());
+				DirEntrySetString(entry.directory, "%s", path.c_str());
 				if (path.length() > 0 && path[path.length() - 1] == '/')
 				{
-					sprintf(entry.path, "%s%s", path.c_str(), entry.name);
+					DirEntrySetString(entry.path, "%s%s", path.c_str(), entry.name.c_str());
 				}
 				else
 				{
-					sprintf(entry.path, "%s/%s", path.c_str(), entry.name);
+					DirEntrySetString(entry.path, "%s/%s", path.c_str(), entry.name.c_str());
 				}
 
 				if (entry.isDir)
@@ -1796,7 +1796,7 @@ std::vector<DirEntry> FtpClient::ListDir(const std::string &path)
 				{
 					DirEntry::SetDisplaySize(&entry);
 				}
-				if (strcmp(entry.name, "..") != 0 && strcmp(entry.name, ".") != 0)
+				if (strcmp(entry.name.c_str(), "..") != 0 && strcmp(entry.name.c_str(), ".") != 0)
 					out.push_back(entry);
 			}
 			ret = FtpRead(buf, 1024, nData);

@@ -72,7 +72,7 @@ std::vector<DirEntry> NginxClient::ListDir(const std::string &path)
         node = element->node.first_child;
 
         DirEntry entry;
-        memset(&entry, 0, sizeof(DirEntry));
+        entry = DirEntry();
         do
         {
             if (node->type == LXB_DOM_NODE_TYPE_ELEMENT)
@@ -87,15 +87,15 @@ std::vector<DirEntry> NginxClient::ListDir(const std::string &path)
                     tmp = BaseClient::UnEscape(tmp);
                     if (tmp.compare("..") != 0)
                     {
-                        sprintf(entry.directory, "%s", path.c_str());
-                        sprintf(entry.name, "%s", tmp.c_str());
+                        DirEntrySetString(entry.directory, "%s", path.c_str());
+                        DirEntrySetString(entry.name, "%s", tmp.c_str());
                         if (path.length() > 0 && path[path.length() - 1] == '/')
                         {
-                            sprintf(entry.path, "%s%s", path.c_str(), entry.name);
+                            DirEntrySetString(entry.path, "%s%s", path.c_str(), entry.name.c_str());
                         }
                         else
                         {
-                            sprintf(entry.path, "%s/%s", path.c_str(), entry.name);
+                            DirEntrySetString(entry.path, "%s/%s", path.c_str(), entry.name.c_str());
                         }
                     }
                 }
@@ -139,7 +139,7 @@ std::vector<DirEntry> NginxClient::ListDir(const std::string &path)
                         entry.modified.minutes = atoi(atime[1].c_str());
                     }
                     out.push_back(entry);
-                    memset(&entry, 0, sizeof(DirEntry));
+                    entry = DirEntry();
                 }
             }
             node = node->next;

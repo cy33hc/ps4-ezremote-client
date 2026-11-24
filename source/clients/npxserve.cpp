@@ -61,15 +61,15 @@ std::vector<DirEntry> NpxServeClient::ListDir(const std::string &path)
             if (attr != nullptr)
                 aclass = std::string((char *)attr->value->data, attr->value->length);
 
-            sprintf(entry.directory, "%s", path.c_str());
-            sprintf(entry.name, "%s", Util::Rtrim(title, "/").c_str());
+            DirEntrySetString(entry.directory, "%s", path.c_str());
+            DirEntrySetString(entry.name, "%s", Util::Rtrim(title, "/").c_str());
             if (path.length() > 0 && path[path.length() - 1] == '/')
             {
-                sprintf(entry.path, "%s%s", path.c_str(), entry.name);
+                DirEntrySetString(entry.path, "%s%s", path.c_str(), entry.name.c_str());
             }
             else
             {
-                sprintf(entry.path, "%s/%s", path.c_str(), entry.name);
+                DirEntrySetString(entry.path, "%s/%s", path.c_str(), entry.name.c_str());
             }
 
             sprintf(entry.display_date, "%s", "--");

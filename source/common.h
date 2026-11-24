@@ -2,7 +2,10 @@
 #define EZ_COMMON_H
 
 #include <string>
+#include <cstdarg>
+#include <cstdio>
 #include <vector>
+#include <algorithm>
 #include <string.h>
 #include <lexbor/html/parser.h>
 #include <lexbor/dom/interfaces/element.h>
@@ -30,13 +33,25 @@ typedef struct
     uint32_t microsecond;
 } DateTime;
 
+// Helper for code that previously wrote into fixed DirEntry char arrays.
+// Keeps the formatting expressions intact while storing into std::string.
+static inline void DirEntrySetString(std::string &out, const char *fmt, ...)
+{
+    char buffer[1024];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    out.assign(buffer);
+}
+
 struct DirEntry
 {
-    char directory[512];
-    char name[256];
+    std::string directory;
+    std::string name;
     char display_size[48];
     char display_date[48];
-    char path[768];
+    std::string path;
     uint64_t file_size;
     bool isDir;
     bool isLink;
@@ -47,33 +62,27 @@ struct DirEntry
 
     friend bool operator<(DirEntry const &a, DirEntry const &b)
     {
-        return strcmp(a.name, b.name) < 0;
+        return a.name < b.name;
     }
 
-    static int DirEntryComparator(const void *v1, const void *v2)
+    static bool CompareEntries(const DirEntry &a, const DirEntry &b)
     {
-        const DirEntry *p1 = (DirEntry *)v1;
-        const DirEntry *p2 = (DirEntry *)v2;
-        if (strcasecmp(p1->name, "..") == 0)
-            return -1;
-        if (strcasecmp(p2->name, "..") == 0)
-            return 1;
+        if (a.name == ".." && b.name != "..")
+            return true;
+        if (b.name == ".." && a.name != "..")
+            return false;
 
-        if (p1->isDir && !p2->isDir)
-        {
-            return -1;
-        }
-        else if (!p1->isDir && p2->isDir)
-        {
-            return 1;
-        }
+        if (a.isDir && !b.isDir)
+            return true;
+        if (!a.isDir && b.isDir)
+            return false;
 
-        return strcasecmp(p1->name, p2->name);
+        return strcasecmp(a.name.c_str(), b.name.c_str()) < 0;
     }
 
     static void Sort(std::vector<DirEntry> &list)
     {
-        qsort(&list[0], list.size(), sizeof(DirEntry), DirEntryComparator);
+        std::sort(list.begin(), list.end(), CompareEntries);
     }
 
     static void SetDisplaySize(DirEntry *entry)

@@ -113,17 +113,13 @@ namespace Util
 
     static inline void SetupPreviousFolder(const std::string &path, DirEntry *entry)
     {
-        memset(entry, 0, sizeof(DirEntry));
-        if (path[path.length() - 1] == '/' && path.length() > 1)
-        {
-            strlcpy(entry->directory, path.c_str(), path.length() - 1);
-        }
+        *entry = DirEntry();
+        if (path.length() > 1 && path[path.length() - 1] == '/')
+            entry->directory = path.substr(0, path.length() - 1);
         else
-        {
-            sprintf(entry->directory, "%s", path.c_str());
-        }
-        sprintf(entry->name, "%s", "..");
-        sprintf(entry->path, "%s", entry->directory);
+            entry->directory = path;
+        entry->name = "..";
+        entry->path = entry->directory;
         sprintf(entry->display_size, "%s", lang_strings[STR_FOLDER]);
         entry->file_size = 0;
         entry->isDir = true;

@@ -98,7 +98,7 @@ namespace Windows
 
         if (prev_down[SDL_CONTROLLER_BUTTON_X] && !cur_down[SDL_CONTROLLER_BUTTON_X] && !paused)
         {
-            if (selected_browser & LOCAL_BROWSER && strcmp(selected_local_file.name, "..") != 0)
+            if (selected_browser & LOCAL_BROWSER && strcmp(selected_local_file.name.c_str(), "..") != 0)
             {
                 auto search_item = multi_selected_local_files.find(selected_local_file);
                 if (search_item != multi_selected_local_files.end())
@@ -110,7 +110,7 @@ namespace Windows
                     multi_selected_local_files.insert(selected_local_file);
                 }
             }
-            if (selected_browser & REMOTE_BROWSER && strcmp(selected_remote_file.name, "..") != 0)
+            if (selected_browser & REMOTE_BROWSER && strcmp(selected_remote_file.name.c_str(), "..") != 0)
             {
                 auto search_item = multi_selected_remote_files.find(selected_remote_file);
                 if (search_item != multi_selected_remote_files.end())
@@ -155,8 +155,8 @@ namespace Windows
         else
             files.push_back(selected_local_file);
 
-        if (strncmp(files.begin()->directory, "/data", 5) != 0 &&
-            strncmp(files.begin()->directory, "/mnt/usb", 8) != 0)
+        if (strncmp(files.begin()->directory.c_str(), "/data", 5) != 0 &&
+            strncmp(files.begin()->directory.c_str(), "/mnt/usb", 8) != 0)
         {
             zipfolder = "/data";
         }
@@ -169,7 +169,7 @@ namespace Windows
         {
             zipname = files.begin()->name;
         }
-        else if (strcmp(files.begin()->directory, "/") == 0)
+        else if (strcmp(files.begin()->directory.c_str(), "/") == 0)
         {
             zipname = "new_zip";
         }
@@ -709,7 +709,7 @@ namespace Windows
             {
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
             }
-            if (ImGui::Selectable(item.name, false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(919, 0)))
+            if (ImGui::Selectable(item.name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(919, 0)))
             {
                 selected_local_file = item;
                 if (item.isDir)
@@ -745,10 +745,10 @@ namespace Windows
             }
             if (ImGui::IsItemHovered())
             {
-                if (ImGui::CalcTextSize(item.name).x > 740)
+                if (ImGui::CalcTextSize(item.name.c_str()).x > 740)
                 {
                     ImGui::BeginTooltip();
-                    ImGui::Text("%s", item.name);
+                    ImGui::Text("%s", item.name.c_str());
                     ImGui::EndTooltip();
                 }
                 if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadUp) && !paused)
@@ -770,7 +770,7 @@ namespace Windows
             }
             if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
             {
-                if (strcmp(local_file_to_select, item.name) == 0)
+                if (strcmp(local_file_to_select, item.name.c_str()) == 0)
                 {
                     SetNavFocusHere();
                     ImGui::SetScrollHereY(0.5f);
@@ -897,7 +897,7 @@ namespace Windows
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
             }
             ImGui::PushID(i);
-            if (ImGui::Selectable(item.name, false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(919, 0)))
+            if (ImGui::Selectable(item.name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(919, 0)))
             {
                 selected_remote_file = item;
                 if (item.isDir)
@@ -932,10 +932,10 @@ namespace Windows
             }
             if (ImGui::IsItemHovered())
             {
-                if (ImGui::CalcTextSize(item.name).x > 740)
+                if (ImGui::CalcTextSize(item.name.c_str()).x > 740)
                 {
                     ImGui::BeginTooltip();
-                    ImGui::Text("%s", item.name);
+                    ImGui::Text("%s", item.name.c_str());
                     ImGui::EndTooltip();
                 }
                 if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadUp) && !paused)
@@ -958,7 +958,7 @@ namespace Windows
             ImGui::PopID();
             if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
             {
-                if (strcmp(remote_file_to_select, item.name) == 0)
+                if (strcmp(remote_file_to_select, item.name.c_str()) == 0)
                 {
                     SetNavFocusHere();
                     ImGui::SetScrollHereY(0.5f);
@@ -1165,7 +1165,7 @@ namespace Windows
                 for (std::vector<DirEntry>::iterator it = files.begin(); it != files.end(); ++it)
                 {
                     ImGui::SetCursorPosX(file_pos);
-                    ImGui::Text("%s", it->path);
+                    ImGui::Text("%s", it->path.c_str());
                 }
                 ImGui::EndTooltip();
             }
@@ -1577,7 +1577,7 @@ namespace Windows
             ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_NAME]);
             ImGui::SameLine();
             ImGui::SetCursorPosX(150);
-            ImGui::TextWrapped("%s", item.name);
+            ImGui::TextWrapped("%s", item.name.c_str());
             ImGui::Separator();
 
             ImGui::TextColored(colors[ImGuiCol_ButtonHovered], "%s:", lang_strings[STR_SIZE]);
@@ -1653,8 +1653,8 @@ namespace Windows
                         rights[i] = perms[i] ? "rwx"[i % 3] : '-';
                     rights[9] = '\0';
 
-                    if (chmod(item.path, RightsToMode(rights)) != 0)
-                        sprintf(status_message, "Could not change permissions for %s", item.name);
+                    if (chmod(item.path.c_str(), RightsToMode(rights)) != 0)
+                        sprintf(status_message, "Could not change permissions for %s", item.name.c_str());
                     else
                         sprintf(status_message, "Permissions set to %s", rights);
 
@@ -2742,7 +2742,7 @@ namespace Windows
                 EndGroupPanel();
 
                 if (saved_selected_browser & REMOTE_BROWSER ||
-                    (saved_selected_browser & LOCAL_BROWSER && (strncmp(selected_local_file.path, "/data/", 6) == 0 || strncmp(selected_local_file.path, "/mnt/usb", 8) == 0)))
+                    (saved_selected_browser & LOCAL_BROWSER && (strncmp(selected_local_file.path.c_str(), "/data/", 6) == 0 || strncmp(selected_local_file.path.c_str(), "/mnt/usb", 8) == 0)))
                 {
                     ImGui::SetCursorPos(ImVec2(7, 420));
                     if (ImGui::Button(lang_strings[STR_INSTALL], ImVec2(400, 0)))
@@ -2923,9 +2923,9 @@ namespace Windows
             if (gui_mode != GUI_MODE_IME)
             {
                 if (multi_selected_local_files.size() > 0)
-                    sprintf(dialog_editor_text, "%s", multi_selected_local_files.begin()->name);
+                    sprintf(dialog_editor_text, "%s", multi_selected_local_files.begin()->name.c_str());
                 else
-                    sprintf(dialog_editor_text, "%s", selected_local_file.name);
+                    sprintf(dialog_editor_text, "%s", selected_local_file.name.c_str());
                 ime_single_field = dialog_editor_text;
                 ResetImeCallbacks();
                 ime_field_size = 128;
@@ -2940,9 +2940,9 @@ namespace Windows
             if (gui_mode != GUI_MODE_IME)
             {
                 if (multi_selected_remote_files.size() > 0)
-                    sprintf(dialog_editor_text, "%s", multi_selected_remote_files.begin()->name);
+                    sprintf(dialog_editor_text, "%s", multi_selected_remote_files.begin()->name.c_str());
                 else
-                    sprintf(dialog_editor_text, "%s", selected_remote_file.name);
+                    sprintf(dialog_editor_text, "%s", selected_remote_file.name.c_str());
                 ime_single_field = dialog_editor_text;
                 ResetImeCallbacks();
                 ime_field_size = 128;
@@ -3122,7 +3122,7 @@ namespace Windows
                 sprintf(status_message, "%s %d", lang_strings[STR_MAX_EDIT_FILE_SIZE_MSG], max_edit_file_size);
             else
             {
-                snprintf(edit_file, 255, "%s", selected_local_file.path);
+                snprintf(edit_file, 255, "%s", selected_local_file.path.c_str());
                 FS::LoadText(&edit_buffer, selected_local_file.path);
                 editor_inprogress = true;
             }
@@ -3134,7 +3134,7 @@ namespace Windows
                 sprintf(status_message, "%s %d", lang_strings[STR_MAX_EDIT_FILE_SIZE_MSG], max_edit_file_size);
             else if (remoteclient != nullptr && remoteclient->Get(TMP_EDITOR_FILE, selected_remote_file.path))
             {
-                snprintf(edit_file, 255, "%s", selected_remote_file.path);
+                snprintf(edit_file, 255, "%s", selected_remote_file.path.c_str());
                 FS::LoadText(&edit_buffer, TMP_EDITOR_FILE);
                 editor_inprogress = true;
             }
@@ -3273,15 +3273,15 @@ namespace Windows
             break;
         case ACTION_RENAME_LOCAL:
             if (multi_selected_local_files.size() > 0)
-                Actions::RenameLocalFolder(multi_selected_local_files.begin()->path, dialog_editor_text);
+                Actions::RenameLocalFolder(multi_selected_local_files.begin()->path.c_str(), dialog_editor_text);
             else
-                Actions::RenameLocalFolder(selected_local_file.path, dialog_editor_text);
+                Actions::RenameLocalFolder(selected_local_file.path.c_str(), dialog_editor_text);
             break;
         case ACTION_RENAME_REMOTE:
             if (multi_selected_remote_files.size() > 0)
-                Actions::RenameRemoteFolder(multi_selected_remote_files.begin()->path, dialog_editor_text);
+                Actions::RenameRemoteFolder(multi_selected_remote_files.begin()->path.c_str(), dialog_editor_text);
             else
-                Actions::RenameRemoteFolder(selected_remote_file.path, dialog_editor_text);
+                Actions::RenameRemoteFolder(selected_remote_file.path.c_str(), dialog_editor_text);
             break;
         case ACTION_NEW_LOCAL_FILE:
             Actions::CreateLocalFile(dialog_editor_text);

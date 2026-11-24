@@ -128,18 +128,18 @@ std::vector<DirEntry> WebDAVClient::ListDir(const std::string &path)
             std::string resource_type = prop.select_node("*[local-name()='resourcetype']").node().first_child().name();
 
             DirEntry entry;
-            memset(&entry, 0, sizeof(entry));
+            entry = DirEntry();
             entry.selectable = true;
-            sprintf(entry.directory, "%s", path.c_str());
-            sprintf(entry.name, "%s", name.c_str());
+            DirEntrySetString(entry.directory, "%s", path.c_str());
+            DirEntrySetString(entry.name, "%s", name.c_str());
 
             if (path.length() == 1 and path[0] == '/')
             {
-                sprintf(entry.path, "%s%s", path.c_str(), name.c_str());
+                DirEntrySetString(entry.path, "%s%s", path.c_str(), name.c_str());
             }
             else
             {
-                sprintf(entry.path, "%s/%s", path.c_str(), name.c_str());
+                DirEntrySetString(entry.path, "%s/%s", path.c_str(), name.c_str());
             }
 
             entry.isDir = resource_type.find("collection") != std::string::npos;

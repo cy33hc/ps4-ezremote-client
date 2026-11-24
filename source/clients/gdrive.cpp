@@ -1020,10 +1020,10 @@ int GDriveClient::Delete(const std::string &path)
 
 void SetupSharedWithMeFolder(DirEntry *entry)
 {
-    memset(entry, 0, sizeof(DirEntry));
-    sprintf(entry->directory, "%s", "/");
-    sprintf(entry->name, "%s", shared_with_me.c_str());
-    sprintf(entry->path, "/%s", shared_with_me.c_str());
+    *entry = DirEntry();
+    entry->directory = "/";
+    entry->name = shared_with_me;
+    entry->path = "/" + shared_with_me;
     sprintf(entry->display_size, "%s", lang_strings[STR_FOLDER]);
     entry->file_size = 0;
     entry->isDir = true;
@@ -1032,10 +1032,10 @@ void SetupSharedWithMeFolder(DirEntry *entry)
 
 void SetupMyDriveFolder(DirEntry *entry)
 {
-    memset(entry, 0, sizeof(DirEntry));
-    sprintf(entry->directory, "%s", "/");
-    sprintf(entry->name, "%s", my_drive.c_str());
-    sprintf(entry->path, "/%s", my_drive.c_str());
+    *entry = DirEntry();
+    entry->directory = "/";
+    entry->name = my_drive;
+    entry->path = "/" + my_drive;
     sprintf(entry->display_size, "%s", lang_strings[STR_FOLDER]);
     entry->file_size = 0;
     entry->isDir = true;
@@ -1071,9 +1071,9 @@ std::vector<DirEntry> GDriveClient::ListDir(const std::string &path)
                     {
                         json_object *drive = (json_object *)array_list_get_idx(adrives, idx);
                         DirEntry entry;
-                        memset(&entry, 0, sizeof(DirEntry));
+                        entry = DirEntry();
 
-                        sprintf(entry.directory, "%s", path.c_str());
+                        DirEntrySetString(entry.directory, "%s", path.c_str());
                         entry.selectable = false;
                         entry.file_size = 0;
                         entry.isDir = true;
@@ -1081,8 +1081,8 @@ std::vector<DirEntry> GDriveClient::ListDir(const std::string &path)
 
                         const char *id = json_object_get_string(json_object_object_get(drive, "id"));
                         const char *name = json_object_get_string(json_object_object_get(drive, "name"));
-                        sprintf(entry.name, "%s", name);
-                        sprintf(entry.path, "/%s", name);
+                        DirEntrySetString(entry.name, "%s", name);
+                        DirEntrySetString(entry.path, "/%s", name);
                         path_id_map.insert(std::make_pair(entry.path, id));
                         out.push_back(entry);
                     }
@@ -1138,9 +1138,9 @@ std::vector<DirEntry> GDriveClient::ListDir(const std::string &path)
                     {
                         json_object *file = (json_object *)array_list_get_idx(afiles, idx);
                         DirEntry entry;
-                        memset(&entry, 0, sizeof(DirEntry));
+                        entry = DirEntry();
 
-                        sprintf(entry.directory, "%s", path.c_str());
+                        DirEntrySetString(entry.directory, "%s", path.c_str());
                         entry.selectable = true;
                         entry.file_size = 0;
 
@@ -1149,14 +1149,14 @@ std::vector<DirEntry> GDriveClient::ListDir(const std::string &path)
                         const char *mime_type = json_object_get_string(json_object_object_get(file, "mimeType"));
                         const char *modified_time = json_object_get_string(json_object_object_get(file, "modifiedTime"));
 
-                        snprintf(entry.name, 255, "%s", name);
+                        DirEntrySetString(entry.name, "%s", name);
                         if (path.length() > 0 && path[path.length() - 1] == '/')
                         {
-                            snprintf(entry.path, 767, "%s%s", path.c_str(), entry.name);
+                            DirEntrySetString(entry.path, "%s%s", path.c_str(), entry.name.c_str());
                         }
                         else
                         {
-                            sprintf(entry.path, "%s/%s", path.c_str(), entry.name);
+                            DirEntrySetString(entry.path, "%s/%s", path.c_str(), entry.name.c_str());
                         }
                         path_id_map.insert(std::make_pair(entry.path, id));
 

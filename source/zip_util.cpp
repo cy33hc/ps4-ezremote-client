@@ -626,7 +626,7 @@ namespace ZipUtil
 
         if (client == nullptr)
         {
-            ret = archive_read_open_filename(a, file.path, ARCHIVE_TRANSFER_SIZE);
+            ret = archive_read_open_filename(a, file.path.c_str(), ARCHIVE_TRANSFER_SIZE);
             if (ret < ARCHIVE_OK)
             {
                 sprintf(status_message, "%s", "archive_read_open_filename failed");
