@@ -74,6 +74,12 @@ int main(int argc, char *argv[])
             return 0;
         }
     }
+    // when switching from webui mode to native mode, need to terminate webui
+    // otherwise the web server in nativeui will conflict
+    else if (is_daemon_running("EZRC00001"))
+    {
+        stop_daemon("EZRC00001");
+    }
 
     const char *args[] = {
         "ezremote_client_nativeui.self",
