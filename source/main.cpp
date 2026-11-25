@@ -172,6 +172,8 @@ static void Shutdown()
 	done = true;
 
 	HttpServer::Stop();
+	INSTALLER::CancelInstalls();
+
 	if (g_http_started)
 	{
 		pthread_join(http_server_thid, NULL);

@@ -22,6 +22,7 @@
 #include "textures.h"
 #include "sfo.h"
 #include "system.h"
+#include "installer.h"
 
 #define MAX_IMAGE_HEIGHT 980
 #define MAX_IMAGE_WIDTH 1820
@@ -2248,7 +2249,8 @@ namespace Windows
                         }
                         else if (ImGui::SmallButton(lang_strings[STR_CANCEL]))
                         {
-                            Activities::Cancel(item.id);
+                            if (Activities::Cancel(item.id))
+                                INSTALLER::CancelInstall(item.id);
                         }
                         ImGui::PopID();
                     }

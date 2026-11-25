@@ -60,6 +60,7 @@ static bool s_bgft_initialized = false;
 
 static std::map<std::string, ArchivePkgInstallData *> archive_pkg_install_data_list;
 static std::map<std::string, SplitPkgInstallData *> split_pkg_install_data_list;
+static std::mutex archive_pkg_mutex;
 static std::mutex split_pkg_mutex;
 static std::condition_variable split_pkg_cv;
 
@@ -368,8 +369,12 @@ namespace INSTALLER
 	finish:
 		if (bg_check_data->archive_pkg_data != nullptr)
 		{
+			bool cancelled = Activities::Stopped();
 			bg_check_data->archive_pkg_data->stop_write_thread = true;
+			if (cancelled && bg_check_data->archive_pkg_data->split_file != nullptr)
+				bg_check_data->archive_pkg_data->split_file->Abort();
 			pthread_join(bg_check_data->archive_pkg_data->thread, NULL);
+			RemoveArchivePkgInstallData(bg_check_data->hash);
 			delete (bg_check_data->archive_pkg_data->split_file);
 			free(bg_check_data->archive_pkg_data);
 			RemoveArchivePkgInstallData(bg_check_data->hash);
@@ -380,7 +385,10 @@ namespace INSTALLER
 			// First remove the hash and wait for any active /split_inst HTTP
 			// streams. The writer must keep running while they drain.
 			RemoveSplitPkgInstallData(bg_check_data->hash);
+			bool cancelled = Activities::Stopped();
 			bg_check_data->split_pkg_data->stop_write_thread = true;
+			if (cancelled)
+				bg_check_data->split_pkg_data->split_file->Abort();
 			bg_check_data->split_pkg_data->split_file->Close();
 			pthread_join(bg_check_data->split_pkg_data->thread, NULL);
 			delete (bg_check_data->split_pkg_data->split_file);
@@ -896,11 +904,14 @@ namespace INSTALLER
 
 	ArchivePkgInstallData *GetArchivePkgInstallData(const std::string &hash)
 	{
-		return archive_pkg_install_data_list[hash];
+		std::lock_guard<std::mutex> lock(archive_pkg_mutex);
+		std::map<std::string, ArchivePkgInstallData *>::iterator it = archive_pkg_install_data_list.find(hash);
+		return it == archive_pkg_install_data_list.end() ? nullptr : it->second;
 	}
 
 	void AddArchivePkgInstallData(const std::string &hash, ArchivePkgInstallData *pkg_data)
 	{
+		std::lock_guard<std::mutex> lock(archive_pkg_mutex);
 		std::pair<std::string, ArchivePkgInstallData *> pair = std::make_pair(hash, pkg_data);
 		archive_pkg_install_data_list.erase(hash);
 		archive_pkg_install_data_list.insert(pair);
@@ -908,11 +919,14 @@ namespace INSTALLER
 
 	void RemoveArchivePkgInstallData(const std::string &hash)
 	{
+		std::lock_guard<std::mutex> lock(archive_pkg_mutex);
 		archive_pkg_install_data_list.erase(hash);
 	}
 
 	bool InstallArchivePkg(const std::string &path, ArchivePkgInstallData *pkg_data, bool bg)
 	{
+		if (pkg_data->activity_id == 0)
+			pkg_data->activity_id = Activities::CurrentId();
 		pkg_header header;
 		pkg_data->split_file->Read((char *)&header, sizeof(pkg_header), 0);
 
@@ -1038,6 +1052,12 @@ namespace INSTALLER
 
 			while (!completed)
 			{
+				if (Activities::Stopped() || pkg_data->stop_write_thread)
+				{
+					sceBgftServiceDownloadStopTask(task_id);
+					ret = 0;
+					goto finish;
+				}
 				memset(&progress_info, 0, sizeof(progress_info));
 				ret = sceBgftServiceDownloadGetProgress(task_id, &progress_info);
 				if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
@@ -1066,12 +1086,81 @@ namespace INSTALLER
 		}
 		ret = 1;
 	finish:
+		bool cancelled = Activities::Stopped() || pkg_data->stop_write_thread;
 		pkg_data->stop_write_thread = true;
+		if (cancelled && pkg_data->split_file != nullptr)
+			pkg_data->split_file->Abort();
 		pthread_join(pkg_data->thread, NULL);
+		RemoveArchivePkgInstallData(hash);
 		delete (pkg_data->split_file);
 		free(pkg_data);
-		RemoveArchivePkgInstallData(hash);
 		return ret;
+	}
+
+	static void CancelInstallData(ArchivePkgInstallData *data)
+	{
+		if (data == nullptr)
+			return;
+		data->stop_write_thread = true;
+		if (data->split_file != nullptr)
+			data->split_file->Abort();
+		if (data->archive_entry != nullptr && data->archive_entry->client_data != nullptr &&
+		    data->archive_entry->client_data->client != nullptr)
+			data->archive_entry->client_data->client->Cancel();
+	}
+
+	static void CancelInstallData(SplitPkgInstallData *data)
+	{
+		if (data == nullptr)
+			return;
+		data->stop_write_thread = true;
+		if (data->split_file != nullptr)
+			data->split_file->Abort();
+		if (data->remote_client != nullptr)
+			data->remote_client->Cancel();
+	}
+
+	void CancelInstalls()
+	{
+		{
+			std::lock_guard<std::mutex> lock(archive_pkg_mutex);
+			for (std::map<std::string, ArchivePkgInstallData *>::iterator it = archive_pkg_install_data_list.begin();
+			     it != archive_pkg_install_data_list.end(); ++it)
+				CancelInstallData(it->second);
+		}
+
+		{
+			std::lock_guard<std::mutex> lock(split_pkg_mutex);
+			for (std::map<std::string, SplitPkgInstallData *>::iterator it = split_pkg_install_data_list.begin();
+			     it != split_pkg_install_data_list.end(); ++it)
+				CancelInstallData(it->second);
+		}
+	}
+
+	void CancelInstall(uint64_t activity_id)
+	{
+		if (activity_id == 0)
+			return;
+
+		{
+			std::lock_guard<std::mutex> lock(archive_pkg_mutex);
+			for (std::map<std::string, ArchivePkgInstallData *>::iterator it = archive_pkg_install_data_list.begin();
+			     it != archive_pkg_install_data_list.end(); ++it)
+			{
+				if (it->second != nullptr && it->second->activity_id == activity_id)
+					CancelInstallData(it->second);
+			}
+		}
+
+		{
+			std::lock_guard<std::mutex> lock(split_pkg_mutex);
+			for (std::map<std::string, SplitPkgInstallData *>::iterator it = split_pkg_install_data_list.begin();
+			     it != split_pkg_install_data_list.end(); ++it)
+			{
+				if (it->second != nullptr && it->second->activity_id == activity_id)
+					CancelInstallData(it->second);
+			}
+		}
 	}
 
 	SplitPkgInstallData *GetSplitPkgInstallData(const std::string &hash)
@@ -1126,6 +1215,8 @@ namespace INSTALLER
 
 	bool InstallSplitPkg(const std::string &path, SplitPkgInstallData *pkg_data, bool bg)
 	{
+		if (pkg_data->activity_id == 0)
+			pkg_data->activity_id = Activities::CurrentId();
 		pkg_header header;
 		pkg_data->split_file->Read((char *)&header, sizeof(pkg_header), 0);
 
@@ -1251,6 +1342,12 @@ namespace INSTALLER
 
 			while (!completed)
 			{
+				if (Activities::Stopped() || pkg_data->stop_write_thread)
+				{
+					sceBgftServiceDownloadStopTask(task_id);
+					ret = 0;
+					goto finish;
+				}
 				memset(&progress_info, 0, sizeof(progress_info));
 				ret = sceBgftServiceDownloadGetProgress(task_id, &progress_info);
 				if (ret || (progress_info.transferred > 0 && progress_info.errorResult != 0))
@@ -1282,7 +1379,10 @@ namespace INSTALLER
 	finish:
 		// Drain active /split_inst streams before closing/deleting the blocks.
 		RemoveSplitPkgInstallData(hash);
+		bool cancelled = Activities::Stopped() || pkg_data->stop_write_thread;
 		pkg_data->stop_write_thread = true;
+		if (cancelled)
+			pkg_data->split_file->Abort();
 		pkg_data->split_file->Close();
 		pthread_join(pkg_data->thread, NULL);
 		delete (pkg_data->split_file);

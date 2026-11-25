@@ -456,6 +456,12 @@ int BaseClient::Quit()
     return 1;
 }
 
+void BaseClient::Cancel()
+{
+    if (client != nullptr)
+        client->stop();
+}
+
 ClientType BaseClient::clientType()
 {
     return CLIENT_TYPE_HTTP_SERVER;

@@ -4,7 +4,7 @@ project(ezremote_client)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DDONT_HAVE_STRUPR")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
-set(APP_VERSION "02.12")
+set(APP_VERSION "02.13")
 
 # Shared by both builds. The headless build compiles the same code with
 # EZREMOTE_HEADLESS_APP set and without the native UI sources.

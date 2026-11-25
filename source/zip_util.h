@@ -13,7 +13,7 @@
 #ifdef EZREMOTE_HEADLESS_APP
 // Keep archive buffers small in the daemon; the default 20 MiB does not fit
 // comfortably in the headless app's heap during package installs.
-#define ARCHIVE_TRANSFER_SIZE (512 * 1024)
+#define ARCHIVE_TRANSFER_SIZE (1024 * 1024)
 #else
 #define ARCHIVE_TRANSFER_SIZE 20971520
 #endif

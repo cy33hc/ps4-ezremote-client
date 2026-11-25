@@ -86,6 +86,8 @@ public:
     virtual bool Ping() = 0;
     virtual const char *LastResponse() = 0;
     virtual int Quit() = 0;
+    // Interrupt a blocked transfer without deleting the client object.
+    virtual void Cancel() {}
     virtual ClientType clientType() = 0;
     virtual uint32_t SupportedActions() = 0;
 

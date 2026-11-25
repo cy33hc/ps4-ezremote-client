@@ -43,7 +43,7 @@ extern bool done;
 #define FAILURE_MSG "{ \"result\": { \"success\": false, \"error\": \"%s\" } }"
 #define SUCCESS_MSG_LEN 48
 #ifdef EZREMOTE_HEADLESS_APP
-#define PKG_INITIAL_REQUEST_SIZE (512 * 1024ul)
+#define PKG_INITIAL_REQUEST_SIZE (1024 * 1024ul)
 #else
 #define PKG_INITIAL_REQUEST_SIZE 8388608ul
 #endif
@@ -1862,9 +1862,7 @@ namespace HttpServer
 
                     pthread_create(&install_data->thread, NULL, Actions::ExtractArchivePkg, install_data);
 
-                    Activities::SetCancellable(false);
                     int archive_result = INSTALLER::InstallArchivePkg(entry->filename, install_data);
-                    Activities::SetCancellable(true);
                     if (archive_result != 0)
                         installed = true;
                     else
@@ -2221,9 +2219,7 @@ namespace HttpServer
 
                         pthread_create(&install_data->thread, NULL, Actions::ExtractArchivePkg, install_data);
 
-                        Activities::SetCancellable(false);
                         int archive_result = INSTALLER::InstallArchivePkg(entry->filename, install_data);
-                        Activities::SetCancellable(true);
                         if (archive_result != 0)
                             archive_installed = true;
                         else
@@ -2407,7 +2403,10 @@ namespace HttpServer
                 return;
             }
 
-            bool cancelled = Activities::Cancel((uint64_t) json_object_get_int64(jid));
+            uint64_t cancel_id = (uint64_t) json_object_get_int64(jid);
+            bool cancelled = Activities::Cancel(cancel_id);
+            if (cancelled)
+                INSTALLER::CancelInstall(cancel_id);
 
             json_object *result = json_object_new_object();
             JsonObjectRef result_ref(result);
@@ -4654,9 +4653,7 @@ namespace HttpServer
 
                     int ret = pthread_create(&install_data->thread, NULL, Actions::ExtractArchivePkg, install_data);
 
-                    Activities::SetCancellable(false);
                     ret = INSTALLER::InstallArchivePkg(entry->filename, install_data, false);
-                    Activities::SetCancellable(true);
 
                     if (Activities::Stopped())
                         FS::Rm(install_pkg_path.c_str());
@@ -4777,6 +4774,7 @@ namespace HttpServer
             // The listening socket must be closed for listen() to return, which
             // is what headless mode (serving on the main thread) is blocked on.
             Stop();
+            INSTALLER::CancelInstalls();
             // Ends the render loop in gui.cpp so the client terminates.
             done = true;
         });

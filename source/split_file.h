@@ -4,6 +4,7 @@
 #include <string>
 #include <deque>
 #include <mutex>
+#include <atomic>
 #include <time.h>
 #include <semaphore.h>
 #include <pthread.h>
@@ -37,7 +38,9 @@ public:
     ssize_t Write(char* buf, size_t buf_size);
     int Open();
     int Close();
+    void Abort();
     bool IsClosed();
+    bool IsAborted();
 
     // Approximate read throughput. Read() only adds the bytes it returned to a
     // counter, everything else happens when one of these is called. Kept
@@ -56,6 +59,7 @@ private:
     std::string path;
     int write_error;
     bool complete;
+    std::atomic<bool> aborted{false};
     FileBlock *block_in_progress;
     sem_t block_ready;
 

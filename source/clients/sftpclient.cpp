@@ -715,6 +715,15 @@ void SFTPClient::Close(void *fp)
     libssh2_sftp_close((LIBSSH2_SFTP_HANDLE *)fp);
 }
 
+void SFTPClient::Cancel()
+{
+    // Wake a thread blocked in libssh2_sftp_read(). Closing the session from
+    // another thread is not safe, but shutting down the socket is enough for
+    // the pending read to fail and the transfer loop to unwind.
+    if (sock > 0)
+        shutdown(sock, SHUT_RDWR);
+}
+
 ClientType SFTPClient::clientType()
 {
     return CLIENT_TYPE_SFTP;

@@ -145,6 +145,7 @@ struct SplitPkgInstallData
     uint64_t size;
     pthread_t thread;
     bool stop_write_thread;
+    uint64_t activity_id;
     bool delete_client;
     int http_users;
     bool closing;
@@ -193,6 +194,8 @@ namespace INSTALLER
     void ReleaseSplitPkgInstallData(SplitPkgInstallData *pkg_data);
     void AddSplitPkgInstallData(const std::string &hash, SplitPkgInstallData *pkg_data);
     void RemoveSplitPkgInstallData(const std::string &hash);
+    void CancelInstalls();
+    void CancelInstall(uint64_t activity_id);
     bool InstallSplitPkg(const std::string &path, SplitPkgInstallData* pkg_data, bool bg = false);
     std::string StoreBgInstallHostData(RemoteSettings *remote_settings, const std::string &path, uint64_t size);
     RemoteClient *GetRemoteClient(int site_idx);

@@ -55,6 +55,9 @@ size_t SplitFile::Read(char *buf, size_t buf_size, size_t offset)
     // HTTP connection.
     std::lock_guard<std::mutex> read_lock(this->read_mutex);
 
+    if (this->aborted)
+        return 0;
+
     int first_block_num, block_num;
     size_t block_offset;
     size_t remaining;
@@ -321,7 +324,7 @@ ssize_t SplitFile::Write(char *buf, size_t buf_size)
     ssize_t total_bytes_written = 0;
     size_t remaining_to_write = buf_size;
 
-    if (this->IsClosed())
+    if (this->IsClosed() || this->aborted)
         return -1;
 
     while (remaining_to_write > 0 && !this->complete)
@@ -364,6 +367,18 @@ ssize_t SplitFile::Write(char *buf, size_t buf_size)
     this->write_offset += total_bytes_written;
 
     return total_bytes_written;
+}
+
+void SplitFile::Abort()
+{
+    this->aborted = true;
+    this->complete = true;
+    sem_post(&this->block_ready);
+}
+
+bool SplitFile::IsAborted()
+{
+    return this->aborted;
 }
 
 int SplitFile::Close()

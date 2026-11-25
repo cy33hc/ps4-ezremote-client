@@ -945,6 +945,7 @@ namespace Actions
                                         else
                                         {
                                             install_data->path = file.path;
+                                            install_data->activity_id = Activities::CurrentId();
                                             RemotePool::CurrentClient()->Size(file.path, &install_data->size);
                                             install_data->stop_write_thread = false;
                                             /* The Google Drive client is shared with the UI, the
@@ -1000,6 +1001,7 @@ namespace Actions
                             SplitFile *sp = new SplitFile(install_pkg_path, INSTALL_ARCHIVE_PKG_SPLIT_SIZE, INSTALL_ARCHIVE_PKG_WRITE_THROTTLE_DISTANCE);
                             
                             install_data->archive_entry = entry;
+                            install_data->activity_id = Activities::CurrentId();
                             install_data->split_file = sp;
                             install_data->stop_write_thread = false;
 
@@ -1234,6 +1236,7 @@ namespace Actions
                             SplitFile *sp = new SplitFile(install_pkg_path, INSTALL_ARCHIVE_PKG_SPLIT_SIZE, INSTALL_ARCHIVE_PKG_WRITE_THROTTLE_DISTANCE);
                             
                             install_data->archive_entry = entry;
+                            install_data->activity_id = Activities::CurrentId();
                             install_data->split_file = sp;
                             install_data->stop_write_thread = false;
 
@@ -2543,6 +2546,7 @@ namespace Actions
 
         install_data->split_file = sp;
         install_data->remote_client = stream_client;
+        install_data->activity_id = Activities::CurrentId();
         install_data->path = stream_path;
         stream_client->Size(stream_path, (uint64_t*)&install_data->size);
         install_data->stop_write_thread = false;
@@ -2550,9 +2554,7 @@ namespace Actions
 
         pthread_create(&install_data->thread, NULL, DownloadSplitPkg, install_data);
 
-        Activities::SetCancellable(false);
         int ret = INSTALLER::InstallSplitPkg(cache_key, install_data, false);
-        Activities::SetCancellable(true);
 
         if (Activities::Stopped())
             FS::Rm(install_pkg_path.c_str());

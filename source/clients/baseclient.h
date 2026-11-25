@@ -43,6 +43,7 @@ public:
     bool Ping();
     const char *LastResponse();
     int Quit();
+    void Cancel();
     ClientType clientType();
     uint32_t SupportedActions();
     void SetClientPathEncoding(bool enabled);
